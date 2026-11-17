@@ -1,9 +1,9 @@
-// NOX NEXT — starter entry point
-// Keep secrets and privileged API keys out of browser-side code.
-"use strict";
+import { initNavigation } from "./core/navigation.js";
+import { initTheme } from "./core/theme.js";
+import { initApp } from "./core/app.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.documentElement.lang = "ar";
-  document.documentElement.dir = "rtl";
-  console.info("NOX NEXT starter interface loaded.");
+  initTheme();
+  initNavigation();
+  initApp();
 });
