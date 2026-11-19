@@ -121,3 +121,5 @@
 .nox-stabilizer-panel #nox-stabilizer-toggle[aria-pressed="true"]{background:linear-gradient(120deg,#e8f5ff,#a7d5ed);border-color:#a5d8f1;color:#123349}
 
 .nox-low-light-panel #nox-low-light-mode{width:100%;min-height:42px;border:1px solid #d6bd83;border-radius:12px;background:linear-gradient(120deg,#fff8e8,#ead6a7);color:#35270e;padding:8px;font:inherit}
+
+.nox-detail-recovery-panel #nox-detail-recovery-mode{width:100%;min-height:42px;border:1px solid #d6bd83;border-radius:12px;background:linear-gradient(120deg,#fff8e8,#ead6a7);color:#35270e;padding:8px;font:inherit}
