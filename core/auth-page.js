@@ -24,8 +24,8 @@ function setMode(nextMode) {
   nameField.hidden = !signup;
   nameInput.required = signup;
   profileFields.hidden = !signup;
-  ageInput.required = signup;
-  genderInput.required = signup;
+  ageInput.required = false;
+  genderInput.required = false;
   passwordInput.autocomplete = signup ? "new-password" : "current-password";
   title.textContent = signup ? "إنشاء حساب جديد" : "تسجيل الدخول";
   subtitle.textContent = signup
@@ -48,16 +48,16 @@ form.addEventListener("submit", async event => {
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
   const name = nameInput.value.trim();
-  const age = Number(ageInput.value);
-  const gender = genderInput.value;
+  const age = ageInput.value === "" ? null : Number(ageInput.value);
+  const gender = genderInput.value || null;
   const submittedMode = mode;
 
-  if (!email || !password || (submittedMode === "signup" && (!name || !ageInput.value || !gender))) {
+  if (!email || !password || (submittedMode === "signup" && !name)) {
     setMessage("من فضلك أكمل البيانات المطلوبة.");
     return;
   }
-  if (submittedMode === "signup" && (!Number.isInteger(age) || age < 13 || age > 120)) {
-    setMessage("العمر يجب أن يكون رقمًا صحيحًا من 13 إلى 120 سنة.");
+  if (submittedMode === "signup" && age !== null && (!Number.isInteger(age) || age < 0)) {
+    setMessage("إذا أدخلت العمر، يجب أن يكون رقمًا صحيحًا غير سالب.");
     return;
   }
   if (submittedMode === "signup" && password.length < 8) {
@@ -82,13 +82,16 @@ form.addEventListener("submit", async event => {
     await account.createEmailPasswordSession(email, password);
 
     if (submittedMode === "signup") {
-      stage = "حفظ العمر والنوع";
-      try {
-        // Account.updatePrefs accepts the preferences object directly in SDK 17.
-        await account.updatePrefs({ age, gender });
-      } catch (prefsError) {
-        console.error("NOX profile preferences save failed:", prefsError);
-        sessionStorage.setItem("nox.profile.pending", JSON.stringify({ age, gender }));
+      const profilePrefs = {};
+      if (age !== null) profilePrefs.age = age;
+      if (gender) profilePrefs.gender = gender;
+      if (Object.keys(profilePrefs).length) {
+        stage = "حفظ البيانات الاختيارية";
+        try { await account.updatePrefs(profilePrefs); }
+        catch (prefsError) {
+          console.error("NOX optional profile preferences save failed:", prefsError);
+          sessionStorage.setItem("nox.profile.pending", JSON.stringify(profilePrefs));
+        }
       }
     }
 
