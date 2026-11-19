@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "core/camera.js"
+      - "core/nox-filter-engine.js"
       - "app.js"
       - "index.html"
       - "camera.css"
