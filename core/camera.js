@@ -522,7 +522,8 @@ export function initCamera() {
       announce("شغّل الكاميرا وحدد منطقة وانتظر اكتمال أول عينتين للحركة", Boolean(stream));
       return;
     }
-    const centerX = Math.round((livingMetalRegion.x + livingMetalRegion.width / 2) * opticalFlowWidth);
+    const regionCenterX = livingMetalRegion.x + livingMetalRegion.width / 2;
+    const centerX = Math.round((facing === "user" ? 1 - regionCenterX : regionCenterX) * opticalFlowWidth);
     const centerY = Math.round((livingMetalRegion.y + livingMetalRegion.height / 2) * opticalFlowHeight);
     const radius = 2;
     if (centerX < radius || centerY < radius || centerX >= opticalFlowWidth - radius || centerY >= opticalFlowHeight - radius) {
@@ -695,7 +696,10 @@ export function initCamera() {
 
   function setOpticalFlowMode(mode) {
     opticalFlowMode = mode === "vectors" ? "vectors" : "off";
-    if (opticalFlowMode === "off") setRegionFollowEnabled(false);
+    if (opticalFlowMode === "off") {
+      setRegionFollowEnabled(false);
+      clearSubjectLock();
+    }
     resetOpticalFlow();
     const hint = $("#nox-flow-hint");
     if (hint) hint.textContent = opticalFlowMode === "off"
@@ -1052,6 +1056,7 @@ export function initCamera() {
     updateRegionMaskOverlay();
     if (next.width >= 0.025 && next.height >= 0.025) {
       livingMetalRegion = next;
+      clearSubjectLock();
       announce("تم حفظ قناع المنطقة اليدوي لإعادة استخدامه مع المؤثرات الموضعية", true);
     } else {
       announce("المنطقة صغيرة جدًا؛ اسحب لتحديد مساحة أكبر", true);
