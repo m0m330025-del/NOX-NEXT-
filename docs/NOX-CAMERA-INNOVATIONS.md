@@ -308,3 +308,12 @@ Build a reusable effect graph with four cooperating layers:
 - Adds Off / Natural / Strong modes. The WebGL path samples four immediate neighbors, estimates a local luminance high-pass signal, applies a threshold gate to suppress changes in near-flat regions, and adds a restrained luminance detail signal. It reuses the existing camera texture and texel-size uniforms.
 - The Canvas 2D fallback uses mild contrast only; it does not implement spatial sharpening. Diagnostics expose the selected mode.
 - Important limitation: this enhances edge/detail contrast already present in the captured frame. It cannot reconstruct lost texture, recover clipped highlights/shadows, reverse motion blur, increase sensor resolution, or replace multi-frame super-resolution / AI reconstruction. Strong mode can emphasize sensor noise, halos, and compression artifacts. The effect must be evaluated on real devices before claiming image-quality gains.
+
+
+## P15 — NOX Motion Freeze v1 (experimental capture assist)
+
+- Adds an opt-in capture-timing assistant that reuses the existing sparse optical-flow samples. It estimates a median local displacement from vectors with minimum confidence and labels motion as calm, moderate, fast, or unavailable.
+- When enabled, a still-photo request waits briefly (maximum 1.4 seconds) for a fresh, sufficiently populated low-motion estimate, then captures. If confidence is insufficient or motion does not settle before the bounded timeout, it captures anyway and clearly reports the fallback. The user can cancel the pending wait.
+- The feature only affects still-photo timing. It does not delay video recording, change the live preview, or allocate a new frame-history buffer. Motion sampling remains low-resolution and local to the device.
+- This is not true shutter/exposure control, sensor-level motion freeze, deblurring, frame interpolation, burst-frame selection, or recovery of detail lost to motion blur. Browser camera APIs do not expose consistent shutter-speed/ISO control across target phones. A short wait may not improve a moving subject if the camera or subject keeps moving.
+- Canvas/WebGL processing and actual capture quality still require hands-on testing on the Galaxy M12, other Android devices, and iPhone Safari before making performance or image-quality claims.
