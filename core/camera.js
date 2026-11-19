@@ -27,6 +27,7 @@ uniform float u_mode;
 uniform float u_time;
 uniform float u_mirror;
 uniform float u_variant;
+uniform float u_filterGroup;
 uniform float u_lowLight;
 uniform float u_detail;
 uniform float u_waveMatter;
@@ -200,6 +201,57 @@ void main() {
     float gain = u_detail > 1.5 ? 0.62 : 0.34;
     float protectedDetail = detailSignal * detailGate * gain;
     c = clamp(c + vec3(protectedDetail), 0.0, 1.0);
+  }
+  // Extended 140-filter families: distinct full-frame looks using existing WebGL only.
+  // These are visual grades/proxies, not face/hair/background segmentation.
+  if (u_filterGroup > 9.5 && u_filterGroup < 10.5) {
+    float cheekL = exp(-dot((uv - vec2(0.34,0.60))*vec2(1.0,1.45),(uv - vec2(0.34,0.60))*vec2(1.0,1.45))*34.0);
+    float cheekR = exp(-dot((uv - vec2(0.66,0.60))*vec2(1.0,1.45),(uv - vec2(0.66,0.60))*vec2(1.0,1.45))*34.0);
+    vec3 makeupTone = 0.5 + 0.5*cos(vec3(0.0,2.1,4.2) + u_variant*5.2);
+    c = mix(c, c*vec3(1.05,0.96,0.94)+makeupTone*0.08, 0.16);
+    c = mix(c, vec3(0.92,0.30,0.42), (cheekL+cheekR)*(0.05+u_variant*0.08));
+  } else if (u_filterGroup > 10.5 && u_filterGroup < 11.5) {
+    vec3 soft = (texture2D(u_image,uv+u_texel*vec2(1.0,0.0)).rgb + texture2D(u_image,uv-u_texel*vec2(1.0,0.0)).rgb + texture2D(u_image,uv+u_texel*vec2(0.0,1.0)).rgb + texture2D(u_image,uv-u_texel*vec2(0.0,1.0)).rgb)*0.25;
+    float soften = 0.08 + u_variant*0.16;
+    c = mix(c,soft,soften);
+    c = mix(c,c*vec3(1.04,1.01,0.99)+vec3(0.018,0.008,0.006),0.18);
+  } else if (u_filterGroup > 11.5 && u_filterGroup < 12.5) {
+    float hue = u_variant*6.28318;
+    vec3 dye = 0.5 + 0.5*cos(vec3(0.0,2.094,4.188)+hue);
+    float shine = pow(max(0.0,1.0-abs(uv.x-0.5)),5.0)*(0.04+u_variant*0.08);
+    c = mix(c,c*dye*1.25,0.18+u_variant*0.18);
+    c += vec3(shine);
+  } else if (u_filterGroup > 12.5 && u_filterGroup < 13.5) {
+    float eyeGrade = smoothstep(0.18,0.78,lum);
+    vec3 eyePalette = 0.5 + 0.5*cos(vec3(0.0,2.094,4.188)+u_variant*6.28318);
+    c = mix(c,c*mix(vec3(0.86,0.90,1.08),eyePalette,0.34),0.16+u_variant*0.12);
+    c = clamp((c-0.5)*(1.04+eyeGrade*0.12)+0.5,0.0,1.0);
+  } else if (u_filterGroup > 13.5 && u_filterGroup < 14.5) {
+    vec2 cell = floor(uv*vec2(9.0,15.0));
+    float seed = fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+    vec2 local = fract(uv*vec2(9.0,15.0))-0.5;
+    float radius = length(local);
+    float bokeh = (1.0-smoothstep(0.10+u_variant*0.08,0.19+u_variant*0.10,radius))*step(0.84,seed);
+    vec3 backdropTint = 0.5+0.5*cos(vec3(0.0,2.1,4.2)+u_variant*5.0);
+    c = mix(c,c*0.78+backdropTint*0.28,0.12+u_variant*0.12);
+    c += bokeh*0.10;
+  } else if (u_filterGroup > 14.5 && u_filterGroup < 15.5) {
+    float depthProxy = smoothstep(0.08,0.92,lum);
+    float edge = smoothstep(0.25,0.72,length(uv-vec2(0.5)));
+    float focus = 1.0-abs(depthProxy-(0.35+u_variant*0.30));
+    float blurMix = clamp(edge*(1.0-focus)*(0.10+u_variant*0.18),0.0,0.28);
+    vec3 nearby = (texture2D(u_image,uv+u_texel*vec2(2.0,0.0)).rgb+texture2D(u_image,uv-u_texel*vec2(2.0,0.0)).rgb+texture2D(u_image,uv+u_texel*vec2(0.0,2.0)).rgb+texture2D(u_image,uv-u_texel*vec2(0.0,2.0)).rgb)*0.25;
+    c = mix(c,nearby,blurMix);
+    c = clamp((c-0.5)*(1.08+u_variant*0.12)+0.5,0.0,1.0);
+  } else if (u_filterGroup > 15.5 && u_filterGroup < 16.5) {
+    vec2 grid = uv*vec2(13.0,21.0);
+    vec2 cell = floor(grid);
+    vec2 local = fract(grid)-0.5;
+    float seed = fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+    float drift = sin(u_time*(0.6+u_variant)+seed*6.28318)*0.12;
+    float sparkle = (1.0-smoothstep(0.025+u_variant*0.018,0.11+u_variant*0.025,length(local-vec2(drift,0.0))))*step(0.88,seed);
+    vec3 particleTint = 0.5+0.5*cos(vec3(0.0,2.094,4.188)+u_variant*6.28318);
+    c += particleTint*sparkle*(0.18+u_variant*0.18);
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -425,6 +477,7 @@ export function initCamera() {
       mode: gl.getUniformLocation(program, "u_mode"),
       mirror: gl.getUniformLocation(program, "u_mirror"),
       variant: gl.getUniformLocation(program, "u_variant"),
+      filterGroup: gl.getUniformLocation(program, "u_filterGroup"),
       time: gl.getUniformLocation(program, "u_time"),
       lowLight: gl.getUniformLocation(program, "u_lowLight"),
       detail: gl.getUniformLocation(program, "u_detail"),
@@ -1861,6 +1914,7 @@ export function initCamera() {
         gl.uniform1i(gl.getUniformLocation(renderer.program, "u_image"), 0);
         gl.uniform1f(renderer.mode, selectedFilter ? 10 + selectedFilter.family : LENSES[selectedLens].mode);
         gl.uniform1f(renderer.variant, selectedFilter ? selectedFilter.variant / 19 : 0);
+        gl.uniform1f(renderer.filterGroup, selectedFilter ? selectedFilter.groupIndex : -1);
         gl.uniform1f(renderer.time, performance.now() / 1000);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
