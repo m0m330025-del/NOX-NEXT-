@@ -405,5 +405,6 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
 @media(max-width:380px){
  body[data-nox-screen="camera"] #camera .nox-lens-carousel{height:154px!important}
  body[data-nox-screen="camera"] #camera .nox-lens{width:59px!important;height:67px!important;transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-104px) rotate(calc(0deg - var(--wheel-angle,0deg)))!important}
+ body[data-nox-screen="camera"] #camera .nox-lens.active{transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-104px) rotate(calc(0deg - var(--wheel-angle,0deg))) scale(1.12)!important}
  body[data-nox-screen="camera"] #camera .nox-lens-carousel:before{width:208px;height:208px;bottom:-104px}
 }
