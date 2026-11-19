@@ -1,5 +1,3 @@
-import { account } from "./appwrite.js";
-
 export function initApp() {
   const toast = document.getElementById("toast");
   let toastTimer;
@@ -20,18 +18,23 @@ export function initApp() {
     sessionStorage.removeItem("nox.auth.notice");
   }
 
-  account.get().then(user => {
-    const name = document.querySelector(".topbar-user b");
-    if (name) name.textContent = user.name || "حسابي";
-  }).catch(() => {});
+  // Keep the public interface usable even if the Appwrite SDK/CDN is unavailable.
+  import("./appwrite.js")
+    .then(({ account }) => account.get())
+    .then(user => {
+      const name = document.querySelector(".topbar-user b");
+      if (name) name.textContent = user.name || "حسابي";
+    })
+    .catch(() => {});
 
   document.querySelector('[data-action="logout"]')?.addEventListener("click", async () => {
     try {
+      const { account } = await import("./appwrite.js");
       await account.deleteSession("current");
       showNotice("تم تسجيل الخروج بنجاح");
       window.setTimeout(() => window.location.assign("./auth.html"), 500);
     } catch (error) {
-      showNotice("لا يوجد حساب مسجل للدخول حاليًا");
+      showNotice("تعذر تسجيل الخروج الآن. تأكد من الاتصال وحاول مرة أخرى.");
     }
   });
 
