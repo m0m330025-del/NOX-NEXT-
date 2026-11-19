@@ -95,6 +95,7 @@ export function initSocialUI() {
  function drawOverlay(ctx,w,h){
   if(sticker){ctx.save();ctx.textAlign="center";ctx.font=`bold ${Math.round(w*.13)}px sans-serif`;ctx.shadowColor="rgba(20,5,55,.35)";ctx.shadowBlur=12;ctx.fillText(sticker,w*.5,h*.19);ctx.restore();}
   const caption=captionInput?.value.trim();if(caption){ctx.save();ctx.direction="rtl";ctx.textAlign="center";ctx.font=`bold ${Math.max(22,Math.round(w*.055))}px Cairo, sans-serif`;ctx.lineWidth=Math.max(3,w*.008);ctx.strokeStyle="rgba(28,10,75,.75)";ctx.fillStyle="#fff";ctx.strokeText(caption,w*.5,h*.84);ctx.fillText(caption,w*.5,h*.84);ctx.restore();}
+  const scale=Math.max(1,w/720),pad=18*scale,label="NOX NEXT";ctx.save();ctx.direction="ltr";ctx.font=`900 ${18*scale}px Arial`;const tw=ctx.measureText(label).width,bw=tw+56*scale,bh=38*scale,x=w-pad-bw,y=h-pad-bh;ctx.fillStyle="rgba(16,9,39,.62)";ctx.beginPath();ctx.roundRect(x,y,bw,bh,11*scale);ctx.fill();ctx.fillStyle="#f5d77e";ctx.beginPath();ctx.arc(x+18*scale,y+19*scale,12*scale,0,Math.PI*2);ctx.fill();ctx.fillStyle="#24145d";ctx.font=`900 ${14*scale}px Arial`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("N",x+18*scale,y+19*scale);ctx.fillStyle="#ffe7a5";ctx.font=`900 ${18*scale}px Arial`;ctx.textAlign="left";ctx.fillText(label,x+36*scale,y+20*scale);ctx.restore();
  }
  function syncLiveOverlay(){if(stickerLayer)stickerLayer.textContent=sticker;if(captionLayer)captionLayer.textContent=captionInput?.value.trim()||"";}
  async function stopRecording(){
@@ -129,11 +130,30 @@ export function initSocialUI() {
  start?.addEventListener("click",startCamera);
  stop?.addEventListener("click",stopCamera);
  flip?.addEventListener("click",async()=>{facingMode=facingMode==="user"?"environment":"user";await startCamera();});
- $$(".nox-lens").forEach(button=>button.addEventListener("click",()=>{
-  $$(".nox-lens").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});
+ $(".nox-lens").forEach(button=>button.addEventListener("click",()=>{
+  $(".nox-lens").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});
   filter=button.dataset.filter||"none";if(video)video.style.filter=filter;
   notice("تم تغيير تأثير الكاميرا");
  }));
+ let lensHoldTimer=null,lensHoldStarted=false,lensPointer=null;
+ $(".nox-lens").forEach(button=>{
+  button.addEventListener("pointerdown",event=>{
+   if(!stream)return;
+   lensPointer=event.pointerId;lensHoldStarted=false;
+   filter=button.dataset.filter||"none";if(video)video.style.filter=filter;
+   $(".nox-lens").forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});
+   lensHoldTimer=setTimeout(()=>{lensHoldStarted=true;if(record?.disabled)return notice("تعذر بدء تسجيل الفيديو.");record?.click();notice("بدأ تسجيل الفيديو — ارفع إصبعك للإيقاف.");},380);
+  });
+  const finishLensPress=event=>{
+   if(lensPointer!==event.pointerId)return;
+   clearTimeout(lensHoldTimer);lensHoldTimer=null;lensPointer=null;
+   if(lensHoldStarted){if(recorder?.state==="recording")record?.click();}
+   else if(stream)capture?.click();
+  };
+  button.addEventListener("pointerup",finishLensPress);
+  button.addEventListener("pointercancel",finishLensPress);
+  button.addEventListener("contextmenu",event=>event.preventDefault());
+ });
  $(".nox-ar-lens").forEach(button=>button.addEventListener("click",()=>enableFaceLens(button.dataset.arLens||"none")));
  $$(".nox-sticker-picker button").forEach(button=>button.addEventListener("click",()=>{
   sticker=button.dataset.sticker||"";$$(".nox-sticker-picker button").forEach(item=>item.classList.toggle("active",item===button));syncLiveOverlay();
