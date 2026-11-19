@@ -541,7 +541,7 @@ export function initCamera() {
       beautyState = "نشط — تم اكتشاف بشرة الوجه";
       beautyStatus.textContent =
         "نجح التقسيم الحقيقي: " + skin.pixelCount + " بكسل وجه / ثقة " +
-        Math.round(skin.confidence * 100) + "%. المناطق الدقيقة مثل الشفاه والجفون غير متاحة بهذا النموذج.";
+        Math.round(skin.confidence * 100) + "% متوسط احتمال فئة الوجه، وليس نسبة دقة مضمونة. المناطق الدقيقة مثل الشفاه والجفون غير متاحة بهذا النموذج.";
       beautyButton.textContent = "إعادة تحليل إطار";
     } catch (error) {
       beautyState = "غير متاح";
