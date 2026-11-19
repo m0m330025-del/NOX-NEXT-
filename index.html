@@ -93,7 +93,7 @@
         <div class="nox-camera-stage-column">
           <div class="nox-camera-stage" id="nox-camera-stage">
             <video id="nox-camera-video" autoplay playsinline muted hidden></video>
-            <div class="nox-camera-live-overlay" aria-hidden="true"><span class="nox-live-sticker" id="nox-live-sticker"></span><span class="nox-live-caption" id="nox-live-caption"></span></div>
+            <canvas id="nox-face-overlay" class="nox-face-overlay" aria-hidden="true"></canvas><div class="nox-camera-live-overlay" aria-hidden="true"><span class="nox-live-sticker" id="nox-live-sticker"></span><span class="nox-live-caption" id="nox-live-caption"></span></div>
             <div class="nox-camera-empty" id="nox-camera-empty"><span class="camera-aperture">◉</span><b>لحظتك تستحق إطارًا مميزًا</b><small>شغّل الكاميرا وابدأ الإبداع</small><button type="button" id="nox-camera-start" class="feature-primary">تشغيل الكاميرا</button></div>
             <div class="nox-recording-indicator" id="nox-recording-indicator" hidden><i></i> جارٍ التسجيل</div>
             <button type="button" class="nox-camera-flip" id="nox-camera-flip" aria-label="تبديل الكاميرا" title="تبديل الكاميرا" disabled>↻</button>
@@ -123,6 +123,19 @@
               <button type="button" class="nox-lens" data-filter="contrast(1.18) saturate(.82)" aria-pressed="false"><span>◇</span><b>سينمائي</b></button>
             </div>
             <p class="creator-tool-hint">تأثيرات لونية مباشرة على المعاينة والصورة الملتقطة.</p>
+          </section>
+          <section class="creator-tool-group">
+            <div class="creator-tool-heading"><h3>عدسات الوجه الذكية</h3><span>FACE AR</span></div>
+            <div class="nox-ar-lens-grid" role="group" aria-label="عدسات تتبع الوجه">
+              <button type="button" class="nox-ar-lens active" data-ar-lens="none" aria-pressed="true"><span>✕</span><b>بدون</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="glasses" aria-pressed="false"><span>🕶️</span><b>نظارة</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="crown" aria-pressed="false"><span>👑</span><b>تاج</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="cat" aria-pressed="false"><span>🐱</span><b>قطة</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="bunny" aria-pressed="false"><span>🐰</span><b>أرنب</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="sparkle" aria-pressed="false"><span>✨</span><b>بريق</b></button>
+              <button type="button" class="nox-ar-lens" data-ar-lens="beauty" aria-pressed="false"><span>💗</span><b>جمال</b></button>
+            </div>
+            <p class="creator-tool-hint" id="nox-face-hint">تتبع الوجه يعمل محليًا على جهازك بعد تحميل محرك العدسات لأول مرة.</p>
           </section>
           <section class="creator-tool-group">
             <div class="creator-tool-heading"><h3>الملصقات</h3></div>
