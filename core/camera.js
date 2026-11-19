@@ -1517,7 +1517,7 @@ export function initCamera() {
       return;
     }
     if (!stream || !video.videoWidth) return announce("انتظر حتى يظهر بث الكاميرا.");
-    if (!motionFreezeEnabled) {
+    if (!motionFreezeEnabled && scienceMode !== "lucky-frame") {
       capturePhotoNow();
       return;
     }
