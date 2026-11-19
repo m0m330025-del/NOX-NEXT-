@@ -6,6 +6,7 @@ export function initSocialUI() {
  $("#nox-id-search")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#nox-id-submit")?.click();});
  const video=$("#nox-camera-video"),empty=$("#nox-camera-empty"),start=$("#nox-camera-start"),stop=$("#nox-camera-stop"),capture=$("#nox-camera-capture");
  async function stopCamera(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(video){video.srcObject=null;video.hidden=true;video.style.filter="none";}if(empty)empty.hidden=false;if(start)start.disabled=false;if(stop)stop.disabled=true;if(capture)capture.disabled=true;}
+ window.addEventListener("nox:screenchange",event=>{if(event.detail?.from==="camera"&&event.detail?.to!=="camera")stopCamera();});
  start?.addEventListener("click",async()=>{if(!navigator.mediaDevices?.getUserMedia)return notice("الكاميرا غير مدعومة في هذا المتصفح أو الاتصال.");try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});video.srcObject=stream;video.style.filter=filter;video.hidden=false;empty.hidden=true;start.disabled=true;stop.disabled=false;capture.disabled=false;}catch(e){notice(e?.name==="NotAllowedError"?"لم يتم السماح للكاميرا. راجع إذن المتصفح.":"تعذر تشغيل الكاميرا على هذا الجهاز.");}});
  stop?.addEventListener("click",stopCamera);
  $$(".nox-filter").forEach(b=>b.addEventListener("click",()=>{$$(".nox-filter").forEach(x=>x.classList.toggle("active",x===b));filter=b.dataset.filter||"none";if(video)video.style.filter=filter;}));
