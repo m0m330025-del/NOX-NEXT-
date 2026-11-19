@@ -56,7 +56,9 @@ jobs:
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
             'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
-            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint', 'nox-stabilizer-toggle', 'nox-stabilizer-hint', 'nox-low-light-mode', 'nox-low-light-hint', 'nox-detail-recovery-mode', 'nox-detail-recovery-hint', 'nox-motion-freeze-toggle', 'nox-motion-freeze-cancel', 'nox-motion-freeze-hint', 'nox-wave-matter-mode', 'nox-wave-matter-hint', 'nox-science-mode', 'nox-science-hint'
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint', 'nox-stabilizer-toggle', 'nox-stabilizer-hint', 'nox-low-light-mode', 'nox-low-light-hint', 'nox-detail-recovery-mode', 'nox-detail-recovery-hint', 'nox-motion-freeze-toggle', 'nox-motion-freeze-cancel', 'nox-motion-freeze-hint', 'nox-wave-matter-mode', 'nox-wave-matter-hint', 'nox-science-mode', 'nox-science-hint',
+            'nox-photon-timeline-toggle', 'nox-photon-timeline-preview', 'nox-photon-timeline-scrub',
+            'nox-photon-timeline-best', 'nox-photon-timeline-save', 'nox-photon-timeline-clear', 'nox-photon-timeline-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -138,5 +140,9 @@ jobs:
             if (!js.includes(token)) throw new Error('Wave Matter optical-physics simulation missing: ' + token);
           }
           console.log('NOX Wave Matter thin-film, dispersion, and atmospheric-scattering shader paths verified');
+          for (const token of ['capturePhotonMoment', 'measurePhotonSharpness', 'getPhotonMotionEstimate', 'selectBestPhotonMoment', 'saveSelectedPhotonMoment', 'photonTimelineOrder', 'lowPower ? 192 : 256', 'lowPower ? 3 : 4', '220 : 150', 'nox-photon-timeline-scrub']) {
+            if (!js.includes(token)) throw new Error('NOX PHOTON TIME MACHINE timeline implementation missing: ' + token);
+          }
+          console.log('NOX PHOTON TIME MACHINE bounded timeline, moment scoring, and preview hooks verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
