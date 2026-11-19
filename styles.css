@@ -136,3 +136,15 @@ body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 .nox-camera-output video[hidden],
 .nox-download-link[hidden]{display:none!important}
 .nox-camera-stage.is-front>video{transform:scaleX(-1)}
+
+
+/* NOX Face AR lenses — tracked overlay, not fixed stickers */
+.nox-face-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:2;pointer-events:none;display:none}
+.nox-camera-stage.is-front .nox-face-overlay{transform:scaleX(-1)}
+.nox-lens-carousel,.nox-ar-lens-grid,.nox-sticker-picker{position:relative;z-index:3}
+.nox-ar-lens-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nox-ar-lens{min-width:0;min-height:72px;border:1px solid #e7dfff;border-radius:14px;background:#faf8ff;color:#4e2c9d;padding:8px 4px;display:grid;justify-items:center;align-content:center;gap:4px;cursor:pointer}
+.nox-ar-lens>span{font-size:24px;line-height:1.2}
+.nox-ar-lens b{font-size:10px}
+.nox-ar-lens.active{border-color:#9c35f1;background:linear-gradient(145deg,#f4eaff,#fff);box-shadow:0 0 0 2px #9c35f122}
+@media(max-width:760px){.nox-ar-lens-grid{display:flex;overflow-x:auto;scrollbar-width:none;padding:2px 1px 7px}.nox-ar-lens-grid::-webkit-scrollbar{display:none}.nox-ar-lens{flex:0 0 76px}}
