@@ -557,6 +557,11 @@ export function initCamera() {
     regionFollowEnabled = Boolean(enabled);
     regionFollowLastSequence = opticalFlowSequence;
     regionFollowVectorCount = 0;
+    if (regionFollowEnabled && opticalFlowMode === "off") {
+      const flowSelect = $("#nox-flow-mode");
+      if (flowSelect) flowSelect.value = "vectors";
+      setOpticalFlowMode("vectors");
+    }
     const button = $("#nox-region-follow-toggle");
     if (button) {
       button.setAttribute("aria-pressed", String(regionFollowEnabled));
