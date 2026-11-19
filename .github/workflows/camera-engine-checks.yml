@@ -1,0 +1,64 @@
+name: NOX Camera Engine Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/camera.js"
+      - "app.js"
+      - "index.html"
+      - "camera.css"
+      - ".github/workflows/camera-engine-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/camera.js"
+      - "app.js"
+      - "index.html"
+      - "camera.css"
+      - ".github/workflows/camera-engine-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-and-markup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check browser module syntax
+        run: |
+          cp core/camera.js /tmp/camera.mjs
+          cp app.js /tmp/app.mjs
+          node --check /tmp/camera.mjs
+          node --check /tmp/app.mjs
+      - name: Check camera markup hooks
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('core/camera.js', 'utf8');
+          const required = [
+            'nox-camera-video', 'nox-camera-stage', 'nox-camera-start',
+            'nox-camera-state', 'nox-camera-status', 'nox-camera-flip',
+            'nox-camera-stop', 'nox-camera-capture', 'nox-camera-record',
+            'nox-camera-render', 'nox-lens-orbit', 'nox-lens-track',
+            'nox-camera-caption', 'nox-camera-file', 'nox-camera-result',
+            'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save'
+          ];
+          const missing = required.filter(id => !html.includes('id="' + id + '"'));
+          if (missing.length) {
+            console.error('Missing camera elements:', missing.join(', '));
+            process.exit(1);
+          }
+          for (const id of required) {
+            if (!js.includes('#' + id)) {
+              console.error('Camera module does not reference expected element:', id);
+              process.exit(1);
+            }
+          }
+          console.log('Camera markup hooks present:', required.length);
+          NODE
