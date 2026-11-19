@@ -27,6 +27,8 @@ uniform float u_mode;
 uniform float u_time;
 uniform float u_mirror;
 uniform float u_variant;
+uniform float u_lowLight;
+uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
   if (u_mirror > 0.5) uv.x = 1.0 - uv.x;
@@ -93,6 +95,29 @@ void main() {
       c = mix(c, vec3(wave, 0.25 + 0.65 * (1.0-wave), 0.72), 0.12 + v * 0.22);
       c = clamp(c * (1.04 + v * 0.14), 0.0, 1.0);
     }
+  }
+  if (u_lowLight > 0.5) {
+    float lum = dot(c, vec3(0.299, 0.587, 0.114));
+    float darkMask = 1.0 - smoothstep(0.08, 0.52, lum);
+    float strength = u_lowLight > 1.5 ? 1.0 : 0.58;
+    float lift = darkMask * strength * 0.22;
+    c = c + (vec3(1.0) - c) * lift;
+    c = pow(max(c, vec3(0.0)), vec3(1.0 - darkMask * strength * 0.16));
+    vec3 n1 = texture2D(u_image, uv + vec2(u_texel.x, 0.0)).rgb;
+    vec3 n2 = texture2D(u_image, uv - vec2(u_texel.x, 0.0)).rgb;
+    vec3 n3 = texture2D(u_image, uv + vec2(0.0, u_texel.y)).rgb;
+    vec3 n4 = texture2D(u_image, uv - vec2(0.0, u_texel.y)).rgb;
+    float edge1 = abs(dot(n1 - color.rgb, vec3(0.299,0.587,0.114)));
+    float edge2 = abs(dot(n2 - color.rgb, vec3(0.299,0.587,0.114)));
+    float edge3 = abs(dot(n3 - color.rgb, vec3(0.299,0.587,0.114)));
+    float edge4 = abs(dot(n4 - color.rgb, vec3(0.299,0.587,0.114)));
+    float w1 = 1.0 - smoothstep(0.025, 0.16, edge1);
+    float w2 = 1.0 - smoothstep(0.025, 0.16, edge2);
+    float w3 = 1.0 - smoothstep(0.025, 0.16, edge3);
+    float w4 = 1.0 - smoothstep(0.025, 0.16, edge4);
+    vec3 soft = (color.rgb + n1*w1 + n2*w2 + n3*w3 + n4*w4) / (1.0 + w1 + w2 + w3 + w4);
+    c = mix(c, soft, darkMask * strength * 0.24);
+    c = mix(vec3(dot(c, vec3(0.299,0.587,0.114))), c, 1.0 - darkMask * strength * 0.10);
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -193,6 +218,7 @@ export function initCamera() {
   let stabilizationOffset = { x: 0, y: 0 };
   let stabilizationTarget = { x: 0, y: 0 };
   let stabilizationConfidence = 0;
+  let lowLightMode = "off";
 
   const supported = {
     secure: window.isSecureContext,
@@ -288,7 +314,9 @@ export function initCamera() {
       mode: gl.getUniformLocation(program, "u_mode"),
       mirror: gl.getUniformLocation(program, "u_mirror"),
       variant: gl.getUniformLocation(program, "u_variant"),
-      time: gl.getUniformLocation(program, "u_time")
+      time: gl.getUniformLocation(program, "u_time"),
+      lowLight: gl.getUniformLocation(program, "u_lowLight"),
+      texel: gl.getUniformLocation(program, "u_texel")
     };
   }
 
@@ -777,6 +805,20 @@ export function initCamera() {
     if (stream) renderFrame(false);
   }
 
+  function setLowLightMode(mode) {
+    lowLightMode = mode === "strong" || mode === "gentle" ? mode : "off";
+    const control = $("#nox-low-light-mode");
+    if (control) control.value = lowLightMode;
+    const hint = $("#nox-low-light-hint");
+    if (hint) hint.textContent = lowLightMode === "strong"
+      ? "إنقاذ قوي: رفع الظلال وتنعيم مكاني خفيف — قد يقلل التفاصيل الدقيقة"
+      : lowLightMode === "gentle"
+        ? "إنقاذ متوازن: رفع محدود للظلال مع حماية نسبية للحواف"
+        : "متوقف — الصورة الأصلية دون رفع إضاءة أو تنعيم";
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  }
+
   function resetCameraStabilization() {
     stabilizationOffset = { x: 0, y: 0 };
     stabilizationTarget = { x: 0, y: 0 };
@@ -891,7 +933,9 @@ export function initCamera() {
       if (!ctx) return;
       const filters = ["none", "brightness(1.08) saturate(1.1)", "sepia(.18) saturate(1.12)", "hue-rotate(145deg) saturate(1.2)", "saturate(1.45) contrast(1.04)", "sepia(.42) contrast(1.05)", "grayscale(1) contrast(1.08)"];
       ctx.save();
-      ctx.filter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
+      const baseFilter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
+      const lowLightFilter = lowLightMode === "strong" ? "brightness(1.28) contrast(1.08) saturate(1.04)" : lowLightMode === "gentle" ? "brightness(1.14) contrast(1.04) saturate(1.02)" : "none";
+      ctx.filter = baseFilter === "none" ? lowLightFilter : baseFilter + " " + lowLightFilter;
       drawStabilizedSource(ctx, video, outWidth, outHeight, facing === "user");
       ctx.restore();
       renderMode = "Canvas 2D";
@@ -978,6 +1022,7 @@ export function initCamera() {
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
       ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
       ["NOX Smart Stabilizer", cameraStabilizationEnabled ? "تثبيت إلكتروني نشط — ثقة " + Math.round(stabilizationConfidence * 100) + "% / إزاحة " + (stabilizationOffset.x * 100).toFixed(1) + "%, " + (stabilizationOffset.y * 100).toFixed(1) + "%" : "متوقف"],
+      ["NOX Low-Light Rescue", lowLightMode === "off" ? "متوقف" : lowLightMode === "gentle" ? "إنقاذ متوازن" : "إنقاذ قوي"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -1226,6 +1271,7 @@ export function initCamera() {
   $("#nox-subject-lock-toggle")?.addEventListener("click", () => setSubjectLockEnabled(!subjectLockEnabled));
   $("#nox-motion-prediction-toggle")?.addEventListener("click", () => setMotionPredictionEnabled(!motionPredictionEnabled));
   $("#nox-stabilizer-toggle")?.addEventListener("click", () => setCameraStabilizationEnabled(!cameraStabilizationEnabled));
+  $("#nox-low-light-mode")?.addEventListener("change", (event) => setLowLightMode(event.target.value));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
