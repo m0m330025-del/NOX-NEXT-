@@ -39,6 +39,7 @@ export function initApp() {
   });
 
   document.querySelectorAll('[data-action="demo-notice"]').forEach(button => {
+    if (button.closest(".composer")) return;
     button.addEventListener("click", () => {
       showNotice("هذه الخاصية واجهة تجريبية وستُفعّل في مرحلة لاحقة");
     });

@@ -1,11 +1,17 @@
-const SCREEN_KEYS = new Set(["home","messages","camera","stories","reels"]);
+const SCREEN_KEYS = new Set(["home","messages","camera","stories","reels","discover","friends-view","notifications","saved","gifts","settings"]);
 const HASH_TO_SCREEN = {
   "#home":"home",
   "#friends":"home",
   "#messages":"messages",
   "#camera":"camera",
   "#stories-view":"stories",
-  "#reels":"reels"
+  "#reels":"reels",
+  "#discover":"discover",
+  "#friends-view":"friends-view",
+  "#notifications":"notifications",
+  "#saved":"saved",
+  "#gifts":"gifts",
+  "#settings":"settings"
 };
 
 export function initNavigation() {
