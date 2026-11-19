@@ -155,7 +155,18 @@ export function initCamera() {
   let disposed = false;
   let livingMetalEnabled = false;
   let livingMetalRegion = null;
+  let regionMaskEnabled = false;
+  let regionMaskDrawing = false;
+  let regionMaskStart = null;
+  let regionMaskPreview = null;
   let livingMetalPhase = 0;
+  let temporalMode = "off";
+  let temporalBuffers = [];
+  let temporalWriteIndex = 0;
+  let temporalFrameCount = 0;
+  let temporalLastCaptureAt = 0;
+  let temporalSampleWidth = 0;
+  let temporalSampleHeight = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -298,6 +309,84 @@ export function initCamera() {
     overlay.style.width = (region.width * 100) + "%";
     overlay.style.height = (region.height * 100) + "%";
   }
+  
+  function resetTemporalMemory() {
+    temporalBuffers.forEach((buffer) => {
+      buffer.canvas.width = 1;
+      buffer.canvas.height = 1;
+    });
+    temporalBuffers = [];
+    temporalWriteIndex = 0;
+    temporalFrameCount = 0;
+    temporalLastCaptureAt = 0;
+    temporalSampleWidth = 0;
+    temporalSampleHeight = 0;
+  }
+
+  function ensureTemporalMemory(width, height) {
+    const maxSide = lowPower ? 160 : 224;
+    const scale = Math.min(1, maxSide / Math.max(width, height));
+    const sampleWidth = Math.max(1, Math.round(width * scale));
+    const sampleHeight = Math.max(1, Math.round(height * scale));
+    const bufferCount = lowPower ? 3 : 4;
+    if (sampleWidth === temporalSampleWidth && sampleHeight === temporalSampleHeight && temporalBuffers.length === bufferCount) return;
+    resetTemporalMemory();
+    temporalSampleWidth = sampleWidth;
+    temporalSampleHeight = sampleHeight;
+    temporalBuffers = Array.from({ length: bufferCount }, () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = sampleWidth;
+      canvas.height = sampleHeight;
+      return { canvas, context: canvas.getContext("2d", { alpha: false }) };
+    }).filter((buffer) => buffer.context);
+  }
+
+  function renderTemporalMemory(ctx, width, height) {
+    if (!ctx || !width || !height) return;
+    ensureTemporalMemory(width, height);
+    if (!temporalBuffers.length) return;
+    const now = performance.now();
+    const interval = lowPower ? 180 : 120;
+    let capturedCurrent = false;
+    if (!temporalLastCaptureAt || now - temporalLastCaptureAt >= interval) {
+      const buffer = temporalBuffers[temporalWriteIndex];
+      buffer.context.drawImage(renderCanvas, 0, 0, temporalSampleWidth, temporalSampleHeight);
+      temporalWriteIndex = (temporalWriteIndex + 1) % temporalBuffers.length;
+      temporalFrameCount = Math.min(temporalFrameCount + 1, temporalBuffers.length);
+      temporalLastCaptureAt = now;
+      capturedCurrent = true;
+    }
+    if (temporalMode === "off" || temporalFrameCount < 2) return;
+    const firstAge = capturedCurrent ? 2 : 1;
+    if (temporalFrameCount < firstAge) return;
+    ctx.save();
+    ctx.globalCompositeOperation = temporalMode === "motion-trace" ? "screen" : "source-over";
+    for (let age = temporalFrameCount; age >= firstAge; age -= 1) {
+      const index = (temporalWriteIndex - age + temporalBuffers.length) % temporalBuffers.length;
+      const buffer = temporalBuffers[index];
+      const strength = temporalMode === "motion-trace"
+        ? 0.08 + ((temporalFrameCount - age) * 0.025)
+        : 0.12 + ((temporalFrameCount - age) * 0.035);
+      ctx.globalAlpha = strength;
+      const offset = temporalMode === "time-echo" ? (temporalFrameCount - age + 1) * width * 0.004 : 0;
+      ctx.drawImage(buffer.canvas, offset, 0, width, height);
+    }
+    ctx.restore();
+  }
+
+  function setTemporalMode(mode) {
+    temporalMode = ["off", "motion-trace", "time-echo"].includes(mode) ? mode : "off";
+    resetTemporalMemory();
+    const hint = $("#nox-temporal-hint");
+    if (hint) hint.textContent = temporalMode === "off"
+      ? "الذاكرة الزمنية متوقفة"
+      : temporalMode === "motion-trace"
+        ? "Motion Trace: يدمج آثارًا خفيفة من الإطارات السابقة"
+        : "Time Echo: يضيف صدى بصريًا قصيرًا من الإطارات السابقة";
+    announce(temporalMode === "off" ? "تم إيقاف الذاكرة الزمنية" : "تم تفعيل " + (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — انتظر لحظات لامتلاء الذاكرة", Boolean(stream));
+    updateDiagnostics();
+    if (stream) renderFrame(false);
+  }
 
   function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
@@ -362,7 +451,10 @@ export function initCamera() {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
     const outputContext = renderCanvas.getContext("2d");
-    if (outputContext) drawLivingMetal(outputContext, outWidth, outHeight);
+    if (outputContext) {
+      drawLivingMetal(outputContext, outWidth, outHeight);
+      renderTemporalMemory(outputContext, outWidth, outHeight);
+    }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
     lastRenderedAt = performance.now();
@@ -423,7 +515,8 @@ export function initCamera() {
       ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
-      ["مؤثرات الزمن", "تدرجات shader لحظية؛ لا يوجد مخزن إطارات زمني بعد"],
+      ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
+      ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
@@ -462,6 +555,7 @@ export function initCamera() {
     fpsWindowStart = 0;
     fpsWindowFrames = 0;
     qualityTier = lowPower ? 1 : 0;
+    resetTemporalMemory();
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -492,6 +586,7 @@ export function initCamera() {
       measuredFps = 0;
       fpsWindowStart = 0;
       fpsWindowFrames = 0;
+      resetTemporalMemory();
       const base = lowPower
         ? { width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
         : { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 30, max: 30 } };
@@ -648,6 +743,13 @@ export function initCamera() {
     regionMaskStart = null;
     if (stream) renderFrame(false);
     announce("تم مسح قناع المنطقة", Boolean(stream));
+    updateDiagnostics();
+  });
+
+  $("#nox-temporal-mode")?.addEventListener("change", (event) => setTemporalMode(event.target.value));
+  $("#nox-temporal-clear")?.addEventListener("click", () => {
+    resetTemporalMemory();
+    announce("تم مسح الذاكرة الزمنية", Boolean(stream));
     updateDiagnostics();
   });
 
