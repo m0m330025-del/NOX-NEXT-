@@ -101,7 +101,7 @@ export function initCamera() {
     getUserMedia: Boolean(navigator.mediaDevices?.getUserMedia),
     mediaRecorder: typeof window.MediaRecorder === "function",
     canvasCapture: typeof HTMLCanvasElement.prototype.captureStream === "function",
-    webgl: Boolean(renderCanvas.getContext("webgl", { alpha: false, antialias: false })),
+    webgl: Boolean(document.createElement("canvas").getContext("webgl", { alpha: false, antialias: false })),
     faceDetector: typeof window.FaceDetector === "function"
   };
 
@@ -151,7 +151,8 @@ export function initCamera() {
   }
 
   function createRenderer() {
-    const gl = renderCanvas.getContext("webgl", {
+    const glCanvas = document.createElement("canvas");
+    const gl = glCanvas.getContext("webgl", {
       alpha: false, antialias: false, depth: false, stencil: false,
       preserveDrawingBuffer: false, powerPreference: "low-power"
     });
@@ -185,7 +186,7 @@ export function initCamera() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     return {
-      gl, program, texture,
+      gl, canvas: glCanvas, program, texture,
       mode: gl.getUniformLocation(program, "u_mode"),
       mirror: gl.getUniformLocation(program, "u_mirror")
     };
@@ -205,7 +206,9 @@ export function initCamera() {
       renderCanvas.height = outHeight;
     }
     if (renderer) {
-      const { gl, texture } = renderer;
+      const { gl, canvas: glCanvas, texture } = renderer;
+      glCanvas.width = outWidth;
+      glCanvas.height = outHeight;
       gl.viewport(0, 0, outWidth, outHeight);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -216,6 +219,9 @@ export function initCamera() {
         gl.uniform1f(renderer.mode, LENSES[selectedLens].mode);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
+        const outputContext = renderCanvas.getContext("2d");
+        outputContext.clearRect(0, 0, outWidth, outHeight);
+        outputContext.drawImage(glCanvas, 0, 0, outWidth, outHeight);
       } catch {
         renderer = null;
         renderMode = "Canvas 2D احتياطي";
