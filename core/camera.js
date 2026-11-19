@@ -323,6 +323,9 @@ export function initCamera() {
   let photonFusionCanvas = null;
   let photonFusionReferenceIndex = -1;
   let photonFusionTilesUsed = 0;
+  let photonConfidenceCanvas = null;
+  let photonConfidenceReferenceIndex = -1;
+  let photonConfidenceCounts = { corroborated: 0, single: 0, uncertain: 0 };
 
   const supported = {
     secure: window.isSecureContext,
@@ -485,7 +488,18 @@ export function initCamera() {
   }
 
 
+  function clearPhotonConfidenceMap() {
+    if (photonConfidenceCanvas) {
+      photonConfidenceCanvas.width = 1;
+      photonConfidenceCanvas.height = 1;
+    }
+    photonConfidenceCanvas = null;
+    photonConfidenceReferenceIndex = -1;
+    photonConfidenceCounts = { corroborated: 0, single: 0, uncertain: 0 };
+  }
+
   function clearPhotonDetailFusion() {
+    clearPhotonConfidenceMap();
     if (photonFusionCanvas) {
       photonFusionCanvas.width = 1;
       photonFusionCanvas.height = 1;
@@ -755,6 +769,98 @@ export function initCamera() {
     }
   }
 
+  function buildPhotonConfidenceMap() {
+    if (photonTimelineOrder.length < 2 || photonTimelineSelectedIndex < 0) {
+      announce("يلزم وجود عينتين على الأقل لبناء خريطة الثقة", Boolean(stream));
+      return;
+    }
+    const referenceSlotIndex = photonTimelineOrder[photonTimelineSelectedIndex];
+    const referenceSlot = photonTimelineSlots[referenceSlotIndex];
+    if (!referenceSlot?.meta?.alignmentValid) {
+      announce("العينة المرجعية لا تملك محاذاة موثوقة؛ اختر عينة أخرى", Boolean(stream));
+      return;
+    }
+    const width = referenceSlot.canvas.width;
+    const height = referenceSlot.canvas.height;
+    const scratch = [];
+    try {
+      for (const slotIndex of photonTimelineOrder) {
+        const slot = photonTimelineSlots[slotIndex];
+        if (!slot?.meta?.alignmentValid) continue;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+        if (!context) continue;
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, width, height);
+        drawAlignedPhotonSlot(context, slot, width, height);
+        scratch.push({ slot, canvas, context });
+      }
+      const reference = scratch.find(item => item.slot === referenceSlot);
+      if (!reference || scratch.length < 2) {
+        announce("لا توجد عينات كافية بمحاذاة موثوقة لبناء الخريطة", Boolean(stream));
+        scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+        return;
+      }
+      const pixels = scratch.map(item => ({
+        ...item,
+        data: item.context.getImageData(0, 0, width, height).data
+      }));
+      const base = pixels.find(item => item.slot === referenceSlot).data;
+      const map = document.createElement("canvas");
+      map.width = width;
+      map.height = height;
+      const context = map.getContext("2d");
+      if (!context) throw new Error("confidence map context unavailable");
+      const tileSize = 24;
+      const margin = Math.ceil(Math.max(...pixels.map(item =>
+        Math.max(Math.abs(item.slot.meta.alignmentX), Math.abs(item.slot.meta.alignmentY))
+      ))) + 2;
+      const counts = { corroborated: 0, single: 0, uncertain: 0 };
+      const lum = (data, x, y) => {
+        const p = (y * width + x) * 4;
+        return (data[p] * 77 + data[p + 1] * 150 + data[p + 2] * 29) / 256;
+      };
+      for (let y = margin; y + tileSize <= height - margin; y += tileSize) {
+        for (let x = margin; x + tileSize <= width - margin; x += tileSize) {
+          let agreeing = 0;
+          for (const candidate of pixels) {
+            if (candidate.slot === referenceSlot) continue;
+            let difference = 0;
+            let samples = 0;
+            for (let py = y; py < y + tileSize; py += 3) {
+              for (let px = x; px < x + tileSize; px += 3) {
+                difference += Math.abs(lum(base, px, py) - lum(candidate.data, px, py));
+                samples += 1;
+              }
+            }
+            if (samples && difference / samples <= 14) agreeing += 1;
+          }
+          const category = agreeing >= 2 ? "corroborated" : agreeing === 1 ? "single" : "uncertain";
+          counts[category] += 1;
+          context.fillStyle = category === "corroborated"
+            ? "rgba(34, 197, 94, 0.48)"
+            : category === "single"
+              ? "rgba(245, 185, 45, 0.52)"
+              : "rgba(239, 68, 68, 0.48)";
+          context.fillRect(x, y, tileSize, tileSize);
+        }
+      }
+      clearPhotonConfidenceMap();
+      photonConfidenceCanvas = map;
+      photonConfidenceReferenceIndex = referenceSlotIndex;
+      photonConfidenceCounts = counts;
+      scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      updatePhotonTimelineUI();
+      announce("خريطة الثقة جاهزة: " + counts.corroborated + " مناطق مدعومة، " +
+        counts.single + " بعينة واحدة، و" + counts.uncertain + " غير مؤكدة", Boolean(stream));
+    } catch {
+      scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      announce("تعذر بناء خريطة الثقة؛ العينات الأصلية لم تتغير", Boolean(stream));
+    }
+  }
+
   function updatePhotonTimelineUI() {
     const toggle = $("#nox-photon-timeline-toggle");
     const scrub = $("#nox-photon-timeline-scrub");
@@ -764,6 +870,9 @@ export function initCamera() {
     const saveButton = $("#nox-photon-timeline-save");
     const fusionButton = $("#nox-photon-fusion-build");
     const fusionSaveButton = $("#nox-photon-fusion-save");
+    const confidenceButton = $("#nox-photon-confidence-build");
+    const confidenceCanvas = $("#nox-photon-confidence-map");
+    const confidenceHint = $("#nox-photon-confidence-hint");
     const hasFrames = photonTimelineOrder.length > 0;
     if (toggle) {
       toggle.setAttribute("aria-pressed", String(photonTimelineEnabled));
@@ -779,6 +888,8 @@ export function initCamera() {
       ? photonTimelineSlots[photonTimelineOrder[Math.min(photonTimelineSelectedIndex, photonTimelineOrder.length - 1)]]
       : null;
     const hasFusion = Boolean(photonFusionCanvas && photonFusionReferenceIndex ===
+      (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
+    const hasConfidence = Boolean(photonConfidenceCanvas && photonConfidenceReferenceIndex ===
       (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
     if (preview && selectedSlot?.meta) {
       if (preview.width !== selectedSlot.canvas.width || preview.height !== selectedSlot.canvas.height) {
@@ -799,6 +910,25 @@ export function initCamera() {
     if (saveButton) saveButton.disabled = !selectedSlot?.meta;
     if (fusionButton) fusionButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
     if (fusionSaveButton) fusionSaveButton.disabled = !hasFusion;
+    if (confidenceButton) confidenceButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
+    if (confidenceCanvas) {
+      if (hasConfidence) {
+        if (confidenceCanvas.width !== photonConfidenceCanvas.width || confidenceCanvas.height !== photonConfidenceCanvas.height) {
+          confidenceCanvas.width = photonConfidenceCanvas.width;
+          confidenceCanvas.height = photonConfidenceCanvas.height;
+        }
+        const confidenceContext = confidenceCanvas.getContext("2d");
+        if (confidenceContext) confidenceContext.drawImage(photonConfidenceCanvas, 0, 0);
+      } else {
+        const confidenceContext = confidenceCanvas.getContext("2d");
+        if (confidenceContext) confidenceContext.clearRect(0, 0, confidenceCanvas.width, confidenceCanvas.height);
+      }
+    }
+    if (confidenceHint) confidenceHint.textContent = hasConfidence
+      ? "مدعومة بإطارين إضافيين: " + photonConfidenceCounts.corroborated +
+        " — عينة واحدة: " + photonConfidenceCounts.single +
+        " — غير مؤكدة: " + photonConfidenceCounts.uncertain
+      : "الخريطة تقدير بصري محلي وليست قياسًا إحصائيًا أو ضمانًا لصحة التفاصيل";
     if (hint) {
       if (!photonTimelineEnabled) {
         hint.textContent = "المحرك متوقف — شغّله لتسجيل تسلسل زمني قصير من إطارات الكاميرا";
@@ -1991,6 +2121,7 @@ export function initCamera() {
   });
   $("#nox-photon-fusion-build")?.addEventListener("click", buildPhotonDetailFusion);
   $("#nox-photon-fusion-save")?.addEventListener("click", savePhotonDetailFusion);
+  $("#nox-photon-confidence-build")?.addEventListener("click", buildPhotonConfidenceMap);
   $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
     resetPhotonTimeline();
     announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
