@@ -320,6 +320,9 @@ export function initCamera() {
   let photonTimelineSelectionManual = false;
   let photonTimelineSessionStart = 0;
   let photonTimelineSequence = 0;
+  let photonFusionCanvas = null;
+  let photonFusionReferenceIndex = -1;
+  let photonFusionTilesUsed = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -482,7 +485,18 @@ export function initCamera() {
   }
 
 
+  function clearPhotonDetailFusion() {
+    if (photonFusionCanvas) {
+      photonFusionCanvas.width = 1;
+      photonFusionCanvas.height = 1;
+    }
+    photonFusionCanvas = null;
+    photonFusionReferenceIndex = -1;
+    photonFusionTilesUsed = 0;
+  }
+
   function resetPhotonTimeline() {
+    clearPhotonDetailFusion();
     photonTimelineSlots.forEach((slot) => {
       slot.canvas.width = 1;
       slot.canvas.height = 1;
@@ -628,6 +642,119 @@ export function initCamera() {
     context.drawImage(slot.canvas, dx, dy, width, height);
   }
 
+  function buildPhotonDetailFusion() {
+    if (photonTimelineOrder.length < 2 || photonTimelineSelectedIndex < 0) {
+      announce("يلزم وجود عينتين على الأقل لبناء دمج التفاصيل", Boolean(stream));
+      return;
+    }
+    const referenceSlotIndex = photonTimelineOrder[photonTimelineSelectedIndex];
+    const referenceSlot = photonTimelineSlots[referenceSlotIndex];
+    if (!referenceSlot?.meta || !referenceSlot.meta.alignmentValid) {
+      announce("العينة المرجعية لا تملك محاذاة موثوقة؛ اختر عينة أخرى", Boolean(stream));
+      return;
+    }
+    const width = referenceSlot.canvas.width;
+    const height = referenceSlot.canvas.height;
+    const scratchSlots = [];
+    try {
+      for (const slotIndex of photonTimelineOrder) {
+        const slot = photonTimelineSlots[slotIndex];
+        if (!slot?.meta?.alignmentValid) continue;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+        if (!context) continue;
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, width, height);
+        drawAlignedPhotonSlot(context, slot, width, height);
+        scratchSlots.push({ slot, canvas, context });
+      }
+      const reference = scratchSlots.find(item => item.slot === referenceSlot);
+      if (!reference || scratchSlots.length < 2) {
+        announce("لا توجد عينات كافية بمحاذاة موثوقة للدمج", Boolean(stream));
+        scratchSlots.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+        return;
+      }
+      const referencePixels = reference.context.getImageData(0, 0, width, height).data;
+      const candidatePixels = scratchSlots.map(item => ({
+        ...item,
+        pixels: item.context.getImageData(0, 0, width, height).data
+      }));
+      const fusion = document.createElement("canvas");
+      fusion.width = width;
+      fusion.height = height;
+      const fusionContext = fusion.getContext("2d");
+      if (!fusionContext) throw new Error("fusion context unavailable");
+      fusionContext.drawImage(reference.canvas, 0, 0);
+      const tileSize = 24;
+      const maxOffset = Math.max(
+        ...candidatePixels.map(item => Math.max(Math.abs(item.slot.meta.alignmentX), Math.abs(item.slot.meta.alignmentY)))
+      );
+      const safeMargin = Math.ceil(maxOffset) + 2;
+      let tilesUsed = 0;
+      const luminance = (pixels, x, y) => {
+        const p = (y * width + x) * 4;
+        return (pixels[p] * 77 + pixels[p + 1] * 150 + pixels[p + 2] * 29) / 256;
+      };
+      const tileSharpness = (pixels, x0, y0, tw, th) => {
+        let total = 0;
+        let count = 0;
+        for (let y = y0 + 1; y < y0 + th - 1; y += 2) {
+          for (let x = x0 + 1; x < x0 + tw - 1; x += 2) {
+            const center = luminance(pixels, x, y);
+            total += Math.abs(4 * center - luminance(pixels, x - 1, y) -
+              luminance(pixels, x + 1, y) - luminance(pixels, x, y - 1) -
+              luminance(pixels, x, y + 1));
+            count += 1;
+          }
+        }
+        return count ? total / count : 0;
+      };
+      for (let y = safeMargin; y + tileSize <= height - safeMargin; y += tileSize) {
+        for (let x = safeMargin; x + tileSize <= width - safeMargin; x += tileSize) {
+          const baseSharpness = tileSharpness(referencePixels, x, y, tileSize, tileSize);
+          let best = null;
+          let bestSharpness = baseSharpness;
+          for (const candidate of candidatePixels) {
+            if (candidate.slot === referenceSlot) continue;
+            let difference = 0;
+            let count = 0;
+            for (let py = y; py < y + tileSize; py += 2) {
+              for (let px = x; px < x + tileSize; px += 2) {
+                difference += Math.abs(luminance(referencePixels, px, py) -
+                  luminance(candidate.pixels, px, py));
+                count += 1;
+              }
+            }
+            const meanDifference = count ? difference / count : Infinity;
+            if (meanDifference > 14) continue;
+            const sharpness = tileSharpness(candidate.pixels, x, y, tileSize, tileSize);
+            if (sharpness > bestSharpness * 1.12 && sharpness > bestSharpness + 1.5) {
+              best = candidate;
+              bestSharpness = sharpness;
+            }
+          }
+          if (best) {
+            fusionContext.drawImage(best.canvas, x, y, tileSize, tileSize,
+              x, y, tileSize, tileSize);
+            tilesUsed += 1;
+          }
+        }
+      }
+      clearPhotonDetailFusion();
+      photonFusionCanvas = fusion;
+      photonFusionReferenceIndex = referenceSlotIndex;
+      photonFusionTilesUsed = tilesUsed;
+      scratchSlots.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      updatePhotonTimelineUI();
+      announce("اكتمل دمج التفاصيل المحافظ: " + tilesUsed + " منطقة محسّنة من عينات متقاربة بصريًا", Boolean(stream));
+    } catch {
+      scratchSlots.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      announce("تعذر بناء معاينة الدمج؛ بقيت العينات الأصلية دون تغيير", Boolean(stream));
+    }
+  }
+
   function updatePhotonTimelineUI() {
     const toggle = $("#nox-photon-timeline-toggle");
     const scrub = $("#nox-photon-timeline-scrub");
@@ -635,6 +762,8 @@ export function initCamera() {
     const hint = $("#nox-photon-timeline-hint");
     const bestButton = $("#nox-photon-timeline-best");
     const saveButton = $("#nox-photon-timeline-save");
+    const fusionButton = $("#nox-photon-fusion-build");
+    const fusionSaveButton = $("#nox-photon-fusion-save");
     const hasFrames = photonTimelineOrder.length > 0;
     if (toggle) {
       toggle.setAttribute("aria-pressed", String(photonTimelineEnabled));
@@ -657,7 +786,8 @@ export function initCamera() {
       const context = preview.getContext("2d");
       if (context) {
         context.clearRect(0, 0, preview.width, preview.height);
-        drawAlignedPhotonSlot(context, selectedSlot, preview.width, preview.height);
+        if (hasFusion) context.drawImage(photonFusionCanvas, 0, 0, preview.width, preview.height);
+        else drawAlignedPhotonSlot(context, selectedSlot, preview.width, preview.height);
       }
     } else if (preview) {
       const context = preview.getContext("2d");
@@ -665,6 +795,10 @@ export function initCamera() {
     }
     if (bestButton) bestButton.disabled = !hasFrames;
     if (saveButton) saveButton.disabled = !selectedSlot?.meta;
+    const hasFusion = Boolean(photonFusionCanvas && photonFusionReferenceIndex ===
+      (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
+    if (fusionButton) fusionButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
+    if (fusionSaveButton) fusionSaveButton.disabled = !hasFusion;
     if (hint) {
       if (!photonTimelineEnabled) {
         hint.textContent = "المحرك متوقف — شغّله لتسجيل تسلسل زمني قصير من إطارات الكاميرا";
@@ -678,6 +812,7 @@ export function initCamera() {
           " — +" + elapsed + "ث — حدة محلية " + meta.sharpness.toFixed(1) +
           " — " + motion +
           (meta.alignmentValid ? " — محاذاة عامة " + (meta.alignmentConfidence * 100).toFixed(0) + "%" : " — دون محاذاة موثوقة") +
+          (hasFusion ? " — دمج محافظ: " + photonFusionTilesUsed + " منطقة" : "") +
           " — معاينة منخفضة الدقة";
       }
     }
@@ -694,6 +829,7 @@ export function initCamera() {
     const sampleWidth = slot.canvas.width;
     const sampleHeight = slot.canvas.height;
     try {
+      clearPhotonDetailFusion();
       slot.context.drawImage(source, 0, 0, sampleWidth, sampleHeight);
       const sharpness = measurePhotonSharpness(slot.context, sampleWidth, sampleHeight);
       const motion = getPhotonMotionEstimate();
@@ -780,6 +916,15 @@ export function initCamera() {
       showBlob(blob, "image", "nox-photon-moment-aligned-preview.jpg");
       announce("تم تجهيز معاينة منخفضة الدقة بعد المحاذاة العامة؛ الأصل الكامل لم يتغير.");
     }, "image/jpeg", 0.9);
+  }
+
+  function savePhotonDetailFusion() {
+    if (!photonFusionCanvas || photonFusionReferenceIndex < 0) return;
+    photonFusionCanvas.toBlob((blob) => {
+      if (!blob) return announce("تعذر حفظ معاينة دمج التفاصيل.");
+      showBlob(blob, "image", "nox-temporal-detail-fusion-preview.jpg");
+      announce("تم حفظ معاينة دمج منخفضة الدقة؛ لم يتم تعديل الصورة الأصلية.");
+    }, "image/jpeg", 0.92);
   }
 
   function setPhotonTimelineEnabled(enabled) {
@@ -1835,11 +1980,17 @@ export function initCamera() {
   });
   $("#nox-photon-timeline-toggle")?.addEventListener("click", () => setPhotonTimelineEnabled(!photonTimelineEnabled));
   $("#nox-photon-timeline-scrub")?.addEventListener("input", (event) => {
+    clearPhotonDetailFusion();
     photonTimelineSelectedIndex = Number(event.target.value);
     photonTimelineSelectionManual = true;
     updatePhotonTimelineUI();
   });
-  $("#nox-photon-timeline-best")?.addEventListener("click", selectBestPhotonMoment);
+  $("#nox-photon-timeline-best")?.addEventListener("click", () => {
+    clearPhotonDetailFusion();
+    selectBestPhotonMoment();
+  });
+  $("#nox-photon-fusion-build")?.addEventListener("click", buildPhotonDetailFusion);
+  $("#nox-photon-fusion-save")?.addEventListener("click", savePhotonDetailFusion);
   $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
     resetPhotonTimeline();
     announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
