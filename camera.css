@@ -129,3 +129,8 @@
 .nox-motion-freeze-panel button{min-height:42px;padding:9px 12px;border:1px solid #f0cf91;border-radius:11px;background:linear-gradient(120deg,#fff0cb,#e6bd76);color:#382817;font:800 12px Cairo,sans-serif;cursor:pointer}
 .nox-motion-freeze-panel button[aria-pressed="true"]{background:linear-gradient(120deg,#c8f5e9,#8ed8c4);border-color:#a4f1db;color:#10362d}
 .nox-motion-freeze-panel small{font-size:11px;line-height:1.7;color:#f0dfc6}
+
+.nox-wave-matter-panel{display:grid;gap:8px;padding:12px;border:1px solid #7dc8d8;border-radius:15px;background:linear-gradient(135deg,#142c46,#292342);color:#fff}
+.nox-wave-matter-panel>b{font-size:12px;letter-spacing:.07em;color:#bcefff}
+.nox-wave-matter-panel select{width:100%;min-height:42px;border:1px solid #9dd8e5;border-radius:12px;background:linear-gradient(120deg,#e9fbff,#c8eaf1);color:#102b3b;padding:8px;font:inherit}
+.nox-wave-matter-panel small{font-size:11px;line-height:1.7;color:#d6eaf4}
