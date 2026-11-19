@@ -311,6 +311,15 @@ export function initCamera() {
   let motionFreezeLastSpeed = null;
   let motionFreezeLastSampleAt = 0;
   let motionFreezeState = "غير متاح";
+  let photonTimelineEnabled = false;
+  let photonTimelineSlots = [];
+  let photonTimelineOrder = [];
+  let photonTimelineWriteIndex = 0;
+  let photonTimelineLastCaptureAt = 0;
+  let photonTimelineSelectedIndex = -1;
+  let photonTimelineSelectionManual = false;
+  let photonTimelineSessionStart = 0;
+  let photonTimelineSequence = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -409,6 +418,8 @@ export function initCamera() {
       time: gl.getUniformLocation(program, "u_time"),
       lowLight: gl.getUniformLocation(program, "u_lowLight"),
       detail: gl.getUniformLocation(program, "u_detail"),
+      waveMatter: gl.getUniformLocation(program, "u_waveMatter"),
+      science: gl.getUniformLocation(program, "u_science"),
       texel: gl.getUniformLocation(program, "u_texel")
     };
   }
@@ -468,6 +479,215 @@ export function initCamera() {
     temporalLastCaptureAt = 0;
     temporalSampleWidth = 0;
     temporalSampleHeight = 0;
+  }
+
+
+  function resetPhotonTimeline() {
+    photonTimelineSlots.forEach((slot) => {
+      slot.canvas.width = 1;
+      slot.canvas.height = 1;
+    });
+    photonTimelineSlots = [];
+    photonTimelineOrder = [];
+    photonTimelineWriteIndex = 0;
+    photonTimelineLastCaptureAt = 0;
+    photonTimelineSelectedIndex = -1;
+    photonTimelineSelectionManual = false;
+    photonTimelineSessionStart = performance.now();
+    photonTimelineSequence = 0;
+    updatePhotonTimelineUI();
+  }
+
+  function ensurePhotonTimeline(width, height) {
+    const maxSide = lowPower ? 192 : 256;
+    const scale = Math.min(1, maxSide / Math.max(width, height));
+    const sampleWidth = Math.max(1, Math.round(width * scale));
+    const sampleHeight = Math.max(1, Math.round(height * scale));
+    const slotCount = lowPower ? 3 : 4;
+    if (photonTimelineSlots.length === slotCount &&
+        photonTimelineSlots[0]?.canvas.width === sampleWidth &&
+        photonTimelineSlots[0]?.canvas.height === sampleHeight) return;
+    resetPhotonTimeline();
+    photonTimelineSlots = Array.from({ length: slotCount }, () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = sampleWidth;
+      canvas.height = sampleHeight;
+      const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+      return { canvas, context, meta: null };
+    }).filter((slot) => slot.context);
+  }
+
+  function measurePhotonSharpness(context, width, height) {
+    const pixels = context.getImageData(0, 0, width, height).data;
+    const luminanceAt = (x, y) => {
+      const index = (y * width + x) * 4;
+      return (pixels[index] * 77 + pixels[index + 1] * 150 + pixels[index + 2] * 29) / 256;
+    };
+    let total = 0;
+    let samples = 0;
+    for (let y = 1; y < height - 1; y += 2) {
+      for (let x = 1; x < width - 1; x += 2) {
+        const center = luminanceAt(x, y);
+        const laplacian = Math.abs(
+          4 * center - luminanceAt(x - 1, y) - luminanceAt(x + 1, y) -
+          luminanceAt(x, y - 1) - luminanceAt(x, y + 1)
+        );
+        total += laplacian;
+        samples += 1;
+      }
+    }
+    return samples ? total / samples : 0;
+  }
+
+  function getPhotonMotionEstimate() {
+    const usable = opticalFlowVectors
+      .filter((vector) => vector.confidence >= 0.12)
+      .map((vector) => Math.hypot(vector.dx * opticalFlowWidth, vector.dy * opticalFlowHeight))
+      .sort((a, b) => a - b);
+    if (usable.length < 4) return null;
+    const middle = Math.floor(usable.length / 2);
+    return usable.length % 2 ? usable[middle] : (usable[middle - 1] + usable[middle]) / 2;
+  }
+
+  function updatePhotonTimelineUI() {
+    const toggle = $("#nox-photon-timeline-toggle");
+    const scrub = $("#nox-photon-timeline-scrub");
+    const preview = $("#nox-photon-timeline-preview");
+    const hint = $("#nox-photon-timeline-hint");
+    const bestButton = $("#nox-photon-timeline-best");
+    const saveButton = $("#nox-photon-timeline-save");
+    const hasFrames = photonTimelineOrder.length > 0;
+    if (toggle) {
+      toggle.setAttribute("aria-pressed", String(photonTimelineEnabled));
+      toggle.textContent = photonTimelineEnabled ? "إيقاف آلة الزمن الضوئي" : "تشغيل آلة الزمن الضوئي";
+    }
+    if (scrub) {
+      scrub.disabled = !hasFrames;
+      scrub.max = String(Math.max(0, photonTimelineOrder.length - 1));
+      if (photonTimelineSelectedIndex < 0 && hasFrames) photonTimelineSelectedIndex = photonTimelineOrder.length - 1;
+      scrub.value = String(Math.max(0, photonTimelineSelectedIndex));
+    }
+    const selectedSlot = hasFrames && photonTimelineSelectedIndex >= 0
+      ? photonTimelineSlots[photonTimelineOrder[Math.min(photonTimelineSelectedIndex, photonTimelineOrder.length - 1)]]
+      : null;
+    if (preview && selectedSlot?.meta) {
+      if (preview.width !== selectedSlot.canvas.width || preview.height !== selectedSlot.canvas.height) {
+        preview.width = selectedSlot.canvas.width;
+        preview.height = selectedSlot.canvas.height;
+      }
+      const context = preview.getContext("2d");
+      if (context) {
+        context.clearRect(0, 0, preview.width, preview.height);
+        context.drawImage(selectedSlot.canvas, 0, 0);
+      }
+    } else if (preview) {
+      const context = preview.getContext("2d");
+      if (context) context.clearRect(0, 0, preview.width, preview.height);
+    }
+    if (bestButton) bestButton.disabled = !hasFrames;
+    if (saveButton) saveButton.disabled = !selectedSlot?.meta;
+    if (hint) {
+      if (!photonTimelineEnabled) {
+        hint.textContent = "المحرك متوقف — شغّله لتسجيل تسلسل زمني قصير من إطارات الكاميرا";
+      } else if (!hasFrames) {
+        hint.textContent = "جارٍ انتظار أول عينة ضوئية…";
+      } else {
+        const meta = selectedSlot.meta;
+        const elapsed = Math.max(0, (meta.capturedAt - photonTimelineSessionStart) / 1000).toFixed(1);
+        const motion = meta.motion === null ? "الحركة غير متاحة" : "الحركة " + meta.motion.toFixed(2);
+        hint.textContent = "العينة " + (photonTimelineSelectedIndex + 1) + "/" + photonTimelineOrder.length +
+          " — +" + elapsed + "ث — حدة محلية " + meta.sharpness.toFixed(1) +
+          " — " + motion + " — معاينة منخفضة الدقة";
+      }
+    }
+  }
+
+  function capturePhotonMoment(source, width, height) {
+    if (!photonTimelineEnabled || !source || !width || !height) return;
+    const now = performance.now();
+    const interval = lowPower ? 220 : 150;
+    if (photonTimelineLastCaptureAt && now - photonTimelineLastCaptureAt < interval) return;
+    ensurePhotonTimeline(width, height);
+    if (!photonTimelineSlots.length) return;
+    const slot = photonTimelineSlots[photonTimelineWriteIndex];
+    const sampleWidth = slot.canvas.width;
+    const sampleHeight = slot.canvas.height;
+    try {
+      slot.context.drawImage(source, 0, 0, sampleWidth, sampleHeight);
+      const sharpness = measurePhotonSharpness(slot.context, sampleWidth, sampleHeight);
+      const motion = getPhotonMotionEstimate();
+      const detailScore = sharpness / (sharpness + 18);
+      const motionPenalty = motion === null ? 0.45 : 1 / (1 + motion * 0.75);
+      const score = detailScore * motionPenalty;
+      slot.meta = {
+        capturedAt: now,
+        sharpness,
+        motion,
+        score,
+        sequence: ++photonTimelineSequence
+      };
+      const droppingOldest = photonTimelineOrder.length >= photonTimelineSlots.length;
+      if (droppingOldest) photonTimelineOrder.shift();
+      photonTimelineOrder.push(photonTimelineWriteIndex);
+      photonTimelineWriteIndex = (photonTimelineWriteIndex + 1) % photonTimelineSlots.length;
+      if (!photonTimelineSelectionManual) {
+        photonTimelineSelectedIndex = photonTimelineOrder.length - 1;
+      } else if (droppingOldest) {
+        photonTimelineSelectedIndex = Math.max(0, photonTimelineSelectedIndex - 1);
+      }
+      photonTimelineLastCaptureAt = now;
+      updatePhotonTimelineUI();
+    } catch {
+      const hint = $("#nox-photon-timeline-hint");
+      if (hint) hint.textContent = "تعذر تحليل عينة الإطار؛ سيواصل المحرك المحاولة دون تعطيل الكاميرا";
+    }
+  }
+
+  function selectBestPhotonMoment() {
+    if (!photonTimelineOrder.length) return;
+    let bestIndex = 0;
+    let bestScore = -1;
+    photonTimelineOrder.forEach((slotIndex, index) => {
+      const score = photonTimelineSlots[slotIndex]?.meta?.score ?? -1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+    photonTimelineSelectedIndex = bestIndex;
+    photonTimelineSelectionManual = true;
+    updatePhotonTimelineUI();
+    announce("تم اختيار أفضل عينة محفوظة وفق مقياس الحدة والحركة التقريبي", Boolean(stream));
+  }
+
+  function saveSelectedPhotonMoment() {
+    if (photonTimelineSelectedIndex < 0 || !photonTimelineOrder.length) return;
+    const slotIndex = photonTimelineOrder[photonTimelineSelectedIndex];
+    const slot = photonTimelineSlots[slotIndex];
+    if (!slot?.meta) return;
+    slot.canvas.toBlob((blob) => {
+      if (!blob) return announce("تعذر حفظ معاينة اللحظة.");
+      showBlob(blob, "image", "nox-photon-moment-preview.jpg");
+      announce("تم تجهيز معاينة اللحظة المختارة بدقة منخفضة؛ الأصل الكامل غير محفوظ في الذاكرة الزمنية.");
+    }, "image/jpeg", 0.9);
+  }
+
+  function setPhotonTimelineEnabled(enabled) {
+    photonTimelineEnabled = Boolean(enabled);
+    resetPhotonTimeline();
+    if (photonTimelineEnabled) {
+      if (opticalFlowMode === "off") {
+        const flowSelect = $("#nox-flow-mode");
+        if (flowSelect) flowSelect.value = "vectors";
+        setOpticalFlowMode("vectors");
+      }
+      announce("بدأ NOX PHOTON TIME MACHINE تسجيل عينات زمنية محلية قصيرة", Boolean(stream));
+    } else {
+      announce("تم إيقاف آلة الزمن الضوئي ومسح عيناتها المؤقتة", Boolean(stream));
+    }
+    updatePhotonTimelineUI();
+    updateDiagnostics();
+    if (stream) renderFrame(false);
   }
 
   function ensureTemporalMemory(width, height) {
@@ -1127,9 +1347,9 @@ export function initCamera() {
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
         gl.uniform1f(renderer.detail, detailRecoveryMode === "strong" ? 2 : detailRecoveryMode === "natural" ? 1 : 0);
-        gl.uniform1f(gl.getUniformLocation(renderer.program, "u_waveMatter"), waveMatterMode === "thin-film" ? 1 : waveMatterMode === "dispersion" ? 2 : waveMatterMode === "atmosphere" ? 3 : 0);
+        gl.uniform1f(renderer.waveMatter, waveMatterMode === "thin-film" ? 1 : waveMatterMode === "dispersion" ? 2 : waveMatterMode === "atmosphere" ? 3 : 0);
         const scienceModes = ["diffraction","fluorescence","polarization","light-field","flare","spectral","atmosphere","material"];
-        gl.uniform1f(gl.getUniformLocation(renderer.program, "u_science"), Math.max(0, scienceModes.indexOf(scienceMode) + 1));
+        gl.uniform1f(renderer.science, Math.max(0, scienceModes.indexOf(scienceMode) + 1));
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -1157,6 +1377,7 @@ export function initCamera() {
     const outputContext = renderCanvas.getContext("2d");
     if (outputContext) {
       estimateOpticalFlow();
+      capturePhotonMoment(renderCanvas, outWidth, outHeight);
       outputContext.save();
       if (cameraStabilizationEnabled) {
         outputContext.translate(outWidth / 2 + stabilizationOffset.x * outWidth, outHeight / 2 + stabilizationOffset.y * outHeight);
@@ -1229,6 +1450,7 @@ export function initCamera() {
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
+      ["NOX PHOTON TIME MACHINE", photonTimelineEnabled ? "نشط — " + photonTimelineOrder.length + "/" + photonTimelineSlots.length + " عينات زمنية / اختيار " + (photonTimelineSelectedIndex + 1) : "متوقف"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
@@ -1279,6 +1501,7 @@ export function initCamera() {
     fpsWindowFrames = 0;
     qualityTier = lowPower ? 1 : 0;
     resetTemporalMemory();
+    resetPhotonTimeline();
     resetOpticalFlow();
     resetCameraStabilization();
     clearSubjectLock();
@@ -1313,6 +1536,7 @@ export function initCamera() {
       fpsWindowStart = 0;
       fpsWindowFrames = 0;
       resetTemporalMemory();
+      resetPhotonTimeline();
       resetOpticalFlow();
       resetCameraStabilization();
       const base = lowPower
@@ -1499,6 +1723,19 @@ export function initCamera() {
     announce("تم مسح الذاكرة الزمنية", Boolean(stream));
     updateDiagnostics();
   });
+  $("#nox-photon-timeline-toggle")?.addEventListener("click", () => setPhotonTimelineEnabled(!photonTimelineEnabled));
+  $("#nox-photon-timeline-scrub")?.addEventListener("input", (event) => {
+    photonTimelineSelectedIndex = Number(event.target.value);
+    photonTimelineSelectionManual = true;
+    updatePhotonTimelineUI();
+  });
+  $("#nox-photon-timeline-best")?.addEventListener("click", selectBestPhotonMoment);
+  $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
+    resetPhotonTimeline();
+    announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
+    updateDiagnostics();
+  });
+  $("#nox-photon-timeline-save")?.addEventListener("click", saveSelectedPhotonMoment);
 
   $("#nox-living-metal-toggle")?.addEventListener("click", () => {
     livingMetalEnabled = !livingMetalEnabled;
