@@ -104,11 +104,13 @@ export function initSocialUI() {
  async function stopRecording(){
   if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
   if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
-  if(recorder&&recorder.state!=="inactive")recorder.stop();
+  if(recorder&&recorder.state!=="inactive"){try{recorder.stop();}catch(error){notice("تعذر إنهاء التسجيل بشكل طبيعي.");}}
   if(recordingIndicator)recordingIndicator.hidden=true;
   if(record)record.textContent="●";
  }
  async function stopCamera(){
+  if(lensHoldTimer){clearTimeout(lensHoldTimer);lensHoldTimer=null;}
+  lensPointer=null;lensPressedButton=null;lensHoldStarted=false;lensGestureDragged=false;
   await stopRecording();
   if(faceAnimationFrame)cancelAnimationFrame(faceAnimationFrame);
   faceAnimationFrame=0;faceLandmarks=null;
