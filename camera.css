@@ -134,3 +134,8 @@
 .nox-wave-matter-panel>b{font-size:12px;letter-spacing:.07em;color:#bcefff}
 .nox-wave-matter-panel select{width:100%;min-height:42px;border:1px solid #9dd8e5;border-radius:12px;background:linear-gradient(120deg,#e9fbff,#c8eaf1);color:#102b3b;padding:8px;font:inherit}
 .nox-wave-matter-panel small{font-size:11px;line-height:1.7;color:#d6eaf4}
+
+.nox-science-engine-panel{display:grid;gap:8px;padding:12px;border:1px solid #a8a0e8;border-radius:15px;background:linear-gradient(135deg,#202b49,#34234a);color:#fff}
+.nox-science-engine-panel>b{font-size:12px;letter-spacing:.07em;color:#e3dcff}
+.nox-science-engine-panel select{width:100%;min-height:42px;border:1px solid #c5b9ef;border-radius:12px;background:linear-gradient(120deg,#f5f0ff,#ddd3f5);color:#261d3c;padding:8px;font:inherit}
+.nox-science-engine-panel small{font-size:11px;line-height:1.7;color:#e4dcf7}
