@@ -89,12 +89,23 @@ function largestComponent(probabilities, width, height, threshold, minPixels) {
     data: mask,
     pixelCount: best.count,
     confidence: best.sum / best.count,
-    bounds: {
-      x: best.left / width,
-      y: best.top / height,
-      width: (best.right - best.left + 1) / width,
-      height: (best.bottom - best.top + 1) / height
-    }
+    // A small padded ROI is derived from the real mask bounds. It is not
+    // presented as an independently detected face box; it provides context
+    // around the segmented face pixels for downstream mask validation.
+    bounds: (() => {
+      const padX = Math.max(1, Math.ceil((best.right - best.left + 1) * 0.15));
+      const padY = Math.max(1, Math.ceil((best.bottom - best.top + 1) * 0.15));
+      const left = Math.max(0, best.left - padX);
+      const top = Math.max(0, best.top - padY);
+      const right = Math.min(width, best.right + 1 + padX);
+      const bottom = Math.min(height, best.bottom + 1 + padY);
+      return {
+        x: left / width,
+        y: top / height,
+        width: (right - left) / width,
+        height: (bottom - top) / height
+      };
+    })()
   };
 }
 
