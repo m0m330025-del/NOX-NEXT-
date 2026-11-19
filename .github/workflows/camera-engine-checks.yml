@@ -56,7 +56,7 @@ jobs:
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
             'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
-            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint', 'nox-stabilizer-toggle', 'nox-stabilizer-hint', 'nox-low-light-mode', 'nox-low-light-hint', 'nox-detail-recovery-mode', 'nox-detail-recovery-hint'
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint', 'nox-stabilizer-toggle', 'nox-stabilizer-hint', 'nox-low-light-mode', 'nox-low-light-hint', 'nox-detail-recovery-mode', 'nox-detail-recovery-hint', 'nox-motion-freeze-toggle', 'nox-motion-freeze-cancel', 'nox-motion-freeze-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -126,9 +126,13 @@ jobs:
             if (!js.includes(token)) throw new Error('Low-light adaptive shadow/noise treatment missing: ' + token);
           }
           console.log('NOX Low-Light Rescue adaptive shadow and edge-aware smoothing verified');
-          for (const token of ['detailSignal = centerLum - averageLum', 'smoothstep(0.012, 0.075, abs(detailSignal))', 'u_detail > 1.5', 'detailRecoveryMode === "strong"']) {
+          for (const token of ['detailSignal = centerLum - averageLum', 'smoothstep(0.012, 0.075, abs(detailSignal))', 'u_detail > 1.5', 'detailRecoveryMode === "strong"', 'updateMotionFreezeState', 'motionFreezeCaptureStartedAt', 'motionFreezeLastSpeed <= 0.9', '1400', 'nox-motion-freeze-cancel']) {
             if (!js.includes(token)) throw new Error('True Detail Recovery guarded detail enhancement missing: ' + token);
           }
           console.log('NOX True Detail Recovery thresholded local-detail enhancement verified');
+          for (const token of ['motionFreezeEnabled', 'opticalFlowVectors.filter', 'motionFreezeLastSpeed <= 0.9', 'motionFreezeCaptureStartedAt', '1400', 'cancelMotionFreezeCapture', 'capturePhotoNow']) {
+            if (!js.includes(token)) throw new Error('Motion Freeze bounded capture-assist behavior missing: ' + token);
+          }
+          console.log('NOX Motion Freeze motion-aware capture timing and timeout fallback verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
