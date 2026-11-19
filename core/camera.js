@@ -119,8 +119,8 @@ void main() {
     c = mix(c, dispersed, edgeGate * 0.34);
   } else if (u_waveMatter > 2.5) {
     // Rayleigh-like sky scattering grade: wavelength-biased blue lift toward upper image regions.
-    float skyFactor = smoothstep(0.92, 0.18, uv.y);
-    float horizonHaze = smoothstep(0.72, 0.18, uv.y) * 0.10;
+    float skyFactor = (1.0 - smoothstep(0.18, 0.92, uv.y));
+    float horizonHaze = (1.0 - smoothstep(0.18, 0.72, uv.y)) * 0.10;
     vec3 skyTint = vec3(0.42, 0.62, 1.0) * (0.10 + skyFactor * 0.20);
     c = mix(c, c * (vec3(1.0) + skyTint) + vec3(horizonHaze * 0.7, horizonHaze * 0.8, horizonHaze), skyFactor * 0.22);
   }
