@@ -56,7 +56,7 @@ jobs:
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
             'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
-            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint'
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -73,7 +73,7 @@ jobs:
             'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
             'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
             'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode',
-            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled']) {
+            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -106,5 +106,9 @@ jobs:
             if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
           }
           console.log('Reality Follow confidence and displacement guards verified');
+          for (const token of ['meanSad > 38', 'subjectLockConfidence < 0.46', 'subjectLockLostFrames >= 4', 'variance < 12']) {
+            if (!js.includes(token)) throw new Error('Subject Lock confidence/loss guard missing: ' + token);
+          }
+          console.log('Subject Lock bounded template matching and loss guards verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
