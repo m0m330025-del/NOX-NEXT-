@@ -260,3 +260,8 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  body[data-nox-screen="camera"] .nox-camera-stage{height:61svh;min-height:350px}
  body[data-nox-screen="camera"] .nox-camera-bottom-controls{bottom:12px}
 }
+
+.nox-camera-heading-actions{display:flex;align-items:center;gap:10px}
+.nox-camera-back{border:1px solid #ffffff45;border-radius:24px;background:#ffffff12;color:#fff;padding:9px 15px;font-size:11px;font-weight:800}
+.nox-camera-back:hover{background:#ffffff22}
+@media(max-width:760px){.nox-camera-heading-actions{gap:6px}.nox-camera-back{padding:8px 10px;font-size:10px}}
