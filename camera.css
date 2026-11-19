@@ -93,3 +93,11 @@
 #nox-temporal-mode option{background:#101d31;color:#fff}
 .nox-temporal-panel button{min-height:40px;padding:8px 12px;border:1px solid #a8cce5;border-radius:10px;background:linear-gradient(120deg,#d7efff,#91b6d6);color:#102333;font:800 12px Cairo,sans-serif;cursor:pointer}
 .nox-temporal-panel small{font-size:11px;line-height:1.7;color:#c6d9e8}
+
+.nox-flow-panel{display:grid;gap:8px;padding:12px;border:1px solid #64dbe8;border-radius:15px;background:linear-gradient(135deg,#102b35,#182d49);color:#fff}
+.nox-flow-panel>b{font-size:12px;letter-spacing:.08em;color:#a9f5f4}
+.nox-flow-panel label{font-size:12px;font-weight:800;color:#ddffff}
+#nox-flow-mode{width:100%;min-height:44px;padding:9px 12px;border:1px solid #70d9df;border-radius:11px;background:#10212f;color:#fff;font:700 12px Cairo,sans-serif}
+#nox-flow-mode option{background:#10212f;color:#fff}
+.nox-flow-panel button{min-height:40px;padding:8px 12px;border:1px solid #9de5e9;border-radius:10px;background:linear-gradient(120deg,#d8ffff,#8bcbd1);color:#102b35;font:800 12px Cairo,sans-serif;cursor:pointer}
+.nox-flow-panel small{font-size:11px;line-height:1.7;color:#c7e8ec}
