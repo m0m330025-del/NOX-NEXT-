@@ -187,6 +187,8 @@ export function initCamera() {
   let subjectLockConfidence = 0;
   let subjectLockReacquireAttempts = 0;
   let subjectLockWasReacquired = false;
+  let motionPredictionEnabled = false;
+  let subjectLockVelocity = { x: 0, y: 0 };
 
   const supported = {
     secure: window.isSecureContext,
@@ -506,6 +508,7 @@ export function initCamera() {
     subjectLockConfidence = 0;
     subjectLockReacquireAttempts = 0;
     subjectLockWasReacquired = false;
+    subjectLockVelocity = { x: 0, y: 0 };
     const button = $("#nox-subject-lock-toggle");
     if (button) {
       button.setAttribute("aria-pressed", "false");
@@ -563,17 +566,37 @@ export function initCamera() {
     updateDiagnostics();
   }
 
+  function setMotionPredictionEnabled(enabled) {
+    motionPredictionEnabled = Boolean(enabled);
+    if (!motionPredictionEnabled) subjectLockVelocity = { x: 0, y: 0 };
+    const button = $("#nox-motion-prediction-toggle");
+    if (button) {
+      button.setAttribute("aria-pressed", String(motionPredictionEnabled));
+      button.textContent = motionPredictionEnabled ? "إيقاف التنبؤ بالحركة" : "تشغيل التنبؤ بالحركة";
+    }
+    const hint = $("#nox-motion-prediction-hint");
+    if (hint) hint.textContent = motionPredictionEnabled
+      ? "تقدير قصير للموضع التالي من سرعة القفل السابقة — دون ذكاء اصطناعي أو توقع بعيد"
+      : "التنبؤ متوقف — البحث حول آخر موضع مؤكد";
+    updateDiagnostics();
+  }
+
   function updateSubjectLock(gray, width, height) {
     if (!subjectLockEnabled || !subjectLockTemplate || !subjectLockCenter || !livingMetalRegion) return;
     const patchRadius = 2;
     const reacquiring = subjectLockLostFrames >= 2;
     const search = reacquiring ? (lowPower ? 9 : 14) : (lowPower ? 5 : 7);
+    const leadLimit = lowPower ? 4 : 6;
+    const leadX = motionPredictionEnabled ? Math.max(-leadLimit, Math.min(leadLimit, subjectLockVelocity.x)) : 0;
+    const leadY = motionPredictionEnabled ? Math.max(-leadLimit, Math.min(leadLimit, subjectLockVelocity.y)) : 0;
+    const searchCenterX = Math.max(patchRadius, Math.min(width - patchRadius - 1, subjectLockCenter.x + leadX));
+    const searchCenterY = Math.max(patchRadius, Math.min(height - patchRadius - 1, subjectLockCenter.y + leadY));
     let bestSad = Infinity;
     let secondSad = Infinity;
     let bestX = subjectLockCenter.x;
     let bestY = subjectLockCenter.y;
-    for (let cy = Math.max(patchRadius, subjectLockCenter.y - search); cy <= Math.min(height - patchRadius - 1, subjectLockCenter.y + search); cy += 1) {
-      for (let cx = Math.max(patchRadius, subjectLockCenter.x - search); cx <= Math.min(width - patchRadius - 1, subjectLockCenter.x + search); cx += 1) {
+    for (let cy = Math.max(patchRadius, searchCenterY - search); cy <= Math.min(height - patchRadius - 1, searchCenterY + search); cy += 1) {
+      for (let cx = Math.max(patchRadius, searchCenterX - search); cx <= Math.min(width - patchRadius - 1, searchCenterX + search); cx += 1) {
         let sad = 0;
         let index = 0;
         for (let py = -patchRadius; py <= patchRadius; py += 1) {
@@ -610,8 +633,14 @@ export function initCamera() {
     }
     if (reacquiring) subjectLockWasReacquired = true;
     subjectLockLostFrames = 0;
-    const dx = Math.max(-0.08, Math.min(0.08, (bestX - subjectLockCenter.x) / width));
-    const dy = Math.max(-0.08, Math.min(0.08, (bestY - subjectLockCenter.y) / height));
+    const observedDx = bestX - subjectLockCenter.x;
+    const observedDy = bestY - subjectLockCenter.y;
+    subjectLockVelocity = {
+      x: Math.max(-8, Math.min(8, subjectLockVelocity.x * 0.62 + observedDx * 0.38)),
+      y: Math.max(-8, Math.min(8, subjectLockVelocity.y * 0.62 + observedDy * 0.38))
+    };
+    const dx = Math.max(-0.08, Math.min(0.08, observedDx / width));
+    const dy = Math.max(-0.08, Math.min(0.08, observedDy / height));
     const displayDx = facing === "user" ? -dx : dx;
     const region = livingMetalRegion;
     livingMetalRegion = {
@@ -875,6 +904,7 @@ export function initCamera() {
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
+      ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -1116,6 +1146,7 @@ export function initCamera() {
   $("#nox-flow-mode")?.addEventListener("change", (event) => setOpticalFlowMode(event.target.value));
   $("#nox-region-follow-toggle")?.addEventListener("click", () => setRegionFollowEnabled(!regionFollowEnabled));
   $("#nox-subject-lock-toggle")?.addEventListener("click", () => setSubjectLockEnabled(!subjectLockEnabled));
+  $("#nox-motion-prediction-toggle")?.addEventListener("click", () => setMotionPredictionEnabled(!motionPredictionEnabled));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
