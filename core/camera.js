@@ -176,6 +176,10 @@ export function initCamera() {
   let opticalFlowLastAt = 0;
   let opticalFlowVectors = [];
   let opticalFlowConfidence = 0;
+  let opticalFlowSequence = 0;
+  let regionFollowEnabled = false;
+  let regionFollowLastSequence = -1;
+  let regionFollowVectorCount = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -388,6 +392,9 @@ export function initCamera() {
     opticalFlowLastAt = 0;
     opticalFlowVectors = [];
     opticalFlowConfidence = 0;
+    opticalFlowSequence = 0;
+    regionFollowLastSequence = -1;
+    regionFollowVectorCount = 0;
     opticalFlowWidth = 0;
     opticalFlowHeight = 0;
     if (opticalFlowCanvas) {
@@ -471,7 +478,7 @@ export function initCamera() {
         const texture = Math.min(1, secondSad / 90);
         const confidence = uniqueness * texture;
         if ((Math.abs(bestDx) + Math.abs(bestDy)) > 0 && confidence > 0.06) {
-          vectors.push({ x: cx / sampleWidth, y: cy / sampleHeight, dx: bestDx / sampleWidth, dy: bestDy / sampleHeight, confidence });
+          vectors.push({ x: cx / sampleWidth, y: cy / sampleHeight, dx: -bestDx / sampleWidth, dy: -bestDy / sampleHeight, confidence });
           confidenceTotal += confidence;
         }
       }
@@ -479,6 +486,39 @@ export function initCamera() {
     opticalFlowVectors = vectors;
     opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
     opticalFlowPrevious = gray;
+    opticalFlowSequence += 1;
+    updateTrackedRegionFromFlow();
+  }
+
+  function updateTrackedRegionFromFlow() {
+    if (!regionFollowEnabled || !livingMetalRegion || opticalFlowSequence === regionFollowLastSequence) return;
+    regionFollowLastSequence = opticalFlowSequence;
+    const region = livingMetalRegion;
+    let weightedX = 0;
+    let weightedY = 0;
+    let totalWeight = 0;
+    let count = 0;
+    opticalFlowVectors.forEach((vector) => {
+      const displayX = facing === "user" ? 1 - vector.x : vector.x;
+      const displayDx = facing === "user" ? -vector.dx : vector.dx;
+      const displayDy = vector.dy;
+      if (displayX < region.x || displayX > region.x + region.width ||
+          vector.y < region.y || vector.y > region.y + region.height) return;
+      const weight = vector.confidence;
+      weightedX += displayDx * weight;
+      weightedY += displayDy * weight;
+      totalWeight += weight;
+      count += 1;
+    });
+    regionFollowVectorCount = count;
+    if (count < 2 || totalWeight < 0.12) return;
+    const rawDx = weightedX / totalWeight;
+    const rawDy = weightedY / totalWeight;
+    const dx = Math.max(-0.025, Math.min(0.025, rawDx * 0.55));
+    const dy = Math.max(-0.025, Math.min(0.025, rawDy * 0.55));
+    const nextX = Math.max(0, Math.min(1 - region.width, region.x + dx));
+    const nextY = Math.max(0, Math.min(1 - region.height, region.y + dy));
+    livingMetalRegion = { ...region, x: nextX, y: nextY };
   }
 
   function drawOpticalFlow(ctx, width, height) {
@@ -513,8 +553,27 @@ export function initCamera() {
     ctx.restore();
   }
 
+  function setRegionFollowEnabled(enabled) {
+    regionFollowEnabled = Boolean(enabled);
+    regionFollowLastSequence = opticalFlowSequence;
+    regionFollowVectorCount = 0;
+    const button = $("#nox-region-follow-toggle");
+    if (button) {
+      button.setAttribute("aria-pressed", String(regionFollowEnabled));
+      button.textContent = regionFollowEnabled ? "إيقاف تتبع المنطقة بالحركة" : "تتبع المنطقة بالحركة";
+    }
+    const hint = $("#nox-region-follow-hint");
+    if (hint) hint.textContent = regionFollowEnabled
+      ? (livingMetalRegion ? "القناع سيتحرك مع متوسط اتجاه الحركة داخله" : "حدد قناعًا يدويًا أولًا ثم شغّل التتبع")
+      : "التتبع متوقف — القناع ثابت";
+    if (regionFollowEnabled && !livingMetalRegion) announce("حدد منطقة يدويًا أولًا لتشغيل تتبعها", Boolean(stream));
+    else announce(regionFollowEnabled ? "تم تشغيل تتبع قناع المنطقة" : "تم إيقاف تتبع قناع المنطقة", Boolean(stream));
+    updateDiagnostics();
+  }
+
   function setOpticalFlowMode(mode) {
     opticalFlowMode = mode === "vectors" ? "vectors" : "off";
+    if (opticalFlowMode === "off") setRegionFollowEnabled(false);
     resetOpticalFlow();
     const hint = $("#nox-flow-hint");
     if (hint) hint.textContent = opticalFlowMode === "off"
@@ -670,6 +729,7 @@ export function initCamera() {
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
+      ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -893,6 +953,8 @@ export function initCamera() {
   });
   $("#nox-region-mask-clear")?.addEventListener("click", () => {
     livingMetalRegion = null;
+    regionFollowVectorCount = 0;
+    regionFollowLastSequence = opticalFlowSequence;
     regionMaskPreview = null;
     updateRegionMaskOverlay();
     regionMaskDrawing = false;
@@ -904,6 +966,7 @@ export function initCamera() {
 
   $("#nox-temporal-mode")?.addEventListener("change", (event) => setTemporalMode(event.target.value));
   $("#nox-flow-mode")?.addEventListener("change", (event) => setOpticalFlowMode(event.target.value));
+  $("#nox-region-follow-toggle")?.addEventListener("click", () => setRegionFollowEnabled(!regionFollowEnabled));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
