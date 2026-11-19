@@ -87,9 +87,62 @@
       <header class="feature-heading"><div><small>NOX CONNECT</small><h2>المحادثات</h2><p>المحادثة تظهر للطرفين بعد قبول طلب الصداقة فقط</p></div><span class="feature-tag">واجهة تجريبية</span></header>
       <div class="messages-shell"><aside class="message-contacts card"><label class="nox-id-search">⌕ <input id="nox-id-search" placeholder="ابحث باستخدام NOX ID فقط"></label><button class="nox-id-submit" id="nox-id-submit">بحث عن NOX ID</button><div class="empty-chat"><b>لا توجد محادثات بعد</b><small>ابحث عن صديق وأرسل طلب صداقة</small></div></aside><section class="message-preview card"><div class="locked-chat"><span>♙</span><h3>مساحة المحادثة</h3><p>ستظهر هنا بعد قبول طلب الصداقة من الطرفين.</p><small>إرسال الرسائل غير متاح قبل الموافقة</small></div></section></div>
     </section>
-    <section class="social-feature-section" id="camera">
-      <header class="feature-heading"><div><small>NOX CREATOR</small><h2>كاميرا NOX</h2><p>معاينة الكاميرا والفلاتر على جهازك</p></div><span class="feature-tag">محلي فقط</span></header>
-      <div class="camera-layout card"><div class="camera-stage"><video id="nox-camera-video" autoplay playsinline muted hidden></video><div class="camera-empty" id="nox-camera-empty"><span>◎</span><b>كاميرتك الإبداعية</b><small>اسمح للمتصفح باستخدام الكاميرا لعرض المعاينة</small></div><canvas id="nox-camera-canvas" hidden></canvas></div><aside class="camera-controls"><h3>الفلاتر</h3><div class="nox-filters"><button class="nox-filter active" data-filter="none">طبيعي</button><button class="nox-filter" data-filter="grayscale(1)">أبيض وأسود</button><button class="nox-filter" data-filter="sepia(.55)">دافئ</button><button class="nox-filter" data-filter="saturate(1.55)">حيوي</button><button class="nox-filter" data-filter="contrast(1.2)">واضح</button><button class="nox-filter" data-filter="hue-rotate(28deg)">حالم</button></div><div class="camera-buttons"><button id="nox-camera-start" class="feature-primary">تشغيل الكاميرا</button><button id="nox-camera-stop" class="feature-secondary" disabled>إيقاف</button><button id="nox-camera-capture" class="feature-secondary" disabled>التقاط صورة</button></div><p class="feature-note">لا يتم رفع الصورة أو نشرها. التخزين والنشر يحتاجان ربطًا لاحقًا.</p><div id="nox-capture-preview" hidden><b>معاينة الصورة</b><img id="nox-captured-image" alt="الصورة الملتقطة"><button id="nox-capture-close" class="feature-secondary">إغلاق</button></div></aside></div>
+    <section class="social-feature-section nox-camera-page" id="camera">
+      <header class="feature-heading"><div><small>NOX CREATOR STUDIO</small><h2>استوديو كاميرا NOX</h2><p>التقط لحظتك، أضف لمستك، وراجعها قبل الحفظ</p></div><span class="feature-tag">خصوصية محلية</span></header>
+      <div class="nox-camera-workspace card">
+        <div class="nox-camera-stage-column">
+          <div class="nox-camera-stage" id="nox-camera-stage">
+            <video id="nox-camera-video" autoplay playsinline muted hidden></video>
+            <div class="nox-camera-live-overlay" aria-hidden="true"><span class="nox-live-sticker" id="nox-live-sticker"></span><span class="nox-live-caption" id="nox-live-caption"></span></div>
+            <div class="nox-camera-empty" id="nox-camera-empty"><span class="camera-aperture">◉</span><b>لحظتك تستحق إطارًا مميزًا</b><small>شغّل الكاميرا وابدأ الإبداع</small><button type="button" id="nox-camera-start" class="feature-primary">تشغيل الكاميرا</button></div>
+            <div class="nox-recording-indicator" id="nox-recording-indicator" hidden><i></i> جارٍ التسجيل</div>
+            <button type="button" class="nox-camera-flip" id="nox-camera-flip" aria-label="تبديل الكاميرا" title="تبديل الكاميرا" disabled>↻</button>
+            <div class="nox-camera-bottom-controls">
+              <button type="button" class="nox-camera-small" id="nox-camera-gallery" aria-label="اختيار ملف من الجهاز">▧<small>المعرض</small></button>
+              <button type="button" class="nox-shutter" id="nox-camera-capture" aria-label="التقاط صورة" disabled><span></span></button>
+              <button type="button" class="nox-camera-small" id="nox-camera-record" aria-label="بدء تسجيل فيديو" disabled>●<small>فيديو</small></button>
+            </div>
+            <input type="file" id="nox-camera-file" accept="image/*,video/*" hidden>
+            <canvas id="nox-camera-canvas" hidden></canvas>
+          </div>
+          <div class="nox-camera-stage-actions">
+            <button type="button" id="nox-camera-stop" class="feature-secondary" disabled>إيقاف الكاميرا</button>
+            <span id="nox-camera-status" role="status" aria-live="polite">الكاميرا متوقفة</span>
+          </div>
+        </div>
+        <aside class="nox-creator-tools">
+          <section class="creator-tool-group">
+            <div class="creator-tool-heading"><h3>العدسات والتأثيرات</h3><span>LIVE</span></div>
+            <div class="nox-lens-carousel" role="group" aria-label="اختيار تأثير الكاميرا">
+              <button type="button" class="nox-lens active" data-filter="none" aria-pressed="true"><span>◉</span><b>طبيعي</b></button>
+              <button type="button" class="nox-lens" data-filter="brightness(1.12) saturate(1.18)" aria-pressed="false"><span>✧</span><b>إشراقة</b></button>
+              <button type="button" class="nox-lens" data-filter="sepia(.28) saturate(1.2)" aria-pressed="false"><span>☀</span><b>ذهبي</b></button>
+              <button type="button" class="nox-lens" data-filter="grayscale(1) contrast(1.12)" aria-pressed="false"><span>◐</span><b>أحادي</b></button>
+              <button type="button" class="nox-lens" data-filter="saturate(1.65) contrast(1.05)" aria-pressed="false"><span>✺</span><b>حيوي</b></button>
+              <button type="button" class="nox-lens" data-filter="hue-rotate(28deg) brightness(1.05)" aria-pressed="false"><span>☾</span><b>حالم</b></button>
+              <button type="button" class="nox-lens" data-filter="contrast(1.18) saturate(.82)" aria-pressed="false"><span>◇</span><b>سينمائي</b></button>
+            </div>
+            <p class="creator-tool-hint">تأثيرات لونية مباشرة على المعاينة والصورة الملتقطة.</p>
+          </section>
+          <section class="creator-tool-group">
+            <div class="creator-tool-heading"><h3>الملصقات</h3></div>
+            <div class="nox-sticker-picker" role="group" aria-label="إضافة ملصق"><button type="button" data-sticker="💜" aria-label="قلب بنفسجي">💜</button><button type="button" data-sticker="✨" aria-label="بريق">✨</button><button type="button" data-sticker="⭐" aria-label="نجمة">⭐</button><button type="button" data-sticker="🦋" aria-label="فراشة">🦋</button><button type="button" data-sticker="😎" aria-label="نظارة">😎</button><button type="button" data-sticker="" aria-label="إزالة الملصق">×</button></div>
+          </section>
+          <section class="creator-tool-group">
+            <div class="creator-tool-heading"><h3>إضافة نص</h3></div>
+            <input type="text" id="nox-camera-caption-input" class="nox-caption-input" maxlength="50" placeholder="اكتب عبارة قصيرة...">
+            <p class="creator-tool-hint">سيظهر النص على المعاينة والصورة.</p>
+          </section>
+          <section class="creator-tool-group nox-camera-output" id="nox-camera-output" hidden>
+            <div class="creator-tool-heading"><h3>معاينة النتيجة</h3></div>
+            <img id="nox-captured-image" alt="الصورة الملتقطة" hidden>
+            <video id="nox-recorded-video" controls playsinline hidden></video>
+            <p id="nox-output-label">تم تجهيز ملف محلي.</p>
+            <a id="nox-camera-download" class="feature-primary nox-download-link" href="#" download>حفظ على الجهاز</a>
+          </section>
+          <p class="nox-privacy-note"><span>♢</span> الصور والفيديوهات لا تُرفع إلى خوادم NOX. الحفظ يتم باختيارك على جهازك.</p>
+        </aside>
+      </div>
     </section>
     <section class="social-feature-section" id="stories-view">
       <header class="feature-heading"><div><small>NOX MOMENTS</small><h2>الحالات</h2><p>اختر حالة لعرض معاينة شكلية</p></div><a class="feature-primary feature-link" href="#camera">＋ إضافة حالة</a></header>
