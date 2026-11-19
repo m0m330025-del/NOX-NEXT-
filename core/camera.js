@@ -289,8 +289,7 @@ export function initCamera() {
     track.style.setProperty("--lens-rotation", angle + "deg");
     track.style.transform = "rotate(" + angle + "deg)";
     lenses.forEach((button) => {
-      const counterAngle = activeIndex * (360 / lenses.length);
-      button.style.transform = "rotate(" + counterAngle + "deg)";
+
     });
     say(stream ? "تم تطبيق عدسة " + lenses[activeIndex].innerText.trim() : "اخترت العدسة. شغّل الكاميرا لمعاينتها.");
   }
