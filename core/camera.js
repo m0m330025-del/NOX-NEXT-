@@ -185,6 +185,8 @@ export function initCamera() {
   let subjectLockCenter = null;
   let subjectLockLostFrames = 0;
   let subjectLockConfidence = 0;
+  let subjectLockReacquireAttempts = 0;
+  let subjectLockWasReacquired = false;
 
   const supported = {
     secure: window.isSecureContext,
@@ -502,6 +504,8 @@ export function initCamera() {
     subjectLockCenter = null;
     subjectLockLostFrames = 0;
     subjectLockConfidence = 0;
+    subjectLockReacquireAttempts = 0;
+    subjectLockWasReacquired = false;
     const button = $("#nox-subject-lock-toggle");
     if (button) {
       button.setAttribute("aria-pressed", "false");
@@ -561,38 +565,46 @@ export function initCamera() {
 
   function updateSubjectLock(gray, width, height) {
     if (!subjectLockEnabled || !subjectLockTemplate || !subjectLockCenter || !livingMetalRegion) return;
-    const radius = 2;
-    const search = lowPower ? 5 : 7;
+    const patchRadius = 2;
+    const reacquiring = subjectLockLostFrames >= 2;
+    const search = reacquiring ? (lowPower ? 9 : 14) : (lowPower ? 5 : 7);
     let bestSad = Infinity;
+    let secondSad = Infinity;
     let bestX = subjectLockCenter.x;
     let bestY = subjectLockCenter.y;
-    for (let cy = Math.max(radius, subjectLockCenter.y - search); cy <= Math.min(height - radius - 1, subjectLockCenter.y + search); cy += 1) {
-      for (let cx = Math.max(radius, subjectLockCenter.x - search); cx <= Math.min(width - radius - 1, subjectLockCenter.x + search); cx += 1) {
+    for (let cy = Math.max(patchRadius, subjectLockCenter.y - search); cy <= Math.min(height - patchRadius - 1, subjectLockCenter.y + search); cy += 1) {
+      for (let cx = Math.max(patchRadius, subjectLockCenter.x - search); cx <= Math.min(width - patchRadius - 1, subjectLockCenter.x + search); cx += 1) {
         let sad = 0;
         let index = 0;
-        for (let py = -radius; py <= radius; py += 1) {
-          for (let px = -radius; px <= radius; px += 1) {
+        for (let py = -patchRadius; py <= patchRadius; py += 1) {
+          for (let px = -patchRadius; px <= patchRadius; px += 1) {
             sad += Math.abs(gray[(cy + py) * width + cx + px] - subjectLockTemplate[index]);
             index += 1;
           }
         }
         if (sad < bestSad) {
+          secondSad = bestSad;
           bestSad = sad;
           bestX = cx;
           bestY = cy;
-        }
+        } else if (sad < secondSad) secondSad = sad;
       }
     }
     const meanSad = bestSad / subjectLockTemplate.length;
+    const secondMeanSad = secondSad / subjectLockTemplate.length;
+    const distinctMatchMargin = secondMeanSad - meanSad;
     subjectLockConfidence = Math.max(0, Math.min(1, 1 - meanSad / 72));
-    if (meanSad > 38 || subjectLockConfidence < 0.46) {
+    const ambiguousReacquire = reacquiring && (meanSad > 25 || distinctMatchMargin < 1.5);
+    if (meanSad > 38 || subjectLockConfidence < 0.46 || ambiguousReacquire) {
       subjectLockLostFrames += 1;
+      if (reacquiring) subjectLockReacquireAttempts += 1;
       const hint = $("#nox-subject-lock-hint");
-      if (hint) hint.textContent = subjectLockLostFrames >= 4
-        ? "فُقدت البصمة مؤقتًا — أوقف الحركة لتجنب الانجراف"
+      if (hint) hint.textContent = reacquiring
+        ? "محاولة استعادة البصمة " + subjectLockReacquireAttempts + " — لا يوجد تطابق فريد موثوق"
         : "ثقة القفل منخفضة — جارٍ انتظار تطابق أوضح";
       return;
     }
+    if (reacquiring) subjectLockWasReacquired = true;
     subjectLockLostFrames = 0;
     const dx = Math.max(-0.08, Math.min(0.08, (bestX - subjectLockCenter.x) / width));
     const dy = Math.max(-0.08, Math.min(0.08, (bestY - subjectLockCenter.y) / height));
@@ -605,7 +617,9 @@ export function initCamera() {
     };
     subjectLockCenter = { x: bestX, y: bestY };
     const hint = $("#nox-subject-lock-hint");
-    if (hint) hint.textContent = "القفل البصري نشط — ثقة المطابقة " + Math.round(subjectLockConfidence * 100) + "%";
+    if (hint) hint.textContent = subjectLockWasReacquired
+      ? "تمت استعادة البصمة — ثقة التطابق " + Math.round(subjectLockConfidence * 100) + "%"
+      : "القفل البصري نشط — ثقة المطابقة " + Math.round(subjectLockConfidence * 100) + "%";
   }
 
   function updateTrackedRegionFromFlow() {
@@ -856,7 +870,7 @@ export function initCamera() {
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
-      ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames : "متوقف"],
+      ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
