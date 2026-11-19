@@ -72,7 +72,7 @@ jobs:
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
           }
-          const catalogMatch = filterEngine.match(/export const NOX_FILTER_GROUPS = (\\[[\\s\\S]*?\\]);/);
+          const catalogMatch = filterEngine.match(/export const NOX_FILTER_GROUPS = (\\[[^\\n]+\\]);/);
           if (!catalogMatch) throw new Error('Filter catalog data missing');
           const groups = JSON.parse(catalogMatch[1]);
           const totalFilters = groups.reduce((sum, group) => sum + group[1].length, 0);
