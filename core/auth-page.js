@@ -101,7 +101,7 @@ form.addEventListener("submit", async event => {
       ? "مرحبًا " + (user.name || "بك") + "، تم إنشاء حسابك بنجاح."
       : "مرحبًا بعودتك " + (user.name || "إلى NOX NEXT") + "، تم تسجيل الدخول بنجاح.";
     sessionStorage.setItem("nox.auth.notice", notice);
-    window.location.replace(submittedMode === "signup" ? "./profile.html" : "./index.html");
+    window.location.replace("./index.html");
   } catch (error) {
     console.error("NOX authentication failed at stage:", stage, error);
     const code = Number(error?.code);
