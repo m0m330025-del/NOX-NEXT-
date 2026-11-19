@@ -106,7 +106,7 @@ jobs:
             if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
           }
           console.log('Reality Follow confidence and displacement guards verified');
-          for (const token of ['meanSad > 38', 'subjectLockConfidence < 0.46', 'subjectLockLostFrames >= 4', 'variance < 12']) {
+          for (const token of ['meanSad > 38', 'subjectLockConfidence < 0.46', 'subjectLockLostFrames >= 2', 'variance < 12']) {
             if (!js.includes(token)) throw new Error('Subject Lock confidence/loss guard missing: ' + token);
           }
           console.log('Subject Lock bounded template matching and loss guards verified');
