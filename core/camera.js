@@ -982,6 +982,7 @@ export function initCamera() {
     const fusionButton = $("#nox-photon-fusion-build");
     const fusionSaveButton = $("#nox-photon-fusion-save");
     const confidenceButton = $("#nox-photon-confidence-build");
+    const ghostButton = $("#nox-photon-ghost-build");
     const confidenceCanvas = $("#nox-photon-confidence-map");
     const confidenceHint = $("#nox-photon-confidence-hint");
     const ghostCanvas = $("#nox-photon-ghost-map");
@@ -1026,6 +1027,7 @@ export function initCamera() {
     if (fusionButton) fusionButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
     if (fusionSaveButton) fusionSaveButton.disabled = !hasFusion;
     if (confidenceButton) confidenceButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
+    if (ghostButton) ghostButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
     if (confidenceCanvas) {
       if (hasConfidence) {
         if (confidenceCanvas.width !== photonConfidenceCanvas.width || confidenceCanvas.height !== photonConfidenceCanvas.height) {
