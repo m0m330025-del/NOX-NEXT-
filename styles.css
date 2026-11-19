@@ -293,7 +293,7 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  #nox-camera-gallery{min-width:52px;min-height:52px}
  .nox-creator-tools{position:absolute;z-index:9;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 88px);display:block;padding:0;pointer-events:none}
  .nox-creator-tools>.creator-tool-group{display:none}
- .nox-creator-tools>.creator-tool-group:first-child{display:block;pointer-events:auto;margin:0;padding:12px 10px 10px;border:1px solid #e8c87566;border-bottom:0;border-radius:150px 150px 18px 18px;background:linear-gradient(180deg,rgba(43,25,76,.78),rgba(13,8,31,.94));box-shadow:0 -8px 30px #0006;backdrop-filter:blur(16px)}
+ .nox-creator-tools>.creator-tool-group.is-active{display:block;pointer-events:auto;margin:0;padding:12px 10px 10px;border:1px solid #e8c87566;border-bottom:0;border-radius:24px 24px 18px 18px;background:linear-gradient(180deg,rgba(43,25,76,.78),rgba(13,8,31,.94));box-shadow:0 -8px 30px #0006;backdrop-filter:blur(16px)}
  .nox-creator-tools .creator-tool-heading{justify-content:center;margin:0 0 7px}
  .nox-creator-tools .creator-tool-heading h3{color:#ffe5a0;font-size:11px}
  .nox-creator-tools .creator-tool-heading>span{display:none}
@@ -382,7 +382,7 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
 }
 /* NOX NEXT — radial lens wheel: high-specificity mobile overrides */
 @media(max-width:760px){
- body[data-nox-screen="camera"] #camera .nox-creator-tools .creator-tool-group:first-child{overflow:visible}
+ body[data-nox-screen="camera"] #camera .nox-creator-tools .creator-tool-group.is-active{overflow:visible}
  body[data-nox-screen="camera"] #camera .nox-lens-carousel{
   position:relative!important;display:block!important;width:min(100%,360px)!important;height:166px!important;margin:4px auto 0!important;padding:0!important;
   overflow:hidden!important;touch-action:pan-y;overscroll-behavior:contain;cursor:grab
