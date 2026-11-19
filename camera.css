@@ -157,3 +157,9 @@
 .nox-photon-timeline-panel #nox-photon-fusion-build{background:linear-gradient(120deg,#d8f5e8,#a9dfcf);border-color:#a5e7d3;color:#15392f}
 .nox-photon-timeline-panel #nox-photon-fusion-save{background:linear-gradient(120deg,#e7e0ff,#c5d6f4);border-color:#c5b6ee;color:#292044}
 .nox-photon-timeline-panel #nox-photon-fusion-build:disabled,.nox-photon-timeline-panel #nox-photon-fusion-save:disabled{opacity:.42;cursor:not-allowed}
+
+
+/* NOX TEMPORAL CONFIDENCE MAP — overlay confidence categories */
+#nox-photon-confidence-map{display:block;width:100%;max-height:190px;aspect-ratio:16/9;object-fit:contain;border:1px solid #806b9f;border-radius:10px;background:#0b1020}
+.nox-photon-timeline-panel #nox-photon-confidence-build{background:linear-gradient(120deg,#fff0c5,#f0d58a);border-color:#f0d58a;color:#44320b}
+#nox-photon-confidence-hint{font-size:11px;line-height:1.8;color:#e5d9f5}
