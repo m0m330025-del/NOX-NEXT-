@@ -92,7 +92,7 @@ jobs:
           if (!catalogMatch) throw new Error('Filter catalog data missing');
           const groups = JSON.parse(catalogMatch[1]);
           const totalFilters = groups.reduce((sum, group) => sum + group[1].length, 0);
-          if (totalFilters !== 200 || groups.length !== 10) throw new Error('Expected 200 filters in 10 groups, got ' + totalFilters);
+          if (totalFilters !== 340 || groups.length !== 17) throw new Error('Expected 340 filters in 17 groups, got ' + totalFilters);
           for (const token of ['u_variant', 'u_time', 'family < 8.5']) {
             if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
           }
@@ -164,5 +164,5 @@ jobs:
             }
           }
           console.log('NOX Temporal Ghost Guard temporal-variation mask and fusion blocking verified');
-          console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
+          console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'groups');
           NODE
