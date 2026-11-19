@@ -234,6 +234,13 @@ export function initCamera() {
   let stabilizationConfidence = 0;
   let lowLightMode = "off";
   let detailRecoveryMode = "off";
+  let motionFreezeEnabled = false;
+  let motionFreezeCapturePending = false;
+  let motionFreezeCaptureTimer = 0;
+  let motionFreezeCaptureStartedAt = 0;
+  let motionFreezeLastSpeed = null;
+  let motionFreezeLastSampleAt = 0;
+  let motionFreezeState = "غير متاح";
 
   const supported = {
     secure: window.isSecureContext,
@@ -542,6 +549,7 @@ export function initCamera() {
     }
     opticalFlowVectors = vectors;
     opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
+    updateMotionFreezeState();
     updateCameraStabilization();
     opticalFlowPrevious = gray;
     opticalFlowSequence += 1;
@@ -849,6 +857,63 @@ export function initCamera() {
     updateDiagnostics();
   }
 
+  function updateMotionFreezeState() {
+    const usable = opticalFlowVectors.filter((vector) => vector.confidence >= 0.12);
+    if (opticalFlowMode === "off" || usable.length < 4 || !opticalFlowLastAt || performance.now() - opticalFlowLastAt > 700) {
+      motionFreezeLastSpeed = null;
+      motionFreezeState = "غير متاح";
+    } else {
+      const speeds = usable.map((vector) => Math.hypot(vector.dx * opticalFlowWidth, vector.dy * opticalFlowHeight)).sort((a, b) => a - b);
+      motionFreezeLastSpeed = speeds[Math.floor(speeds.length / 2)];
+      motionFreezeState = motionFreezeLastSpeed <= 0.9 ? "هادئة" : motionFreezeLastSpeed <= 2.2 ? "متوسطة" : "سريعة";
+    }
+    motionFreezeLastSampleAt = opticalFlowLastAt || 0;
+    const hint = $("#nox-motion-freeze-hint");
+    if (hint) hint.textContent = motionFreezeEnabled
+      ? (motionFreezeState === "غير متاح" ? "ننتظر قياس حركة موثوقًا…" : "الحركة " + motionFreezeState + " — " + (motionFreezeLastSpeed ?? 0).toFixed(2) + " بكسل/عينة")
+      : "مساعد توقيت الالتقاط — لا يتحكم في سرعة الغالق";
+  }
+
+  function cancelMotionFreezeCapture(message = "تم إلغاء انتظار الالتقاط") {
+    if (motionFreezeCaptureTimer) window.clearTimeout(motionFreezeCaptureTimer);
+    motionFreezeCaptureTimer = 0;
+    motionFreezeCapturePending = false;
+    const cancel = $("#nox-motion-freeze-cancel");
+    if (cancel) cancel.hidden = true;
+    if (capture) capture.setAttribute("aria-label", "التقاط صورة");
+    if (message) announce(message, Boolean(stream));
+  }
+
+  function capturePhotoNow() {
+    if (!stream || !video.videoWidth) return announce("انتظر حتى يظهر بث الكاميرا.");
+    renderFrame(false);
+    const output = createOutputCanvas();
+    output.toBlob((blob) => {
+      if (!blob) return announce("تعذر إنشاء الصورة.");
+      showBlob(blob, "image", "nox-next-photo.jpg");
+      announce("تم التقاط الصورة. اضغط حفظ على الجهاز.");
+    }, "image/jpeg", 0.92);
+  }
+
+  function waitForMotionFreezeCapture() {
+    if (!motionFreezeCapturePending || !stream) return;
+    const age = performance.now() - motionFreezeLastSampleAt;
+    const reliable = motionFreezeLastSpeed !== null && age <= 700 && opticalFlowVectors.filter((vector) => vector.confidence >= 0.12).length >= 4;
+    if (reliable && motionFreezeLastSpeed <= 0.9) {
+      cancelMotionFreezeCapture(null);
+      capturePhotoNow();
+      announce("تم الالتقاط عند هدوء الحركة.");
+      return;
+    }
+    if (performance.now() - motionFreezeCaptureStartedAt >= 1400) {
+      cancelMotionFreezeCapture(null);
+      capturePhotoNow();
+      announce("انتهى انتظار الهدوء — تم الالتقاط الآن.");
+      return;
+    }
+    motionFreezeCaptureTimer = window.setTimeout(waitForMotionFreezeCapture, 90);
+  }
+
   function resetCameraStabilization() {
     stabilizationOffset = { x: 0, y: 0 };
     stabilizationTarget = { x: 0, y: 0 };
@@ -1058,6 +1123,7 @@ export function initCamera() {
       ["NOX Smart Stabilizer", cameraStabilizationEnabled ? "تثبيت إلكتروني نشط — ثقة " + Math.round(stabilizationConfidence * 100) + "% / إزاحة " + (stabilizationOffset.x * 100).toFixed(1) + "%, " + (stabilizationOffset.y * 100).toFixed(1) + "%" : "متوقف"],
       ["NOX Low-Light Rescue", lowLightMode === "off" ? "متوقف" : lowLightMode === "gentle" ? "إنقاذ متوازن" : "إنقاذ قوي"],
       ["NOX True Detail Recovery", detailRecoveryMode === "off" ? "متوقف" : detailRecoveryMode === "natural" ? "حدة طبيعية — WebGL" : "حدة قوية — WebGL"],
+      ["NOX Motion Freeze", motionFreezeEnabled ? "مساعد توقيت الالتقاط — حركة " + motionFreezeState + (motionFreezeLastSpeed === null ? "" : " / " + motionFreezeLastSpeed.toFixed(2) + " px/sample") : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -1080,6 +1146,7 @@ export function initCamera() {
 
   async function stopCamera() {
     recording = false;
+    cancelMotionFreezeCapture(null);
     if (recorder && recorder.state !== "inactive") {
       try { recorder.stop(); } catch { stopTracks(recordingStream); recordingStream = null; }
     } else {
@@ -1331,15 +1398,41 @@ export function initCamera() {
   });
 
   capture.addEventListener("click", () => {
+    if (motionFreezeCapturePending) {
+      cancelMotionFreezeCapture();
+      return;
+    }
     if (!stream || !video.videoWidth) return announce("انتظر حتى يظهر بث الكاميرا.");
-    renderFrame(false);
-    const output = createOutputCanvas();
-    output.toBlob((blob) => {
-      if (!blob) return announce("تعذر إنشاء الصورة.");
-      showBlob(blob, "image", "nox-next-photo.jpg");
-      announce("تم التقاط الصورة. اضغط حفظ على الجهاز.");
-    }, "image/jpeg", 0.92);
+    if (!motionFreezeEnabled) {
+      capturePhotoNow();
+      return;
+    }
+    if (opticalFlowMode === "off") setOpticalFlowMode("vectors");
+    motionFreezeCapturePending = true;
+    motionFreezeCaptureStartedAt = performance.now();
+    const cancel = $("#nox-motion-freeze-cancel");
+    if (cancel) cancel.hidden = false;
+    capture.setAttribute("aria-label", "إلغاء انتظار الالتقاط");
+    announce("NOX MOTION FREEZE: ننتظر لحظة حركة أهدأ لمدة قصيرة…");
+    waitForMotionFreezeCapture();
   });
+
+  $("#nox-motion-freeze-toggle")?.addEventListener("click", () => {
+    motionFreezeEnabled = !motionFreezeEnabled;
+    if (motionFreezeEnabled && opticalFlowMode === "off") {
+      const flowSelect = $("#nox-flow-mode");
+      if (flowSelect) flowSelect.value = "vectors";
+      setOpticalFlowMode("vectors");
+    }
+    const button = $("#nox-motion-freeze-toggle");
+    button.setAttribute("aria-pressed", String(motionFreezeEnabled));
+    button.textContent = motionFreezeEnabled ? "إيقاف مساعد تجميد الحركة" : "تشغيل مساعد تجميد الحركة";
+    if (!motionFreezeEnabled) cancelMotionFreezeCapture("تم إيقاف مساعد توقيت الالتقاط");
+    updateMotionFreezeState();
+    updateDiagnostics();
+  });
+
+  $("#nox-motion-freeze-cancel")?.addEventListener("click", () => cancelMotionFreezeCapture());
 
   recordButton.addEventListener("click", () => {
     if (!stream) return;
