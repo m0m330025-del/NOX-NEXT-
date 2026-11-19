@@ -95,3 +95,17 @@
 [hidden]{display:none!important}
 @media(max-width:850px){.profile-content-layout{grid-template-columns:1fr}.profile-side-column{grid-template-columns:1fr 1fr}.profile-identity{padding-inline:22px}.identity-actions{flex-direction:column;align-items:stretch}.identity-actions button{white-space:nowrap}}
 @media(max-width:600px){.profile-app{width:calc(100% - 20px);padding:12px 0 35px}.profile-topbar{gap:8px;margin-bottom:12px}.profile-brand .brand-symbol{width:38px;height:38px;font-size:24px}.profile-brand b{font-size:14px}.profile-brand small{font-size:8px}.profile-topbar nav{display:none}.back-home{font-size:10px;padding:8px 10px}.profile-cover{height:145px}.profile-identity{display:block;padding:0 14px 15px}.identity-main{align-items:flex-end;gap:12px}.profile-avatar-wrap{width:108px;height:108px;flex-basis:108px;margin-top:-48px}.profile-avatar-frame{width:108px;height:108px}.profile-avatar-frame>span:not(.profile-avatar-shine){font-size:51px}.identity-copy{padding-bottom:3px}.profile-name-line h1{font-size:18px}.profile-id-row{gap:5px;padding:4px 6px}.profile-id-row b{font-size:9px}.identity-about{font-size:10px;line-height:1.5}.identity-actions{flex-direction:row;padding:13px 0 0;gap:7px}.identity-actions button{flex:1;padding:9px 7px;font-size:10px}.profile-social-nav{padding:0 5px;min-height:52px;justify-content:space-around}.profile-tab{padding:0 11px;font-size:11px}.profile-content-layout{margin-top:12px;gap:12px}.profile-side-column{grid-template-columns:1fr}.profile-panel{padding:15px;border-radius:16px}.profile-panel h2{font-size:14px}.form-grid,.private-account-fields{grid-template-columns:1fr}.empty-social-state{min-height:190px}.cover-mark{font-size:10px;bottom:15px;letter-spacing:3px}}
+
+
+/* Reliable, visible profile-tab feedback */
+.profile-social-nav{position:relative;z-index:2;isolation:isolate}
+.profile-social-nav .profile-tab{position:relative;z-index:1;cursor:pointer;pointer-events:auto;touch-action:manipulation}
+.profile-tab-panel.is-active{animation:profilePanelEnter .22s ease-out both}
+.profile-tab-panel[hidden]{display:none!important}
+@keyframes profilePanelEnter{
+  from{opacity:0;transform:translateY(7px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(prefers-reduced-motion:reduce){
+  .profile-tab-panel.is-active{animation:none}
+}
