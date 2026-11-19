@@ -2,6 +2,9 @@ import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
+import { NOXMediaPipeSelfieProvider } from "./nox-mediapipe-selfie-provider.js";
+import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
+import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -395,6 +398,39 @@ export function initCamera() {
   let faceDetectionLastAt = 0;
   let faceDetectionSession = 0;
   let trackedFace = null;
+  let beautyVisionAdapter = null;
+  let beautyVisionProvider = null;
+  let beautySkinEngine = new NOXSkinSegmentationEngine({
+    minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
+  });
+  let beautyFrameCounter = 0;
+  let beautyProcessing = false;
+  let beautyState = "متوقف";
+  const beautyInputCanvas = document.createElement("canvas");
+  const beautyInputContext = beautyInputCanvas.getContext("2d", { willReadFrequently: true });
+  const beautyOverlay = document.createElement("canvas");
+  beautyOverlay.id = "nox-beauty-ai-mask-preview";
+  beautyOverlay.hidden = true;
+  beautyOverlay.setAttribute("aria-hidden", "true");
+  beautyOverlay.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:3;pointer-events:none;";
+  stage.append(beautyOverlay);
+  const beautyOverlayContext = beautyOverlay.getContext("2d");
+
+  const beautyPanel = document.createElement("section");
+  beautyPanel.className = "nox-beauty-ai-panel";
+  const beautyTitle = document.createElement("b");
+  beautyTitle.textContent = "NOX BEAUTY VISION — REAL AI";
+  const beautyButton = document.createElement("button");
+  beautyButton.type = "button";
+  beautyButton.textContent = "تحميل نموذج تقسيم البشرة";
+  beautyButton.disabled = true;
+  const beautyStatus = document.createElement("small");
+  beautyStatus.setAttribute("role", "status");
+  beautyStatus.textContent = "شغّل الكاميرا ثم ابدأ التحليل. النموذج يُحمّل عند طلبك فقط.";
+  const beautyPrivacy = document.createElement("small");
+  beautyPrivacy.textContent = "المعالجة على الجهاز. قد ترسل مكتبة MediaPipe بيانات قياس استخدام؛ لا ترسل إطارات الكاميرا إلى خوادم النموذج.";
+  beautyPanel.append(beautyTitle, beautyButton, beautyStatus, beautyPrivacy);
+  page.querySelector(".nox-camera-v2-tools")?.prepend(beautyPanel);
 
   const supported = {
     secure: window.isSecureContext,
@@ -404,6 +440,134 @@ export function initCamera() {
     webgl: typeof window.WebGLRenderingContext === "function",
     faceDetector: typeof window.FaceDetector === "function"
   };
+
+  function clearBeautyMaskPreview() {
+    if (beautyOverlayContext) {
+      beautyOverlayContext.clearRect(0, 0, beautyOverlay.width, beautyOverlay.height);
+    }
+    beautyOverlay.hidden = true;
+    beautyOverlay.style.transform = "none";
+  }
+
+  function drawBeautyMaskPreview(mask) {
+    if (!mask?.data || !beautyOverlayContext) return false;
+    const width = mask.width;
+    const height = mask.height;
+    if (!Number.isInteger(width) || !Number.isInteger(height) ||
+        mask.data.length !== width * height) return false;
+    beautyOverlay.width = width;
+    beautyOverlay.height = height;
+    const image = beautyOverlayContext.createImageData(width, height);
+    for (let i = 0; i < mask.data.length; i += 1) {
+      const probability = Math.max(0, Math.min(1, Number(mask.data[i]) || 0));
+      const offset = i * 4;
+      image.data[offset] = 68;
+      image.data[offset + 1] = 245;
+      image.data[offset + 2] = 174;
+      image.data[offset + 3] = probability > 0 ? Math.round(118 * probability) : 0;
+    }
+    beautyOverlayContext.putImageData(image, 0, 0);
+    beautyOverlay.style.transform = facing === "user" ? "scaleX(-1)" : "none";
+    beautyOverlay.hidden = false;
+    return true;
+  }
+
+  async function runBeautyMaskPreview() {
+    if (!stream || video.readyState < 2 || beautyProcessing) {
+      beautyStatus.textContent = "شغّل الكاميرا وانتظر ظهور الصورة أولًا.";
+      return;
+    }
+    beautyProcessing = true;
+    beautyButton.disabled = true;
+    beautyState = "جارٍ تحميل النموذج أو تحليل إطار";
+    beautyStatus.textContent = beautyState + " — قد يستغرق التحميل الأول وقتًا بسبب حجم النموذج.";
+    try {
+      if (!beautyVisionAdapter) {
+        beautyVisionProvider = new NOXMediaPipeSelfieProvider({
+          delegate: "CPU",
+          maxInputDimension: 256
+        });
+        beautyVisionAdapter = new NOXBeautyVisionProvider({
+          provider: beautyVisionProvider,
+          minSkinConfidence: 0.55,
+          minRegionConfidence: 0.8,
+          maxFrameAgeMs: 5000,
+          now: () => Date.now()
+        });
+      }
+      if (beautyVisionAdapter.state !== "ready") {
+        const initialized = await beautyVisionAdapter.initialize();
+        if (!initialized.available) {
+          throw new Error(initialized.reason || "تعذر تحميل نموذج MediaPipe");
+        }
+      }
+
+      const scale = Math.min(1, 256 / Math.max(video.videoWidth, video.videoHeight));
+      const width = Math.max(2, Math.round(video.videoWidth * scale));
+      const height = Math.max(2, Math.round(video.videoHeight * scale));
+      beautyInputCanvas.width = width;
+      beautyInputCanvas.height = height;
+      beautyInputContext.drawImage(video, 0, 0, width, height);
+
+      const frame = {
+        source: beautyInputCanvas,
+        width,
+        height,
+        frameId: "nox-beauty-" + (++beautyFrameCounter),
+        timestamp: Date.now()
+      };
+      const vision = await beautyVisionAdapter.processFrame(frame);
+      if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
+        throw new Error(vision?.reason || "لم يتم اكتشاف منطقة بشرة موثوقة");
+      }
+
+      const skin = beautySkinEngine.validateMask({
+        data: vision.skinMask.data,
+        width: vision.skinMask.width,
+        height: vision.skinMask.height,
+        confidence: vision.skinMask.confidence,
+        source: vision.skinMask.source,
+        faceBox: vision.faceBox
+      });
+      if (skin.state !== "accepted") {
+        throw new Error("رفض قناع البشرة: " + skin.reason);
+      }
+      if (!drawBeautyMaskPreview(vision.skinMask)) {
+        throw new Error("تعذر رسم قناع المعاينة");
+      }
+
+      beautyState = "نشط — تم اكتشاف بشرة الوجه";
+      beautyStatus.textContent =
+        "نجح التقسيم الحقيقي: " + skin.pixelCount + " بكسل وجه / ثقة " +
+        Math.round(skin.confidence * 100) + "%. المناطق الدقيقة مثل الشفاه والجفون غير متاحة بهذا النموذج.";
+      beautyButton.textContent = "إعادة تحليل إطار";
+    } catch (error) {
+      beautyState = "غير متاح";
+      clearBeautyMaskPreview();
+      beautyStatus.textContent = "لم يعمل التحليل: " + String(error?.message || error).slice(0, 180);
+      beautyButton.textContent = "إعادة محاولة تحميل النموذج";
+    } finally {
+      beautyProcessing = false;
+      beautyButton.disabled = !stream;
+      updateDiagnostics();
+    }
+  }
+
+  beautyButton.addEventListener("click", runBeautyMaskPreview);
+
+  async function releaseBeautyVision() {
+    clearBeautyMaskPreview();
+    if (beautyVisionAdapter) {
+      try { await beautyVisionAdapter.reset(); } catch { /* release remains best-effort */ }
+    }
+    beautyVisionAdapter = null;
+    beautyVisionProvider = null;
+    beautySkinEngine.reset();
+    beautyState = "متوقف";
+    beautyButton.textContent = "تحميل نموذج تقسيم البشرة";
+    beautyButton.disabled = true;
+    beautyStatus.textContent = "تم تحرير موارد النموذج. شغّل الكاميرا لإعادة الاختبار.";
+  }
 
   function resetFaceTracking() {
     faceDetectionSession += 1;
@@ -499,6 +663,7 @@ export function initCamera() {
     video.hidden = !ready;
     renderCanvas.hidden = !ready;
     stage.classList.toggle("is-live", ready);
+    beautyButton.disabled = !ready || beautyProcessing;
   }
 
   function stopTracks(target) {
@@ -2129,7 +2294,8 @@ export function initCamera() {
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
-      ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
+      ["NOX Beauty Vision", beautyState],
+      ["تجميل البشرة", "معاينة قناع وجه حقيقي؛ لا يوجد مكياج دقيق بعد"],
       ["المؤثر النشط", renderMode],
       ["Adaptive Rescue", QUALITY_TIERS[qualityTier].name + " — " + QUALITY_TIERS[qualityTier].targetFps + " FPS مستهدف"],
       ["أداء المعالجة", averageFrameCost.toFixed(1) + " ms متوسط / " + measuredFps.toFixed(1) + " FPS مقاس"],
@@ -2172,6 +2338,7 @@ export function initCamera() {
     resetCameraStabilization();
     clearSubjectLock();
     resetFaceTracking();
+    await releaseBeautyVision();
     stopTracks(stream);
     stream = null;
     video.pause();
