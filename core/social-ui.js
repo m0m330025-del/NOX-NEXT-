@@ -161,7 +161,7 @@ export function initSocialUI() {
   if(event.pointerType==="mouse"&&event.button!==0)return;
   const button=event.target.closest?.(".nox-lens");
   lensPointer=event.pointerId;lensPressedButton=button||null;lensGestureDragged=false;lensHoldStarted=false;
-  lensWheelStartX=event.clientX;lensWheelStartIndex=activeLensIndex;
+  lensWheelStartX=event.clientX;
   if(button){
    selectLens(button);
    if(stream)lensHoldTimer=setTimeout(()=>{
@@ -172,6 +172,7 @@ export function initSocialUI() {
     if(recorder?.state==="recording")notice("بدأ تسجيل الفيديو — ارفع إصبعك للإيقاف.");
    },450);
   }
+  lensWheelStartIndex=activeLensIndex;
   try{lensCarousel.setPointerCapture(event.pointerId);}catch(error){}
  },{passive:true});
  lensCarousel?.addEventListener("pointermove",event=>{
