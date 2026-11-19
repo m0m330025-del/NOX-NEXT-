@@ -30,6 +30,7 @@ uniform float u_variant;
 uniform float u_lowLight;
 uniform float u_detail;
 uniform float u_waveMatter;
+uniform float u_science;
 uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
@@ -123,6 +124,46 @@ void main() {
     float horizonHaze = (1.0 - smoothstep(0.18, 0.72, uv.y)) * 0.10;
     vec3 skyTint = vec3(0.42, 0.62, 1.0) * (0.10 + skyFactor * 0.20);
     c = mix(c, c * (vec3(1.0) + skyTint) + vec3(horizonHaze * 0.7, horizonHaze * 0.8, horizonHaze), skyFactor * 0.22);
+  }
+
+  if (u_science > 0.5 && u_science < 1.5) {
+    vec2 p = uv - vec2(0.5); float radius = length(p);
+    float rings = 0.5 + 0.5 * cos(radius * 185.0 - u_time * 2.2);
+    float aperture = 1.0 - smoothstep(0.08, 0.52, radius);
+    c = mix(c, c * 0.72 + vec3(0.24,0.52,0.92) * rings * 0.42, aperture * 0.30);
+  } else if (u_science > 1.5 && u_science < 2.5) {
+    float lum = dot(c, vec3(0.299,0.587,0.114));
+    float emission = smoothstep(0.28,0.82,lum) * (0.5 + 0.5*sin(u_time*1.4 + uv.y*8.0));
+    c = mix(c, c + vec3(0.10,0.48,0.36)*emission, 0.34);
+  } else if (u_science > 2.5 && u_science < 3.5) {
+    float angle = atan(uv.y-0.5,uv.x-0.5);
+    float analyzer = 0.5 + 0.5*cos(angle*2.0 + u_time*0.18);
+    c = mix(c, c * (0.72 + 0.48*analyzer) + vec3(0.08,0.16,0.28)*(1.0-analyzer), 0.34);
+  } else if (u_science > 3.5 && u_science < 4.5) {
+    float lum = dot(c,vec3(0.299,0.587,0.114));
+    float depthProxy = smoothstep(0.12,0.88,lum);
+    float focusBand = 1.0 - smoothstep(0.08,0.28,abs(depthProxy-0.58));
+    vec3 soft = (texture2D(u_image,uv+u_texel*vec2(1.0,0.0)).rgb + texture2D(u_image,uv-u_texel*vec2(1.0,0.0)).rgb + texture2D(u_image,uv+u_texel*vec2(0.0,1.0)).rgb + texture2D(u_image,uv-u_texel*vec2(0.0,1.0)).rgb) * 0.25;
+    c = mix(c,soft,focusBand*0.34);
+  } else if (u_science > 4.5 && u_science < 5.5) {
+    vec2 flarePos = uv-vec2(0.22,0.28);
+    float flare = exp(-dot(flarePos,flarePos)*42.0);
+    float streak = exp(-abs(uv.y-0.28)*95.0)*0.22;
+    c = clamp(c + vec3(1.0,0.72,0.38)*(flare*0.28+streak*0.08),0.0,1.0);
+  } else if (u_science > 5.5 && u_science < 6.5) {
+    float lum = dot(c,vec3(0.299,0.587,0.114));
+    vec3 spectral = vec3(c.r*1.12, c.g*0.96, c.b*1.18) + vec3(0.03,0.0,0.05)*(1.0-lum);
+    c = mix(c,spectral,0.42);
+  } else if (u_science > 6.5 && u_science < 7.5) {
+    float radius = length(uv-vec2(0.52,0.34));
+    float halo = exp(-pow((radius-0.22)*34.0,2.0));
+    float haze = (1.0-smoothstep(0.15,0.85,uv.y))*0.08;
+    c = clamp(c + vec3(0.34,0.48,0.72)*(halo*0.18+haze),0.0,1.0);
+  } else if (u_science > 7.5) {
+    float lum = dot(c,vec3(0.299,0.587,0.114));
+    float grain = 0.5+0.5*sin((uv.x*19.0+uv.y*13.0+lum*3.0)*6.28318);
+    vec3 material = mix(vec3(0.12,0.20,0.28),vec3(0.88,0.76,0.58),grain);
+    c = mix(c,material*(0.35+lum*0.85),0.28);
   }
   if (u_lowLight > 0.5) {
     float lum = dot(c, vec3(0.299, 0.587, 0.114));
@@ -262,6 +303,7 @@ export function initCamera() {
   let lowLightMode = "off";
   let detailRecoveryMode = "off";
   let waveMatterMode = "off";
+  let scienceMode = "off";
   let motionFreezeEnabled = false;
   let motionFreezeCapturePending = false;
   let motionFreezeCaptureTimer = 0;
@@ -901,6 +943,30 @@ export function initCamera() {
     updateDiagnostics();
   }
 
+
+  function setScienceMode(mode) {
+    const modes = ["diffraction","fluorescence","polarization","light-field","flare","spectral","atmosphere","material"];
+    scienceMode = modes.includes(mode) || mode === "lucky-frame" ? mode : "off";
+    const control = $("#nox-science-mode");
+    if (control) control.value = scienceMode;
+    const hint = $("#nox-science-hint");
+    const descriptions = {
+      diffraction:"حيود وحلقات موجية — محاكاة شكلية وليست قياسًا للجبهة الموجية",
+      fluorescence:"توهج مستوحى من الفلورسنس — لا يكشف تركيبًا كيميائيًا",
+      polarization:"ألوان مستوحاة من الاستقطاب — لا يقيس استقطاب الضوء",
+      "light-field":"عمق وإعادة تركيز أحادي الكاميرا — لا يعادل Light Field حقيقيًا",
+      flare:"وهج وهالات عدسة فنية — ليست إعادة بناء فيزيائية للعدسة",
+      spectral:"تلوين مستوحى من الأطياف — لا يلتقط UV أو IR",
+      atmosphere:"هالات وضباب جوي فني — لا يستخرج الطقس أو تركيب الهواء",
+      material:"مظهر مواد معدنية وخزفية ولؤلؤية — لا يتعرف على المادة",
+      "lucky-frame":"مساعد التقاط اللحظة؛ لا يدّعي اختيار Burst متعدد الصور",
+      off:"متوقف — لا توجد محاكاة علمية إضافية"
+    };
+    if (hint) hint.textContent = descriptions[scienceMode];
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  }
+
   function updateMotionFreezeState() {
     const usable = opticalFlowVectors.filter((vector) => vector.confidence >= 0.12);
     if (opticalFlowMode === "off" || usable.length < 4 || !opticalFlowLastAt || performance.now() - opticalFlowLastAt > 700) {
@@ -1062,6 +1128,8 @@ export function initCamera() {
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
         gl.uniform1f(renderer.detail, detailRecoveryMode === "strong" ? 2 : detailRecoveryMode === "natural" ? 1 : 0);
         gl.uniform1f(gl.getUniformLocation(renderer.program, "u_waveMatter"), waveMatterMode === "thin-film" ? 1 : waveMatterMode === "dispersion" ? 2 : waveMatterMode === "atmosphere" ? 3 : 0);
+        const scienceModes = ["diffraction","fluorescence","polarization","light-field","flare","spectral","atmosphere","material"];
+        gl.uniform1f(gl.getUniformLocation(renderer.program, "u_science"), Math.max(0, scienceModes.indexOf(scienceMode) + 1));
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -1464,6 +1532,7 @@ export function initCamera() {
   });
 
   $("#nox-wave-matter-mode")?.addEventListener("change", (event) => setWaveMatterMode(event.target.value));
+  $("#nox-science-mode")?.addEventListener("change", (event) => setScienceMode(event.target.value));
 
   $("#nox-motion-freeze-toggle")?.addEventListener("click", () => {
     motionFreezeEnabled = !motionFreezeEnabled;
