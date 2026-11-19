@@ -56,7 +56,7 @@ jobs:
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
             'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
-            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint'
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -73,7 +73,7 @@ jobs:
             'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
             'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
             'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode',
-            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames', 'subjectLockReacquireAttempts', 'distinctMatchMargin', 'ambiguousReacquire']) {
+            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames', 'subjectLockReacquireAttempts', 'distinctMatchMargin', 'ambiguousReacquire', 'setMotionPredictionEnabled', 'motionPredictionEnabled', 'subjectLockVelocity', 'searchCenterX', 'searchCenterY', 'leadLimit']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -114,5 +114,9 @@ jobs:
             if (!js.includes(token)) throw new Error('Subject Lock safe re-acquisition guard missing: ' + token);
           }
           console.log('Subject Lock conservative re-acquisition guards verified');
+          for (const token of ['subjectLockVelocity.x * 0.62', 'observedDx * 0.38', 'lowPower ? 4 : 6', 'motionPredictionEnabled ? Math.max', 'subjectLockVelocity = { x: 0, y: 0 }']) {
+            if (!js.includes(token)) throw new Error('Motion prediction smoothing or bounded lead missing: ' + token);
+          }
+          console.log('NOX Motion Prediction bounded lead and velocity smoothing verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
