@@ -404,6 +404,7 @@ export function initCamera() {
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
   let beautyFrameCounter = 0;
+  let beautyLastTimestamp = 0;
   let beautyProcessing = false;
   let beautyState = "متوقف";
   const beautyInputCanvas = document.createElement("canvas");
@@ -509,12 +510,13 @@ export function initCamera() {
       beautyInputCanvas.height = height;
       beautyInputContext.drawImage(video, 0, 0, width, height);
 
+      beautyLastTimestamp = Math.max(Date.now(), beautyLastTimestamp + 1);
       const frame = {
         source: beautyInputCanvas,
         width,
         height,
         frameId: "nox-beauty-" + (++beautyFrameCounter),
-        timestamp: Date.now()
+        timestamp: beautyLastTimestamp
       };
       const vision = await beautyVisionAdapter.processFrame(frame);
       if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
@@ -562,6 +564,7 @@ export function initCamera() {
     }
     beautyVisionAdapter = null;
     beautyVisionProvider = null;
+    beautyLastTimestamp = 0;
     beautySkinEngine.reset();
     beautyState = "متوقف";
     beautyButton.textContent = "تحميل نموذج تقسيم البشرة";
