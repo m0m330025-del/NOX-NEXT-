@@ -96,6 +96,9 @@ jobs:
           for (const token of ['u_filterGroup', 'renderer.filterGroup', 'u_filterGroup > 9.5', 'u_filterGroup > 10.5', 'u_filterGroup > 11.5', 'u_filterGroup > 12.5', 'u_filterGroup > 13.5', 'u_filterGroup > 14.5', 'u_filterGroup > 15.5']) {
             if (!cameraSource.includes(token)) throw new Error('Extended live-filter shader path missing: ' + token);
           }
+          if (!cameraSource.includes('float eyeLum = dot(c, vec3(0.299, 0.587, 0.114));') || !cameraSource.includes('smoothstep(0.18,0.78,eyeLum)')) {
+            throw new Error('Eye filter shader must calculate luminance within its own scope');
+          }
           const extendedGroups = groups.slice(10).map(group => group[0]);
           const expectedExtended = ['مكياج الوجه','البشرة والعناية بالمظهر','الشعر والتسريحات','العيون والحواجب والرموش','الخلفيات والفصل المكاني','العمق والمنظور والبورتريه','الجسيمات والزخارف التفاعلية'];
           if (JSON.stringify(extendedGroups) !== JSON.stringify(expectedExtended)) throw new Error('Extended filter groups are missing or reordered');
