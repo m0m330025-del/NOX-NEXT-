@@ -134,6 +134,13 @@ export function initSocialUI() {
  start?.addEventListener("click",startCamera);
  stop?.addEventListener("click",stopCamera);
  flip?.addEventListener("click",async()=>{facingMode=facingMode==="user"?"environment":"user";await startCamera();});
+ const cameraToolTabs=$(".nox-camera-tool-tab");
+ const cameraToolPanels=$(".nox-creator-tools [data-camera-tool-panel]");
+ cameraToolTabs.forEach(button=>button.addEventListener("click",()=>{
+  const target=button.dataset.cameraTool;
+  cameraToolTabs.forEach(item=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));});
+  cameraToolPanels.forEach(panel=>panel.classList.toggle("is-active",panel.dataset.cameraToolPanel===target));
+ }));
  const lensCarousel=$(".nox-lens-carousel");
  const lensButtons=$$(".nox-lens");
  let activeLensIndex=Math.max(0,lensButtons.findIndex(button=>button.classList.contains("active")));
