@@ -1,5 +1,3 @@
-import { account, ID } from "./appwrite.js";
-
 const form = document.getElementById("auth-form");
 const nameField = document.getElementById("name-field");
 const nameInput = document.getElementById("name");
@@ -44,20 +42,24 @@ form.addEventListener("submit", async event => {
   const email = emailInput.value.trim().toLowerCase();
   const password = passwordInput.value;
   const name = nameInput.value.trim();
+  const submittedMode = mode;
 
-  if (!email || !password || (mode === "signup" && !name)) {
+  if (!email || !password || (submittedMode === "signup" && !name)) {
     setMessage("من فضلك أكمل البيانات المطلوبة.");
     return;
   }
-  if (mode === "signup" && password.length < 8) {
+  if (submittedMode === "signup" && password.length < 8) {
     setMessage("كلمة المرور يجب ألا تقل عن 8 أحرف.");
     return;
   }
 
   submitButton.disabled = true;
-  submitButton.textContent = mode === "signup" ? "جارٍ إنشاء الحساب..." : "جارٍ تسجيل الدخول...";
+  tabs.forEach(tab => { tab.disabled = true; });
+  submitButton.textContent = submittedMode === "signup" ? "جارٍ إنشاء الحساب..." : "جارٍ تسجيل الدخول...";
   try {
-    if (mode === "signup") {
+    // Load the SDK only when the visitor actually submits the form.
+    const { account, ID } = await import("./appwrite.js");
+    if (submittedMode === "signup") {
       await account.create(ID.unique(), email, password, name);
     }
     await account.createEmailPasswordSession(email, password);
@@ -69,16 +71,15 @@ form.addEventListener("submit", async event => {
       ? "هذا البريد الإلكتروني مسجل بالفعل. جرّب تسجيل الدخول."
       : error?.code === 401
         ? "البريد الإلكتروني أو كلمة المرور غير صحيحة."
-        : error?.message || "تعذر إكمال العملية. حاول مرة أخرى.";
+        : error?.code === 429
+          ? "محاولات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول."
+          : error instanceof TypeError
+            ? "تعذر الاتصال بخدمة الحسابات. تحقق من الإنترنت وحاول مرة أخرى."
+            : "تعذر إكمال العملية. راجع إعدادات Appwrite وحاول مرة أخرى.";
     setMessage(text);
   } finally {
     submitButton.disabled = false;
+    tabs.forEach(tab => { tab.disabled = false; });
     submitButton.textContent = mode === "signup" ? "إنشاء حساب" : "دخول إلى NOX NEXT";
   }
 });
-
-account.get().then(user => {
-  if (user) {
-    setMessage("أنت مسجل الدخول بالفعل باسم " + (user.name || "مستخدم NOX") + ".", true);
-  }
-}).catch(() => {});
