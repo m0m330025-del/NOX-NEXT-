@@ -2,11 +2,13 @@ export function initSocialUI() {
  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
  const toast=$("#toast");let timer,stream=null,filter="none",facingMode="user",recorder=null,recordedChunks=[],outputUrl=null,recordStream=null,recordFrame=0;
  function notice(message){const status=$("#nox-camera-status");if(status)status.textContent=message;if(!toast)return;toast.textContent=message;toast.classList.add("show");clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove("show"),2600);}
+ $(".add-story")?.addEventListener("click",()=>{window.location.hash="#camera";});
  $("#nox-id-submit")?.addEventListener("click",()=>{const id=$("#nox-id-search")?.value.trim();notice(id?"واجهة البحث جاهزة؛ ربط البحث وإرسال طلب الصداقة بقاعدة البيانات في المرحلة التالية.":"اكتب NOX ID للبحث.");});
  $("#nox-id-search")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#nox-id-submit")?.click();});
 
  const video=$("#nox-camera-video"),empty=$("#nox-camera-empty"),start=$("#nox-camera-start"),stop=$("#nox-camera-stop"),capture=$("#nox-camera-capture"),record=$("#nox-camera-record"),flip=$("#nox-camera-flip"),canvas=$("#nox-camera-canvas"),recordCanvas=$("#nox-record-canvas");
  const stage=$("#nox-camera-stage"),stickerLayer=$("#nox-live-sticker"),captionLayer=$("#nox-live-caption"),captionInput=$("#nox-camera-caption-input"),faceCanvas=$("#nox-face-overlay");
+ $("#nox-camera-back")?.addEventListener("click",()=>{window.location.hash="#home";});
  let faceLandmarker=null,faceModelPromise=null,faceAnimationFrame=0,lastFaceDetection=0,faceLandmarks=null,arLens="none";
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
  const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator");
@@ -46,6 +48,11 @@ export function initSocialUI() {
    const size=kind==="bunny"?.48:.34,topY=Math.min(forehead.y,eyeMid.y-unit*.55);
    ctx.fillStyle=kind==="bunny"?"rgba(255,220,240,.92)":"rgba(190,145,255,.94)";ctx.strokeStyle="#fff";ctx.lineWidth=Math.max(2,unit*.025);
    [-1,1].forEach(side=>{const x=eyeMid.x+side*unit*.43,y=topY+unit*.08;ctx.beginPath();if(kind==="bunny"){ctx.ellipse(x+side*unit*.08,y-unit*.28,unit*.14,unit*size,side*-.18,0,Math.PI*2);}else{ctx.moveTo(x-unit*.2,y+unit*.12);ctx.lineTo(x-side*unit*.02,y-unit*.38);ctx.lineTo(x+side*unit*.25,y+unit*.12);ctx.closePath();}ctx.fill();ctx.stroke();});
+  }else if(kind==="halo"||kind==="hearts"||kind==="butterfly"){
+   ctx.textAlign="center";ctx.textBaseline="middle";ctx.font=`bold ${Math.round(unit*(kind==="halo"?1.05:.62))}px sans-serif`;
+   if(kind==="halo"){ctx.shadowColor="#ffe58a";ctx.shadowBlur=unit*.22;ctx.fillText("✧",forehead.x,forehead.y-unit*.48);}
+   if(kind==="hearts"){ctx.fillText("💜",cheekL.x-unit*.12,cheekL.y-unit*.18);ctx.fillText("💗",cheekR.x+unit*.12,cheekR.y-unit*.18);}
+   if(kind==="butterfly"){ctx.fillText("🦋",forehead.x,forehead.y-unit*.55);}
   }else if(kind==="sparkle"){
    ctx.fillStyle="#ffe58a";ctx.shadowColor="#ffdf74";ctx.shadowBlur=unit*.12;
    [cheekL,cheekR,{x:forehead.x,y:forehead.y-unit*.25}].forEach((q,n)=>{const r=unit*(n===2?.075:.06);ctx.beginPath();ctx.moveTo(q.x,q.y-r*2.2);ctx.quadraticCurveTo(q.x+r*.3,q.y-r*.3,q.x+r*2,q.y);ctx.quadraticCurveTo(q.x+r*.3,q.y+r*.3,q.x,q.y+r*2.2);ctx.quadraticCurveTo(q.x-r*.3,q.y+r*.3,q.x-r*2,q.y);ctx.quadraticCurveTo(q.x-r*.3,q.y-r*.3,q.x,q.y-r*2.2);ctx.fill();});
@@ -98,9 +105,12 @@ export function initSocialUI() {
  }
  async function stopCamera(){
   await stopRecording();
+  if(faceAnimationFrame)cancelAnimationFrame(faceAnimationFrame);
+  faceAnimationFrame=0;faceLandmarks=null;
   if(stream)stream.getTracks().forEach(track=>track.stop());
   stream=null;
   if(video){video.pause();video.srcObject=null;video.hidden=true;video.style.filter="none";}
+  if(faceCanvas){const ctx=faceCanvas.getContext("2d");ctx?.clearRect(0,0,faceCanvas.width,faceCanvas.height);}
   if(empty)empty.hidden=false;
   setCameraControls(false);
   notice("الكاميرا متوقفة");
@@ -109,11 +119,12 @@ export function initSocialUI() {
   if(!navigator.mediaDevices?.getUserMedia){notice("الكاميرا تحتاج متصفحًا حديثًا واتصال HTTPS.");return;}
   if(!window.isSecureContext){notice("شغّل الموقع عبر HTTPS للسماح باستخدام الكاميرا.");return;}
   try{
-   if(stream){await stopRecording();stream.getTracks().forEach(track=>track.stop());}
+   if(stream){await stopRecording();stream.getTracks().forEach(track=>track.stop());stream=null;}
+   if(video){video.pause();video.srcObject=null;}
    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1280},height:{ideal:720}}});
    video.srcObject=stream;video.style.filter=filter;video.hidden=false;stage?.classList.toggle("is-front",facingMode==="user");if(faceCanvas)faceCanvas.style.display=arLens==="none"?"none":"block";empty.hidden=true;
    await video.play();setCameraControls(true);notice(facingMode==="user"?"الكاميرا الأمامية جاهزة":"الكاميرا الخلفية جاهزة");if(arLens!=="none"){if(faceCanvas)faceCanvas.style.display="block";loadFaceTracker().then(()=>{if(stream&&!faceAnimationFrame)trackFaceFrame();}).catch(()=>notice("تعذر تحميل عدسة الوجه. تحقق من اتصال الإنترنت."));}
-  }catch(error){stream=null;notice(error?.name==="NotAllowedError"?"لم يتم السماح بالكاميرا. راجع إذن المتصفح.":error?.name==="NotFoundError"?"لم يتم العثور على كاميرا متاحة.":"تعذر تشغيل الكاميرا على هذا الجهاز.");}
+  }catch(error){if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;if(video){video.pause();video.srcObject=null;video.hidden=true;}if(empty)empty.hidden=false;setCameraControls(false);notice(error?.name==="NotAllowedError"?"لم يتم السماح بالكاميرا. راجع إذن المتصفح.":error?.name==="NotFoundError"?"لم يتم العثور على كاميرا متاحة.":"تعذر تشغيل الكاميرا. تأكد من إذن المتصفح وأن الموقع يعمل عبر HTTPS.");}
  }
  start?.addEventListener("click",startCamera);
  stop?.addEventListener("click",stopCamera);
