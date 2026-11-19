@@ -88,10 +88,9 @@ jobs:
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
           }
-          const catalogMatch = filterEngine.match(/(\[[^\n]+\])/);
-          if (!catalogMatch) throw new Error('Filter catalog data missing');
-          const groups = JSON.parse(catalogMatch[1]);
-          const totalFilters = groups.reduce((sum, group) => sum + group[1].length, 0);
+          const catalogModule = await import('file:///tmp/filter-engine.mjs');
+          const groups = catalogModule.NOX_FILTER_GROUPS;
+          const totalFilters = catalogModule.NOX_FILTERS.length;
           if (totalFilters !== 340 || groups.length !== 17) throw new Error('Expected 340 filters in 17 groups, got ' + totalFilters);
           for (const token of ['u_variant', 'u_time', 'family < 8.5']) {
             if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
