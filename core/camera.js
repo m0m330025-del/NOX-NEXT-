@@ -47,6 +47,8 @@ export function initCamera() {
     record.disabled = !ready || !window.MediaRecorder;
     flip.disabled = !ready;
     stop.disabled = !ready;
+    flip.hidden = !ready;
+    stop.hidden = !ready;
     start.hidden = ready;
     empty.hidden = ready;
     video.hidden = !ready;
