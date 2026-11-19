@@ -421,3 +421,27 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  body[data-nox-screen="camera"] #camera .nox-lens.active{transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-104px) rotate(calc(0deg - var(--wheel-angle,0deg))) scale(1.12)!important}
  body[data-nox-screen="camera"] #camera .nox-lens-carousel:before{width:208px;height:208px;bottom:-104px}
 }
+
+
+/* NOX camera mobile tool switcher and safe output panel */
+.nox-camera-tool-tabs{display:none}
+@media(max-width:760px){
+ body[data-nox-screen="camera"] #camera .nox-camera-tool-tabs{
+  display:flex;gap:6px;justify-content:center;align-items:center;
+  margin:0 0 7px;padding:5px;border:1px solid rgba(231,206,255,.18);
+  border-radius:14px;background:rgba(12,7,31,.78);pointer-events:auto
+ }
+ body[data-nox-screen="camera"] #camera .nox-camera-tool-tab{
+  flex:1;min-width:0;min-height:34px;padding:7px 5px;border:1px solid transparent;
+  border-radius:10px;background:transparent;color:#d9cbed;font-size:10px;font-weight:800;
+  white-space:nowrap;touch-action:manipulation
+ }
+ body[data-nox-screen="camera"] #camera .nox-camera-tool-tab.active{
+  border-color:rgba(245,215,126,.72);background:linear-gradient(135deg,rgba(245,215,126,.22),rgba(115,69,180,.24));
+  color:#ffe6a0;box-shadow:0 0 12px rgba(245,215,126,.12)
+ }
+ body[data-nox-screen="camera"] #camera .nox-creator-tools>.creator-tool-group:not(.nox-camera-output){display:none!important}
+ body[data-nox-screen="camera"] #camera .nox-creator-tools>.creator-tool-group.is-active:not(.nox-camera-output){display:block!important}
+ body[data-nox-screen="camera"] #camera .nox-creator-tools>.nox-camera-output:not([hidden]){display:block!important}
+ body[data-nox-screen="camera"] #camera .nox-camera-tool-tabs button:focus-visible{outline:2px solid #f5d77e;outline-offset:2px}
+}
