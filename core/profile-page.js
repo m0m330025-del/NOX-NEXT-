@@ -35,14 +35,15 @@ byId("profile-form").addEventListener("submit", async event => {
   button.disabled = true;
   button.textContent = "جارٍ الحفظ...";
   try {
-    await account.updatePrefs({ ...(currentUser.prefs || {}), age, gender });
+    await account.updatePrefs({ prefs: { ...(currentUser.prefs || {}), age, gender } });
     currentUser = await account.get();
     byId("profile-age").textContent = age + " سنة";
     byId("profile-gender").textContent = labels[gender];
     byId("profile-gender-symbol").textContent = genderSymbols[gender] || "";
     message("تم حفظ بيانات الملف الشخصي.", true);
-  } catch {
-    message("تعذر حفظ البيانات. حاول مرة أخرى.");
+  } catch (error) {
+    console.error("NOX profile update failed:", error);
+    message("تعذر حفظ البيانات: " + (error?.message || "حاول مرة أخرى."));
   } finally {
     button.disabled = false;
     button.textContent = "حفظ التعديلات";
