@@ -222,7 +222,8 @@ void main() {
     c = mix(c,c*dye*1.25,0.18+u_variant*0.18);
     c += vec3(shine);
   } else if (u_filterGroup > 12.5 && u_filterGroup < 13.5) {
-    float eyeGrade = smoothstep(0.18,0.78,lum);
+    float eyeLum = dot(c, vec3(0.299, 0.587, 0.114));
+    float eyeGrade = smoothstep(0.18,0.78,eyeLum);
     vec3 eyePalette = 0.5 + 0.5*cos(vec3(0.0,2.094,4.188)+u_variant*6.28318);
     c = mix(c,c*mix(vec3(0.86,0.90,1.08),eyePalette,0.34),0.16+u_variant*0.12);
     c = clamp((c-0.5)*(1.04+eyeGrade*0.12)+0.5,0.0,1.0);
