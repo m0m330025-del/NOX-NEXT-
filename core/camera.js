@@ -442,8 +442,9 @@ export function initCamera() {
     const searchRadius = lowPower ? 2 : 3;
     const vectors = [];
     let confidenceTotal = 0;
-    for (let cy = 3; cy < sampleHeight - 3; cy += cellStep) {
-      for (let cx = 3; cx < sampleWidth - 3; cx += cellStep) {
+    const border = searchRadius + patchRadius;
+    for (let cy = border; cy < sampleHeight - border; cy += cellStep) {
+      for (let cx = border; cx < sampleWidth - border; cx += cellStep) {
         let bestSad = Infinity;
         let secondSad = Infinity;
         let bestDx = 0;
@@ -488,9 +489,10 @@ export function initCamera() {
     ctx.lineWidth = Math.max(1, width / 700);
     ctx.lineCap = "round";
     opticalFlowVectors.forEach((vector) => {
-      const x = vector.x * width;
+      const mirrored = facing === "user";
+      const x = (mirrored ? 1 - vector.x : vector.x) * width;
       const y = vector.y * height;
-      const dx = vector.dx * width * 2.8;
+      const dx = vector.dx * width * 2.8 * (mirrored ? -1 : 1);
       const dy = vector.dy * height * 2.8;
       const endX = x + dx;
       const endY = y + dy;
