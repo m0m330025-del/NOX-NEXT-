@@ -13,30 +13,65 @@
   <script type="module" src="./core/profile-page.js"></script>
 </head>
 <body>
-  <main class="auth-shell">
+  <main class="auth-shell profile-shell">
     <a class="brand" href="./index.html"><span class="brand-symbol">N</span><span><b>NOX NEXT</b><small>NOX Social Universe</small></span></a>
     <section class="auth-card profile-card">
-      <div class="auth-heading"><span class="eyebrow">حسابك في NOX NEXT</span><h1>الملف الشخصي</h1><p>بياناتك الأساسية وإعدادات حسابك</p></div>
-      <div class="profile-avatar" aria-hidden="true">N</div>
+      <div class="profile-hero">
+        <span class="profile-kicker">NOX IDENTITY</span>
+        <h1>ملفك الشخصي</h1>
+        <p>مساحتك الخاصة — عرّف الآخرين بنفسك بالطريقة التي تختارها</p>
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar-frame" id="profile-avatar-frame">
+            <img id="profile-photo" alt="صورتك الشخصية" hidden>
+            <span id="profile-avatar-fallback" aria-hidden="true">N</span>
+            <span class="profile-avatar-shine" aria-hidden="true"></span>
+          </div>
+          <label class="photo-edit-button" for="profile-photo-input" title="اختيار صورة شخصية" aria-label="اختيار صورة شخصية">✎</label>
+          <input id="profile-photo-input" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <button class="photo-upload-button" id="upload-profile-photo" type="button">＋ تغيير الصورة الشخصية</button>
+        <div class="profile-name-line"><h2 id="profile-name">—</h2><span class="gender-emblem" id="profile-gender-emblem" hidden aria-label="رمز النوع"></span></div>
+        <div class="profile-id-row"><span>NOX ID</span><b id="profile-nox-id">جارٍ التحميل...</b><button id="copy-nox-id" type="button" aria-label="نسخ NOX ID">نسخ</button></div>
+      </div>
+
+      <section class="profile-about-card">
+        <div class="section-title"><span>نبذة عني</span><small>ABOUT</small></div>
+        <p id="profile-about-preview">اكتب نبذة قصيرة تعبّر عنك</p>
+      </section>
+
       <div class="profile-data">
-        <div><span>الاسم</span><b id="profile-name">—</b></div>
         <div><span>البريد الإلكتروني</span><b id="profile-email">—</b></div>
-        <div><span>العمر</span><b id="profile-age">—</b></div>
+        <div><span>العمر <small>خاص بك</small></span><b id="profile-age">—</b></div>
         <div><span>النوع</span><b class="gender-value"><span id="profile-gender-symbol" aria-hidden="true"></span><span id="profile-gender">—</span></b></div>
       </div>
+
       <form id="profile-form" novalidate>
-        <h2>تعديل بيانات الملف الشخصي</h2>
-        <label>العمر
-          <input id="edit-age" type="number" min="13" max="120" inputmode="numeric" required>
+        <div class="section-title"><span>تخصيص الملف الشخصي</span><small>PERSONALIZE</small></div>
+        <label>الاسم المعروض
+          <input id="edit-name" type="text" maxlength="60" autocomplete="name" required>
         </label>
-        <label>النوع
-          <select id="edit-gender" required>
-            <option value="">اختر النوع</option>
-            <option value="male">ذكر</option>
-            <option value="female">أنثى</option>
-            <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
-          </select>
+        <label>نبذة قصيرة
+          <textarea id="edit-about" maxlength="160" rows="3" placeholder="اكتب شيئًا تحب أن يعرفه الآخرون عنك..."></textarea>
+          <small class="field-hint">حتى 160 حرفًا</small>
         </label>
+        <div class="form-grid">
+          <label>العمر <span class="private-hint">خاص افتراضيًا</span>
+            <input id="edit-age" type="number" min="13" max="120" inputmode="numeric" required>
+          </label>
+          <label>النوع
+            <select id="edit-gender" required>
+              <option value="">اختر النوع</option>
+              <option value="male">ذكر</option>
+              <option value="female">أنثى</option>
+              <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
+            </select>
+          </label>
+        </div>
+        <label class="privacy-toggle">
+          <input id="show-gender" type="checkbox">
+          <span><b>إظهار رمز النوع في ملفي العام</b><small>مغلق افتراضيًا ويمكنك تغييره في أي وقت</small></span>
+        </label>
+        <p class="profile-privacy-note">العمر والبريد الإلكتروني لا يظهران في الملف العام. إعداد إظهار النوع يُحفظ كتفضيل، ويحتاج ربط صفحة الملف العام لاحقًا لتطبيقه على العرض للآخرين.</p>
         <p class="form-message" id="profile-message" role="status" aria-live="polite"></p>
         <button class="submit-button" id="save-profile" type="submit">حفظ التعديلات</button>
       </form>
