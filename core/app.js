@@ -1,3 +1,5 @@
+import { account } from "./appwrite.js";
+
 export function initApp() {
   const toast = document.getElementById("toast");
   let toastTimer;
@@ -11,6 +13,27 @@ export function initApp() {
   }
 
   window.addEventListener("nox:notice", event => showNotice(event.detail));
+
+  const authNotice = sessionStorage.getItem("nox.auth.notice");
+  if (authNotice) {
+    showNotice(authNotice);
+    sessionStorage.removeItem("nox.auth.notice");
+  }
+
+  account.get().then(user => {
+    const name = document.querySelector(".topbar-user b");
+    if (name) name.textContent = user.name || "حسابي";
+  }).catch(() => {});
+
+  document.querySelector('[data-action="logout"]')?.addEventListener("click", async () => {
+    try {
+      await account.deleteSession("current");
+      showNotice("تم تسجيل الخروج بنجاح");
+      window.setTimeout(() => window.location.assign("./auth.html"), 500);
+    } catch (error) {
+      showNotice("لا يوجد حساب مسجل للدخول حاليًا");
+    }
+  });
 
   document.querySelectorAll('[data-action="demo-notice"]').forEach(button => {
     button.addEventListener("click", () => {
