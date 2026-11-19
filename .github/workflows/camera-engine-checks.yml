@@ -90,9 +90,34 @@ jobs:
           }
           const catalogModule = await import('file:///tmp/filter-engine.mjs');
           const groups = catalogModule.NOX_FILTER_GROUPS;
-          const totalFilters = catalogModule.NOX_FILTERS.length;
+          const filters = catalogModule.NOX_FILTERS;
+          const totalFilters = filters.length;
           if (totalFilters !== 340 || groups.length !== 17) throw new Error('Expected 340 filters in 17 groups, got ' + totalFilters);
+          if (groups.some((group) => !Array.isArray(group[1]) || group[1].length !== 20)) {
+            throw new Error('Every filter group must contain exactly 20 presets');
+          }
+          const expectedFamilies = [0,1,2,3,4,5,6,7,8,9,5,5,0,5,3,7,2];
+          const ids = new Set();
+          filters.forEach((filter, index) => {
+            const group = groups[filter.groupIndex];
+            if (filter.id !== index || ids.has(filter.id)) throw new Error('Filter IDs must be unique and sequential');
+            ids.add(filter.id);
+            if (!group || filter.category !== group[0] || filter.variant < 0 || filter.variant >= 20) {
+              throw new Error('Filter metadata does not match its catalog group: ' + filter.name);
+            }
+            if (filter.family !== expectedFamilies[filter.groupIndex]) {
+              throw new Error('Unexpected render-family mapping for ' + filter.name);
+            }
+          });
+          if (typeof catalogModule.getFallbackFilter !== 'function' ||
+              filters.some((filter) => typeof catalogModule.getFallbackFilter(filter) !== 'string')) {
+            throw new Error('Every filter must provide a Canvas fallback style');
+          }
           const cameraSource = fs.readFileSync('core/camera.js', 'utf8');
+          if (!cameraSource.includes('selectedFilter ? selectedFilter.groupIndex : -1') ||
+              !cameraSource.includes('selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens]')) {
+            throw new Error('Selected filter group or Canvas fallback is not wired to the renderer');
+          }
           for (const token of ['u_filterGroup', 'renderer.filterGroup', 'u_filterGroup > 9.5', 'u_filterGroup > 10.5', 'u_filterGroup > 11.5', 'u_filterGroup > 12.5', 'u_filterGroup > 13.5', 'u_filterGroup > 14.5', 'u_filterGroup > 15.5']) {
             if (!cameraSource.includes(token)) throw new Error('Extended live-filter shader path missing: ' + token);
           }
