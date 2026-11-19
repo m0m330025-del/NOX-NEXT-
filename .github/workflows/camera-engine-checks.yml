@@ -46,6 +46,13 @@ jobs:
           import fs from 'node:fs';
           const html = fs.readFileSync('index.html', 'utf8');
           const js = fs.readFileSync('core/camera.js', 'utf8');
+          if (!html.includes('340 إعدادًا بصريًا في 17 مجموعة') ||
+              html.includes('200 إعداد بصري مباشر')) {
+            throw new Error('Camera filter-library count must match the 340-preset / 17-group catalog');
+          }
+          if (!html.includes('الفصل الدقيق وتتبع ملامح الوجه والشعر والعمق لم تُنفذ بعد')) {
+            throw new Error('Camera filter UI must disclose unimplemented semantic segmentation features');
+          }
           const required = [
             'nox-camera-video', 'nox-camera-stage', 'nox-camera-start',
             'nox-camera-state', 'nox-camera-status', 'nox-camera-flip',
