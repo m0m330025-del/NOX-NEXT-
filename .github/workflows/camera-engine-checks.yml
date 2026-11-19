@@ -48,7 +48,7 @@ jobs:
             'nox-camera-render', 'nox-lens-orbit', 'nox-lens-track',
             'nox-camera-caption', 'nox-camera-file', 'nox-camera-result',
             'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save',
-            'nox-living-metal-toggle', 'nox-living-metal-hint'
+            'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -68,5 +68,18 @@ jobs:
             }
           }
           console.log('Camera markup hooks present:', required.length);
+          const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
+          for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
+            if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
+          }
+          const catalogMatch = filterEngine.match(/export const NOX_FILTER_GROUPS = (\\[[\\s\\S]*?\\]);/);
+          if (!catalogMatch) throw new Error('Filter catalog data missing');
+          const groups = JSON.parse(catalogMatch[1]);
+          const totalFilters = groups.reduce((sum, group) => sum + group[1].length, 0);
+          if (totalFilters !== 200 || groups.length !== 10) throw new Error('Expected 200 filters in 10 groups, got ' + totalFilters);
+          for (const token of ['u_variant', 'u_time', 'family < 9.5']) {
+            if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
+          }
           console.log('Living Metal prototype hooks present: 3');
+          console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
