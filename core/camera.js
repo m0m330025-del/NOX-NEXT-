@@ -11,6 +11,7 @@ export function initCamera() {
   const stopState = $("#nox-camera-state");
   const status = $("#nox-camera-status");
   const flip = $("#nox-camera-flip");
+  const stop = $("#nox-camera-stop");
   const capture = $("#nox-camera-capture");
   const record = $("#nox-camera-record");
   const renderCanvas = $("#nox-camera-render");
@@ -45,6 +46,7 @@ export function initCamera() {
     capture.disabled = !ready;
     record.disabled = !ready || !window.MediaRecorder;
     flip.disabled = !ready;
+    stop.disabled = !ready;
     start.hidden = ready;
     empty.hidden = ready;
     video.hidden = !ready;
@@ -239,6 +241,7 @@ export function initCamera() {
     }
   });
 
+  stop.addEventListener("click", stopCamera);
   flip.addEventListener("click", async () => {
     facing = facing === "user" ? "environment" : "user";
     await startCamera();
