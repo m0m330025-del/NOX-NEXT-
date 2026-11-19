@@ -1,26 +1,49 @@
-const labels = {
-  friends: "قسم الأصدقاء",
-  messages: "قسم المحادثات",
-  camera: "قسم الكاميرا",
-  calls: "قسم المكالمات",
-  stories: "قسم الحالات",
-  reels: "قسم المقاطع",
-  gifts: "قسم الهدايا",
-  settings: "الإعدادات"
+const SCREEN_KEYS = new Set(["home","messages","camera","stories","reels"]);
+const HASH_TO_SCREEN = {
+  "#home":"home",
+  "#friends":"home",
+  "#messages":"messages",
+  "#camera":"camera",
+  "#stories-view":"stories",
+  "#reels":"reels"
 };
 
 export function initNavigation() {
-  const links = document.querySelectorAll("[data-nav]");
+  const links = [...document.querySelectorAll("[data-nav]")];
+  const applyScreen = () => {
+    const hash = window.location.hash || "#home";
+    const screen = HASH_TO_SCREEN[hash] || "home";
+    document.body.dataset.noxScreen = screen;
+
+    links.forEach(link => {
+      const key = link.dataset.nav;
+      const active = key === screen || (screen === "home" && key === "friends" && hash === "#friends");
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current","page");
+      else link.removeAttribute("aria-current");
+    });
+
+    if (hash === "#friends") {
+      requestAnimationFrame(() => document.getElementById("friends")?.scrollIntoView({block:"start",behavior:"smooth"}));
+    } else {
+      window.scrollTo({top:0,behavior:"auto"});
+    }
+  };
+
+  window.addEventListener("hashchange", applyScreen);
   links.forEach(link => {
     link.addEventListener("click", event => {
       const key = link.dataset.nav;
-      if (!["home", "stories", "friends", "messages", "camera", "reels"].includes(key)) {
+      if (!SCREEN_KEYS.has(key) && key !== "friends") {
         event.preventDefault();
         window.dispatchEvent(new CustomEvent("nox:notice", {
-          detail: labels[key] || "هذا القسم قيد التجهيز"
+          detail: key === "gifts" ? "قسم الهدايا قيد التجهيز" : "هذا القسم قيد التجهيز"
         }));
+        return;
       }
-      links.forEach(item => item.classList.toggle("active", item.dataset.nav === key));
+      // The URL hash is the navigation state; hashchange also supports browser Back/Forward.
+      if (key === "home" && window.location.hash === "#home") applyScreen();
+      if (key === "friends" && window.location.hash === "#friends") applyScreen();
     });
   });
 
@@ -29,4 +52,6 @@ export function initNavigation() {
       detail: "الأقسام الإضافية ستظهر هنا عند تجهيزها"
     }));
   });
+
+  applyScreen();
 }
