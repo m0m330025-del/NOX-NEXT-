@@ -30,7 +30,12 @@ function renderProfile() {
   byId("profile-age").textContent = prefs.age ? String(prefs.age) + " سنة" : "لم يُضف بعد";
   byId("profile-gender").textContent = labels[prefs.gender] || "لم يُحدد";
   byId("profile-gender-symbol").textContent = genderSymbols[prefs.gender] || "";
-  byId("profile-about-preview").textContent = prefs.about || "اكتب نبذة قصيرة تعبّر عنك";
+  byId("profile-about-preview").textContent = prefs.about || "مساحتك في عالم NOX NEXT — أضف نبذة قصيرة ليعرفك الآخرون.";
+  byId("about-card-text").textContent = prefs.about || "لم تضف نبذة شخصية بعد.";
+  byId("about-detail-text").textContent = prefs.about || "لم تضف نبذة شخصية بعد.";
+  byId("side-nox-id").textContent = currentUser.$id;
+  byId("about-nox-id").textContent = currentUser.$id;
+  byId("public-gender-value").textContent = prefs.showGender === true && labels[prefs.gender] ? labels[prefs.gender] : "غير معروض";
   byId("profile-nox-id").textContent = currentUser.$id;
   byId("edit-name").value = currentUser.name || "";
   byId("edit-about").value = prefs.about || "";
@@ -163,5 +168,34 @@ byId("profile-form").addEventListener("submit", async event => {
     button.textContent = "حفظ التعديلات";
   }
 });
+
+// Profile sections behave as real tabs; empty sections are clearly identified until backend data is connected.
+const profileTabs = [...document.querySelectorAll("[data-profile-tab]")];
+const profilePanels = {
+  posts: byId("panel-posts"),
+  photos: byId("panel-photos"),
+  friends: byId("panel-friends"),
+  about: byId("panel-about")
+};
+profileTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    const key = tab.dataset.profileTab;
+    profileTabs.forEach(item => {
+      const active = item === tab;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-selected", String(active));
+    });
+    Object.entries(profilePanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
+  });
+});
+
+const editor = byId("profile-editor");
+const openEditor = () => {
+  editor.hidden = false;
+  editor.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+byId("edit-profile-toggle").addEventListener("click", openEditor);
+byId("close-profile-editor").addEventListener("click", () => { editor.hidden = true; });
+byId("privacy-edit-link").addEventListener("click", openEditor);
 
 loadProfile();
