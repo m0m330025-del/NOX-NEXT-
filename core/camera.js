@@ -653,7 +653,6 @@ export function initCamera() {
 
   $("#nox-living-metal-toggle")?.addEventListener("click", () => {
     livingMetalEnabled = !livingMetalEnabled;
-    if (!livingMetalEnabled) livingMetalRegion = null;
     const button = $("#nox-living-metal-toggle");
     button.textContent = livingMetalEnabled ? "إيقاف Living Metal" : "تشغيل Living Metal";
     button.setAttribute("aria-pressed", String(livingMetalEnabled));
