@@ -66,3 +66,6 @@ body[data-nox-screen="camera"] .mobile-nav [data-nav="camera"],
 body[data-nox-screen="stories"] .mobile-nav [data-nav="stories"],
 body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 @media(max-width:760px){.mobile-nav{grid-template-columns:repeat(6,minmax(0,1fr))}.mobile-nav a{font-size:8px}.mobile-nav a>span{font-size:19px}}
+
+/* Shared NOX profile-photo treatment */
+.nox-profile-avatar{outline:2px solid #d9aa45;outline-offset:2px;box-shadow:0 0 0 5px #6722ed2b,0 3px 12px #29135c35!important}
