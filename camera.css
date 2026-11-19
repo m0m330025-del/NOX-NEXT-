@@ -75,3 +75,10 @@
 #nox-filter-select{width:100%;min-height:46px;padding:10px 12px;border:1px solid #a88bd0;border-radius:11px;background:#160b2c;color:#fff;font:700 13px Cairo,sans-serif}
 #nox-filter-select optgroup{background:#211238;color:#ffdf91}
 #nox-filter-select option{background:#160b2c;color:#fff}
+
+.nox-region-mask-panel{display:grid;gap:8px;padding:12px;border:1px solid #d6b56f;border-radius:15px;background:linear-gradient(135deg,#211b2d,#30223f);color:#fff}
+.nox-region-mask-panel>b{font-size:12px;letter-spacing:.08em;color:#ffe2a0}
+.nox-region-mask-panel button{min-height:42px;padding:9px 13px;border:1px solid #e7d5aa;border-radius:11px;background:linear-gradient(120deg,#f8e8bd,#c8a96b);color:#2a2031;font:800 12px Cairo,sans-serif;cursor:pointer}
+.nox-region-mask-panel button[aria-pressed=true]{background:linear-gradient(120deg,#bdeaff,#8d9fcf)}
+.nox-region-mask-panel small{font-size:11px;line-height:1.7;color:#e7dcef}
+.nox-camera-v2-stage.is-live canvas#nox-camera-render{touch-action:none;cursor:crosshair}
