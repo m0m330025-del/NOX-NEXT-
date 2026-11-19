@@ -116,6 +116,10 @@ body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 .nox-sticker-picker button.active{border-color:#9c35f1;background:#f0e7ff;box-shadow:0 0 0 2px #9c35f122}
 .nox-caption-input{width:100%;border:1px solid #e5dcff;border-radius:12px;padding:12px;background:#faf8ff;color:#291762;outline:none;font-size:12px}
 .nox-caption-input:focus{border-color:#8d35e8;box-shadow:0 0 0 3px #8d35e822}
+.nox-output-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.nox-output-actions>*{min-width:0;text-align:center;display:flex;align-items:center;justify-content:center}
+.nox-output-actions .nox-download-link{grid-column:1/-1}
+.nox-output-actions button{min-height:40px}
 .nox-camera-output{display:grid;gap:10px}
 .nox-camera-output img,.nox-camera-output video{width:100%;max-height:300px;object-fit:contain;background:#160b49;border-radius:14px}
 .nox-camera-output p{font-size:11px;color:#756b91;margin:0}
@@ -361,6 +365,8 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
 @media(max-width:360px){body[data-nox-screen="camera"] #camera .nox-lens{width:54px;height:64px}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(1){--lens-angle:-68deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(2){--lens-angle:-45deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(3){--lens-angle:-22deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(5){--lens-angle:22deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(6){--lens-angle:45deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(7){--lens-angle:68deg}}
 
 
+.nox-output-actions .feature-secondary{border-radius:12px;padding:9px 8px;font-size:11px;font-weight:800}
+@media(prefers-reduced-motion:reduce){body[data-nox-screen="camera"] #camera .nox-lens{transition:none!important}}
 /* NOX NEXT — radial lens wheel: high-specificity mobile overrides */
 @media(max-width:760px){
  body[data-nox-screen="camera"] #camera .nox-creator-tools .creator-tool-group:first-child{overflow:visible}
