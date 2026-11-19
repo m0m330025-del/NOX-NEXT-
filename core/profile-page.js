@@ -169,7 +169,9 @@ byId("profile-form").addEventListener("submit", async event => {
   }
 });
 
-// Profile sections behave as real tabs; empty sections are clearly identified until backend data is connected.
+// Profile tabs: delegated click handling keeps navigation reliable even if the
+// tab bar is re-rendered, and updates both the selected tab and visible panel.
+const profileTabBar = document.querySelector(".profile-social-nav");
 const profileTabs = [...document.querySelectorAll("[data-profile-tab]")];
 const profilePanels = {
   posts: byId("panel-posts"),
@@ -177,17 +179,40 @@ const profilePanels = {
   friends: byId("panel-friends"),
   about: byId("panel-about")
 };
-profileTabs.forEach(tab => {
-  tab.addEventListener("click", () => {
-    const key = tab.dataset.profileTab;
-    profileTabs.forEach(item => {
-      const active = item === tab;
-      item.classList.toggle("active", active);
-      item.setAttribute("aria-selected", String(active));
-    });
-    Object.entries(profilePanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
+function activateProfileTab(key, moveFocus = false) {
+  if (!Object.prototype.hasOwnProperty.call(profilePanels, key) || !profilePanels[key]) return;
+  profileTabs.forEach(tab => {
+    const active = tab.dataset.profileTab === key;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.setAttribute("tabindex", active ? "0" : "-1");
+    if (active && moveFocus) tab.focus();
   });
-});
+  Object.entries(profilePanels).forEach(([name, panel]) => {
+    const active = name === key;
+    panel.hidden = !active;
+    panel.classList.toggle("is-active", active);
+  });
+  document.querySelector(".profile-main-column")?.setAttribute("data-active-profile-tab", key);
+}
+if (profileTabBar) {
+  profileTabBar.addEventListener("click", event => {
+    const tab = event.target.closest("[data-profile-tab]");
+    if (!tab || !profileTabBar.contains(tab)) return;
+    activateProfileTab(tab.dataset.profileTab);
+  });
+  profileTabBar.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const current = profileTabs.indexOf(document.activeElement);
+    if (current < 0) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? profileTabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + profileTabs.length) % profileTabs.length;
+    activateProfileTab(profileTabs[next].dataset.profileTab, true);
+  });
+}
+activateProfileTab("posts");
 
 const editor = byId("profile-editor");
 const openEditor = () => {
