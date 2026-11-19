@@ -67,3 +67,11 @@
 .nox-living-metal-panel button[aria-pressed=true]{background:linear-gradient(120deg,#a9f0e2,#7aa8c9 55%,#a78de0)}
 .nox-living-metal-panel small{font-size:11px;line-height:1.7;color:#d5e7f6}
 .nox-camera-v2-stage.is-live canvas#nox-camera-render{touch-action:manipulation;cursor:crosshair}
+
+.nox-filter-library{display:grid;gap:8px;padding:13px;border:1px solid #a88bd0;border-radius:15px;background:linear-gradient(135deg,#1b1032,#2b1746);color:#fff}
+.nox-filter-library>b{font-size:14px;color:#ffdf91}
+.nox-filter-library>small{font-size:11px;line-height:1.7;color:#cbbce2}
+.nox-filter-library label{font-size:12px;color:#ffdf91;font-weight:800}
+#nox-filter-select{width:100%;min-height:46px;padding:10px 12px;border:1px solid #a88bd0;border-radius:11px;background:#160b2c;color:#fff;font:700 13px Cairo,sans-serif}
+#nox-filter-select optgroup{background:#211238;color:#ffdf91}
+#nox-filter-select option{background:#160b2c;color:#fff}
