@@ -238,3 +238,13 @@ Build a reusable effect graph with four cooperating layers:
 - Estimated pixel storage is approximately 0.30 MiB for low-power buffers and 0.77 MiB for standard buffers (excluding browser canvas overhead).
 - The previously referenced region-mask state variables are now explicitly declared so the existing manual mask controls do not read undeclared identifiers.
 - Automated syntax/markup checks do not replace real camera validation. Galaxy M12 and iPhone testing remains pending.
+
+
+## P7 — NOX Sparse Optical Flow (v1)
+
+- Added a local sparse block-matching motion estimator using consecutive low-resolution grayscale samples from the live video element.
+- Sample grid: 48×36 pixels on low-power profiles and 64×48 on standard profiles; analysis cadence is at most one sample every 240 ms (low-power) or 160 ms (standard).
+- Each grid point compares a 3×3 patch across a bounded search window (±2 low-power, ±3 standard), then estimates a short motion vector with a basic uniqueness/texture confidence score.
+- Optional vector overlay draws the estimated directions over the camera output. The estimator resets when disabled, when the camera stops, or when the user clears it.
+- This is sparse block matching, not dense Farnebäck/Lucas–Kanade optical flow, neural flow, semantic object tracking, face tracking, or guaranteed physical motion. Low-texture, repetitive, fast, or occluded scenes can produce missing or incorrect vectors.
+- Pixel analysis is local in a tiny scratch canvas; no camera frames are uploaded to an external service. Actual device performance and vector quality on Galaxy M12/iPhone remain unverified.
