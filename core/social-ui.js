@@ -14,7 +14,7 @@ export function initSocialUI() {
  let faceLandmarker=null,faceModelPromise=null,faceAnimationFrame=0,lastFaceDetection=0,faceLandmarks=null,arLens="none";
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
  const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator"),recordingTime=$("#nox-recording-time"),retakeButton=$("#nox-camera-retake"),shareButton=$("#nox-camera-share");
- let recordingClock=null,recordingStartedAt=0;
+ let recordingClock=null,recordingStartedAt=0,recordingFinalizing=false;
  let sticker="";
  function setCameraControls(active){if(start)start.hidden=active;if(stop)stop.disabled=!active;if(capture)capture.disabled=!active;if(record)record.disabled=!active;if(flip)flip.disabled=!active;}
  function revokeOutput(){if(outputUrl){URL.revokeObjectURL(outputUrl);outputUrl=null;}if(download){download.removeAttribute("href");download.hidden=true;}if(imageOutput){imageOutput.hidden=true;imageOutput.removeAttribute("src");}if(videoOutput){videoOutput.pause();videoOutput.hidden=true;videoOutput.removeAttribute("src");}}
@@ -104,7 +104,7 @@ export function initSocialUI() {
  async function stopRecording(){
   if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
   if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
-  if(recorder&&recorder.state!=="inactive"){try{recorder.stop();}catch(error){notice("تعذر إنهاء التسجيل بشكل طبيعي.");}}
+  if(recorder&&recorder.state!=="inactive"){recordingFinalizing=true;try{recorder.stop();}catch(error){recordingFinalizing=false;notice("تعذر إنهاء التسجيل بشكل طبيعي.");}}
   if(recordingIndicator)recordingIndicator.hidden=true;
   if(record)record.textContent="●";
  }
@@ -237,6 +237,7 @@ export function initSocialUI() {
  record?.addEventListener("click",()=>{
   if(!stream)return notice("شغّل الكاميرا أولًا.");
   if(!window.MediaRecorder||!recordCanvas?.captureStream)return notice("تسجيل الفيديو غير مدعوم في هذا المتصفح.");
+  if(recordingFinalizing)return notice("جارٍ تجهيز الفيديو السابق، انتظر لحظة.");
   if(recorder&&recorder.state==="recording"){stopRecording();return;}
   try{
    recordedChunks=[];recordCanvas.width=video.videoWidth;recordCanvas.height=video.videoHeight;
@@ -250,14 +251,14 @@ export function initSocialUI() {
     if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
     if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;
     if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
-    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";
+    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";recordingFinalizing=false;
     notice("حدث خطأ أثناء تسجيل الفيديو. جرّب مدة أقصر أو متصفحًا أحدث.");
    };
    recorder.onstop=()=>{
     if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
     if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
     if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;
-    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";
+    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";recordingFinalizing=false;
     if(!recordedChunks.length){notice("لم يتم إنشاء ملف فيديو.");return;}
     const mimeType=recorder.mimeType||recordedChunks[0]?.type||"video/webm";
     const blob=new Blob(recordedChunks,{type:mimeType});revokeOutput();outputUrl=URL.createObjectURL(blob);
@@ -265,7 +266,7 @@ export function initSocialUI() {
     download.href=outputUrl;download.download="nox-video."+(mimeType.includes("mp4")?"mp4":"webm");download.hidden=false;notice("انتهى التسجيل. يمكنك مشاهدة الفيديو وحفظه.");
    };
    recorder.start();record.textContent="■";recordingIndicator.hidden=false;recordingStartedAt=Date.now();if(recordingTime)recordingTime.textContent="00:00";recordingClock=setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStartedAt)/1000);if(recordingTime)recordingTime.textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");},500);notice("بدأ تسجيل الفيديو");
-  }catch(error){notice("تعذر بدء تسجيل الفيديو على هذا المتصفح.");}
+  }catch(error){if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;if(recordingClock){clearInterval(recordingClock);recordingClock=null;}if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";recordingFinalizing=false;notice("تعذر بدء تسجيل الفيديو على هذا المتصفح.");}
  });
  gallery?.addEventListener("click",()=>fileInput?.click());
  fileInput?.addEventListener("change",()=>{
