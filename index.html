@@ -115,7 +115,13 @@
           </div>
         </div>
         <aside class="nox-creator-tools">
-          <section class="creator-tool-group">
+          <nav class="nox-camera-tool-tabs" aria-label="أدوات الكاميرا">
+            <button type="button" class="nox-camera-tool-tab active" data-camera-tool="lenses" aria-pressed="true">العدسات</button>
+            <button type="button" class="nox-camera-tool-tab" data-camera-tool="face" aria-pressed="false">الوجه</button>
+            <button type="button" class="nox-camera-tool-tab" data-camera-tool="stickers" aria-pressed="false">ملصقات</button>
+            <button type="button" class="nox-camera-tool-tab" data-camera-tool="caption" aria-pressed="false">نص</button>
+          </nav>
+          <section class="creator-tool-group is-active" data-camera-tool-panel="lenses">
             <div class="creator-tool-heading"><h3>العدسات والتأثيرات</h3><span>LIVE</span></div>
             <div class="nox-lens-carousel" role="group" aria-label="اختيار تأثير الكاميرا">
               <button type="button" class="nox-lens active" data-filter="none" aria-pressed="true"><span>◉</span><b>طبيعي</b></button>
@@ -128,7 +134,7 @@
             </div>
             <p class="creator-tool-hint">اضغط ضغطة قصيرة على الفلتر لالتقاط صورة، أو اضغط مطولًا لتسجيل فيديو بنفس التأثير.</p>
           </section>
-          <section class="creator-tool-group">
+          <section class="creator-tool-group" data-camera-tool-panel="face">
             <div class="creator-tool-heading"><h3>عدسات الوجه الذكية</h3><span>FACE AR</span></div>
             <div class="nox-ar-lens-grid" role="group" aria-label="عدسات تتبع الوجه">
               <button type="button" class="nox-ar-lens active" data-ar-lens="none" aria-pressed="true"><span>✕</span><b>بدون</b></button>
@@ -143,11 +149,11 @@
             </div>
             <p class="creator-tool-hint" id="nox-face-hint">تتبع الوجه يعمل محليًا على جهازك بعد تحميل محرك العدسات لأول مرة.</p>
           </section>
-          <section class="creator-tool-group">
+          <section class="creator-tool-group" data-camera-tool-panel="stickers">
             <div class="creator-tool-heading"><h3>الملصقات</h3></div>
             <div class="nox-sticker-picker" role="group" aria-label="إضافة ملصق"><button type="button" data-sticker="💜" aria-label="قلب بنفسجي">💜</button><button type="button" data-sticker="✨" aria-label="بريق">✨</button><button type="button" data-sticker="⭐" aria-label="نجمة">⭐</button><button type="button" data-sticker="🦋" aria-label="فراشة">🦋</button><button type="button" data-sticker="😎" aria-label="نظارة">😎</button><button type="button" data-sticker="" aria-label="إزالة الملصق">×</button></div>
           </section>
-          <section class="creator-tool-group">
+          <section class="creator-tool-group" data-camera-tool-panel="caption">
             <div class="creator-tool-heading"><h3>إضافة نص</h3></div>
             <input type="text" id="nox-camera-caption-input" class="nox-caption-input" maxlength="50" placeholder="اكتب عبارة قصيرة...">
             <p class="creator-tool-hint">سيظهر النص على المعاينة والصورة.</p>
