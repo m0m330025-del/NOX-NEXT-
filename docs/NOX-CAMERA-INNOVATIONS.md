@@ -31,10 +31,11 @@ NOX Camera should feel like one coherent camera engine, not a collection of unre
    - Acceptance: both views use the same source frame and selected effect; no duplicate camera permission or stream.
 
 4. **NOX Adaptive Rescue**
-   - Monitor frame timing and rendering failures; lower render resolution/effect workload in steps.
-   - Restore quality gradually after stable performance.
-   - Use memory/CPU hints only as hints, not as reliable measurements. Do not promise thermal readings where the browser exposes none.
-   - Acceptance: camera remains usable when effects are reduced; diagnostics explain the active quality tier.
+   - Implemented first controller: measure per-frame render cost and approximate delivered FPS; pace rendering to a tier target.
+   - Three render tiers (1280/960/640 max dimension; 30/24/18 FPS target) step down after sustained slow frames and step back up only after a longer stable window.
+   - Reuses the existing camera stream and render loop; does not request new permissions or read unavailable thermal data.
+   - Device memory / CPU hints only choose the initial tier; live frame timing drives later changes.
+   - Acceptance still requires visual smoothness, capture parity, and physical-device validation on the M12.
 
 5. **Circular Gesture Lens**
    - Keep the circular orbit as the primary interaction.
@@ -58,6 +59,10 @@ NOX Camera should feel like one coherent camera engine, not a collection of unre
    - Give concise composition and exposure suggestions.
    - Offline/basic mode may use measurable image properties. Face, object, and scene labels require a separately integrated model and must be disclosed.
    - Suggestions are advisory and never block capture.
+
+### P0 implementation note — Adaptive Rescue v1
+
+The camera loop now measures render cost, maintains a smoothed cost estimate and approximate FPS, and applies hysteresis to avoid quality oscillation. It limits output resolution and render cadence while preserving the same camera stream. The controller reports its active tier and measurements in diagnostics. It does not yet tune individual shader complexity or observe OS thermal state; those are not exposed consistently by mobile browsers.
 
 ## Engineering constraints
 
