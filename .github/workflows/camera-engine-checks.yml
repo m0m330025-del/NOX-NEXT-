@@ -158,5 +158,11 @@ jobs:
             if (!js.includes(token)) throw new Error('NOX Temporal Confidence Map classification or invalidation guard missing: ' + token);
           }
           console.log('NOX Temporal Confidence Map evidence categories and reference invalidation verified');
+          for (const token of ['buildPhotonGhostGuard', 'clearPhotonGhostGuard', 'photonGhostGuardTiles', 'temporalRange > 18', 'photonGhostGuardReferenceIndex === referenceSlotIndex', 'nox-photon-ghost-build', 'nox-photon-ghost-map']) {
+            if (!js.includes(token) && !fs.readFileSync('index.html', 'utf8').includes(token)) {
+              throw new Error('NOX Temporal Ghost Guard detection or fusion-blocking guard missing: ' + token);
+            }
+          }
+          console.log('NOX Temporal Ghost Guard temporal-variation mask and fusion blocking verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
