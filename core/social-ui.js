@@ -18,6 +18,7 @@ export function initSocialUI() {
  }
  function syncLiveOverlay(){if(stickerLayer)stickerLayer.textContent=sticker;if(captionLayer)captionLayer.textContent=captionInput?.value.trim()||"";}
  async function stopRecording(){
+  if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
   if(recorder&&recorder.state!=="inactive")recorder.stop();
   if(recordingIndicator)recordingIndicator.hidden=true;
   if(record)record.textContent="●";
@@ -35,7 +36,7 @@ export function initSocialUI() {
   if(!navigator.mediaDevices?.getUserMedia){notice("الكاميرا تحتاج متصفحًا حديثًا واتصال HTTPS.");return;}
   if(!window.isSecureContext){notice("شغّل الموقع عبر HTTPS للسماح باستخدام الكاميرا.");return;}
   try{
-   if(stream)stream.getTracks().forEach(track=>track.stop());
+   if(stream){await stopRecording();stream.getTracks().forEach(track=>track.stop());}
    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1280},height:{ideal:720}}});
    video.srcObject=stream;video.style.filter=filter;video.hidden=false;stage?.classList.toggle("is-front",facingMode==="user");empty.hidden=true;
    await video.play();setCameraControls(true);notice(facingMode==="user"?"الكاميرا الأمامية جاهزة":"الكاميرا الخلفية جاهزة");
@@ -66,13 +67,18 @@ export function initSocialUI() {
  });
  record?.addEventListener("click",()=>{
   if(!stream)return notice("شغّل الكاميرا أولًا.");
-  if(!window.MediaRecorder)return notice("تسجيل الفيديو غير مدعوم في هذا المتصفح.");
+  if(!window.MediaRecorder||!recordCanvas?.captureStream)return notice("تسجيل الفيديو غير مدعوم في هذا المتصفح.");
   if(recorder&&recorder.state==="recording"){stopRecording();return;}
   try{
-   recordedChunks=[];const mime=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>MediaRecorder.isTypeSupported(type));
-   recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+   recordedChunks=[];recordCanvas.width=video.videoWidth;recordCanvas.height=video.videoHeight;
+   const drawRecordFrame=()=>{if(!stream||!video.videoWidth)return;const ctx=recordCanvas.getContext("2d");ctx.save();ctx.filter=filter;if(facingMode==="user"){ctx.translate(recordCanvas.width,0);ctx.scale(-1,1);}ctx.drawImage(video,0,0,recordCanvas.width,recordCanvas.height);ctx.restore();drawOverlay(ctx,recordCanvas.width,recordCanvas.height);recordFrame=requestAnimationFrame(drawRecordFrame);};
+   drawRecordFrame();recordStream=recordCanvas.captureStream(30);
+   const mime=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>MediaRecorder.isTypeSupported(type));
+   recorder=new MediaRecorder(recordStream,mime?{mimeType:mime}:undefined);
    recorder.ondataavailable=event=>{if(event.data?.size)recordedChunks.push(event.data);};
    recorder.onstop=()=>{
+    if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;
+    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";
     if(!recordedChunks.length){notice("لم يتم إنشاء ملف فيديو.");return;}
     const blob=new Blob(recordedChunks,{type:recorder.mimeType||"video/webm"});revokeOutput();outputUrl=URL.createObjectURL(blob);
     videoOutput.src=outputUrl;videoOutput.hidden=false;output.hidden=false;$("#nox-output-label").textContent="الفيديو جاهز — لم يتم رفعه.";
