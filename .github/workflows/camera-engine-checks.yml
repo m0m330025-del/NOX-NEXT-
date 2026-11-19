@@ -144,5 +144,9 @@ jobs:
             if (!js.includes(token)) throw new Error('NOX PHOTON TIME MACHINE timeline implementation missing: ' + token);
           }
           console.log('NOX PHOTON TIME MACHINE bounded timeline, moment scoring, and preview hooks verified');
+          for (const token of ['estimatePhotonAlignment', 'drawAlignedPhotonSlot', 'alignmentConfidence', 'alignmentValid', 'alignmentError', 'previousSlot.meta.alignmentValid && Boolean(alignment)', 'bestSad > 38', 'confidence < 0.035']) {
+            if (!js.includes(token)) throw new Error('NOX Temporal Reconstruction alignment guard missing: ' + token);
+          }
+          console.log('NOX Temporal Reconstruction bounded global alignment and confidence guards verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
