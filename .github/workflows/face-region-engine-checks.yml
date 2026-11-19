@@ -12,6 +12,7 @@ on:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
       - "core/nox-face-region-engine.js"
+      - "core/camera.js"
       - "tests/nox-face-region-engine.test.mjs"
       - ".github/workflows/face-region-engine-checks.yml"
 
