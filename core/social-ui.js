@@ -133,7 +133,7 @@ export function initSocialUI() {
  stop?.addEventListener("click",stopCamera);
  flip?.addEventListener("click",async()=>{facingMode=facingMode==="user"?"environment":"user";await startCamera();});
  const lensCarousel=$(".nox-lens-carousel");
- const lensButtons=$(".nox-lens");
+ const lensButtons=$$(".nox-lens");
  let activeLensIndex=Math.max(0,lensButtons.findIndex(button=>button.classList.contains("active")));
  let lensHoldTimer=null,lensHoldStarted=false,lensPointer=null,lensGestureDragged=false,lensWheelStartX=0,lensWheelStartIndex=0;
  const renderLensWheel=()=>{
