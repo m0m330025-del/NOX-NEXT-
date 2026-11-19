@@ -217,3 +217,12 @@ Build a reusable effect graph with four cooperating layers:
 - Device verification is still required. Automated checks can verify syntax, catalog size, and UI hooks only; they cannot establish visual quality, frame rate, battery use, or compatibility on Galaxy M12/iPhone.
 
 **Status:** first 200-preset selector and shared GPU/Canvas rendering families integrated on the feature branch; advanced tracking, temporal memory, segmentation, and device testing remain incomplete.
+
+## P5 — NOX Manual Region Mask Engine (v1)
+
+- Added touch/mouse drag selection of a normalized rectangular region over the live camera preview.
+- The selected mask is stored in normalized coordinates, so it remains aligned when the render output changes resolution.
+- The mask can be cleared or redrawn and is exposed as a shared region primitive for local effects; the current Living Metal prototype consumes it as its clip region.
+- Selection guide is drawn on the preview only while mask selection is enabled; it is not part of the captured or recorded output.
+- This is a manual 2D rectangle mask only: no semantic segmentation, subject isolation, edge refinement, automatic tracking, or persistence across camera sessions is claimed.
+- Device validation on Galaxy M12 and iPhone remains pending.
