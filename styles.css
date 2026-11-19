@@ -69,3 +69,54 @@ body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 
 /* Shared NOX profile-photo treatment */
 .nox-profile-avatar{outline:2px solid #d9aa45;outline-offset:2px;box-shadow:0 0 0 5px #6722ed2b,0 3px 12px #29135c35!important}
+
+
+/* NOX Creator Studio — mobile-first camera experience */
+.nox-camera-workspace{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px;padding:20px;align-items:start}
+.nox-camera-stage-column{min-width:0;display:grid;justify-items:center;gap:12px}
+.nox-camera-stage{position:relative;width:min(100%,410px);aspect-ratio:9/16;max-height:calc(100vh - 185px);min-height:430px;border-radius:27px;overflow:hidden;background:radial-gradient(circle at 50% 35%,#5630a1,#160b49 70%);box-shadow:0 18px 42px #1b0b5133;isolation:isolate}
+.nox-camera-stage>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.nox-camera-live-overlay{position:absolute;inset:0;z-index:2;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:17% 12% 24%;color:white;text-align:center}
+.nox-live-sticker{font-size:clamp(40px,8vw,76px);filter:drop-shadow(0 4px 9px #18083b88)}
+.nox-live-caption{font-size:clamp(17px,3vw,25px);font-weight:900;text-shadow:0 2px 8px #160b49,0 0 3px #160b49;overflow-wrap:anywhere}
+.nox-camera-empty{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;padding:25px;text-align:center;color:#fff;background:radial-gradient(circle at 50% 40%,#6d37bd 0,#32166f 42%,#160b49 100%)}
+.camera-aperture{font-size:76px;color:var(--gold);text-shadow:0 0 30px #ffd45f66}
+.nox-camera-empty b{font-size:17px}.nox-camera-empty small{font-size:12px;color:#e5dafa}
+.nox-camera-flip{position:absolute;z-index:5;top:16px;left:16px;width:44px;height:44px;border:1px solid #ffffff66;border-radius:50%;background:#170a4c88;color:#fff;font-size:27px;backdrop-filter:blur(10px)}
+.nox-camera-flip:disabled{opacity:.35}
+.nox-camera-bottom-controls{position:absolute;z-index:5;bottom:22px;left:0;right:0;display:flex;align-items:center;justify-content:space-evenly;gap:16px;padding:0 18px}
+.nox-camera-small{min-width:58px;min-height:58px;border:0;background:#1b0b5188;color:#fff;border-radius:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;backdrop-filter:blur(9px)}
+.nox-camera-small small{font-size:10px;font-weight:800}.nox-camera-small:disabled{opacity:.35}
+.nox-shutter{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:#ffffff30;display:grid;place-items:center;box-shadow:0 0 0 4px #ffffff33}
+.nox-shutter span{width:57px;height:57px;border-radius:50%;background:#fff;box-shadow:0 3px 12px #170a4c66}
+.nox-shutter:disabled{opacity:.35}
+.nox-recording-indicator{position:absolute;z-index:6;top:18px;right:18px;border-radius:20px;padding:7px 12px;background:#290b4ed9;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;gap:7px}
+.nox-recording-indicator i{width:9px;height:9px;border-radius:50%;background:#ff3d68;box-shadow:0 0 0 4px #ff3d6833}
+.nox-camera-stage-actions{width:min(100%,410px);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.nox-camera-stage-actions>span{font-size:11px;color:var(--muted)}
+.nox-creator-tools{display:grid;gap:18px;min-width:0}
+.creator-tool-group{padding-bottom:16px;border-bottom:1px solid #eee8ff}
+.creator-tool-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.creator-tool-heading h3{font-size:14px;color:#291762;margin:0}
+.creator-tool-heading>span{font-size:9px;font-weight:900;letter-spacing:1px;color:#fff;background:linear-gradient(100deg,#a52bed,#5320df);border-radius:15px;padding:5px 9px}
+.nox-lens-carousel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nox-lens{min-width:0;border:1px solid #e7dfff;border-radius:14px;background:#faf8ff;color:#4e2c9d;padding:10px 4px;display:grid;justify-items:center;gap:4px}
+.nox-lens>span{width:37px;height:37px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#f0e5ff,#fff);font-size:20px;color:#6e2dd2}
+.nox-lens b{font-size:10px}.nox-lens.active{border-color:#9c35f1;background:#f2eaff;box-shadow:0 0 0 2px #9c35f122}
+.nox-lens.active>span{background:linear-gradient(135deg,#a52bed,#5320df);color:#fff}
+.creator-tool-hint{font-size:10px;color:#83799f;line-height:1.7;margin:9px 0 0}
+.nox-sticker-picker{display:flex;flex-wrap:wrap;gap:8px}
+.nox-sticker-picker button{width:43px;height:43px;border-radius:13px;border:1px solid #e6ddff;background:#faf8ff;font-size:21px}
+.nox-sticker-picker button.active{border-color:#9c35f1;background:#f0e7ff;box-shadow:0 0 0 2px #9c35f122}
+.nox-caption-input{width:100%;border:1px solid #e5dcff;border-radius:12px;padding:12px;background:#faf8ff;color:#291762;outline:none;font-size:12px}
+.nox-caption-input:focus{border-color:#8d35e8;box-shadow:0 0 0 3px #8d35e822}
+.nox-camera-output{display:grid;gap:10px}
+.nox-camera-output img,.nox-camera-output video{width:100%;max-height:300px;object-fit:contain;background:#160b49;border-radius:14px}
+.nox-camera-output p{font-size:11px;color:#756b91;margin:0}
+.nox-download-link{display:inline-flex;justify-content:center;text-decoration:none}
+.nox-privacy-note{margin:0;padding:13px;border-radius:13px;background:#f6f1ff;color:#625482;font-size:10px;line-height:1.9}
+.nox-privacy-note span{color:#9b6b13;font-size:16px;margin-left:5px}
+@media(max-width:900px){.nox-camera-workspace{grid-template-columns:minmax(0,1fr) 260px;gap:14px;padding:13px}.nox-lens-carousel{grid-template-columns:repeat(2,minmax(0,1fr))}.nox-camera-stage{min-height:390px}}
+@media(max-width:760px){.nox-camera-workspace{grid-template-columns:1fr;padding:10px;gap:17px}.nox-camera-stage{width:min(100%,390px);min-height:0;max-height:68svh;aspect-ratio:9/16;border-radius:23px}.nox-camera-bottom-controls{bottom:16px}.nox-shutter{width:70px;height:70px}.nox-shutter span{width:52px;height:52px}.nox-camera-stage-actions{width:100%}.nox-creator-tools{gap:13px}.nox-lens-carousel{display:flex;overflow-x:auto;scrollbar-width:none;padding:2px 1px 7px}.nox-lens-carousel::-webkit-scrollbar{display:none}.nox-lens{flex:0 0 78px}.nox-sticker-picker{justify-content:flex-start}}
+@media(max-width:380px){.nox-camera-stage{max-height:63svh}.nox-camera-bottom-controls{gap:8px}.nox-camera-small{min-width:50px;min-height:50px}}
+@media(prefers-reduced-motion:reduce){.nox-camera-stage *{transition:none!important}}
