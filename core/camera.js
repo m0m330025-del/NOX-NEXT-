@@ -189,6 +189,10 @@ export function initCamera() {
   let subjectLockWasReacquired = false;
   let motionPredictionEnabled = false;
   let subjectLockVelocity = { x: 0, y: 0 };
+  let cameraStabilizationEnabled = false;
+  let stabilizationOffset = { x: 0, y: 0 };
+  let stabilizationTarget = { x: 0, y: 0 };
+  let stabilizationConfidence = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -494,6 +498,7 @@ export function initCamera() {
     }
     opticalFlowVectors = vectors;
     opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
+    updateCameraStabilization();
     opticalFlowPrevious = gray;
     opticalFlowSequence += 1;
     updateSubjectLock(gray, sampleWidth, sampleHeight);
@@ -746,6 +751,7 @@ export function initCamera() {
     if (opticalFlowMode === "off") {
       setRegionFollowEnabled(false);
       clearSubjectLock();
+      if (cameraStabilizationEnabled) setCameraStabilizationEnabled(false);
     }
     resetOpticalFlow();
     const hint = $("#nox-flow-hint");
@@ -769,6 +775,71 @@ export function initCamera() {
     announce(temporalMode === "off" ? "تم إيقاف الذاكرة الزمنية" : "تم تفعيل " + (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — انتظر لحظات لامتلاء الذاكرة", Boolean(stream));
     updateDiagnostics();
     if (stream) renderFrame(false);
+  }
+
+  function resetCameraStabilization() {
+    stabilizationOffset = { x: 0, y: 0 };
+    stabilizationTarget = { x: 0, y: 0 };
+    stabilizationConfidence = 0;
+  }
+
+  function updateCameraStabilization() {
+    if (!cameraStabilizationEnabled) return;
+    const stableVectors = opticalFlowVectors.filter((vector) => vector.confidence >= 0.16);
+    if (stableVectors.length < 4) {
+      stabilizationConfidence = 0;
+      return;
+    }
+    const median = (values) => {
+      values.sort((a, b) => a - b);
+      const middle = Math.floor(values.length / 2);
+      return values.length % 2 ? values[middle] : (values[middle - 1] + values[middle]) / 2;
+    };
+    const motionX = median(stableVectors.map((vector) => vector.dx));
+    const motionY = median(stableVectors.map((vector) => vector.dy));
+    const maxOffset = 0.025;
+    stabilizationTarget = {
+      x: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.x - motionX * 0.72)),
+      y: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.y - motionY * 0.72))
+    };
+    stabilizationOffset = {
+      x: stabilizationOffset.x * 0.76 + stabilizationTarget.x * 0.24,
+      y: stabilizationOffset.y * 0.76 + stabilizationTarget.y * 0.24
+    };
+    stabilizationConfidence = stableVectors.reduce((sum, vector) => sum + vector.confidence, 0) / stableVectors.length;
+  }
+
+  function setCameraStabilizationEnabled(enabled) {
+    cameraStabilizationEnabled = Boolean(enabled);
+    if (cameraStabilizationEnabled && opticalFlowMode === "off") {
+      const flowSelect = $("#nox-flow-mode");
+      if (flowSelect) flowSelect.value = "vectors";
+      setOpticalFlowMode("vectors");
+    }
+    if (!cameraStabilizationEnabled) resetCameraStabilization();
+    const button = $("#nox-stabilizer-toggle");
+    if (button) {
+      button.setAttribute("aria-pressed", String(cameraStabilizationEnabled));
+      button.textContent = cameraStabilizationEnabled ? "إيقاف تثبيت الصورة" : "تشغيل تثبيت الصورة";
+    }
+    const hint = $("#nox-stabilizer-hint");
+    if (hint) hint.textContent = cameraStabilizationEnabled
+      ? "تثبيت إلكتروني خفيف من متوسط حركة الصورة — قصّ محدود حتى 5% تقريبًا"
+      : "التثبيت متوقف — لا يوجد قصّ للصورة";
+    updateDiagnostics();
+    if (stream) renderFrame(false);
+  }
+
+  function drawStabilizedSource(ctx, source, width, height, mirror = false) {
+    ctx.save();
+    ctx.clearRect(0, 0, width, height);
+    const zoom = cameraStabilizationEnabled ? 1.06 : 1;
+    const offsetX = cameraStabilizationEnabled ? stabilizationOffset.x * width : 0;
+    const offsetY = cameraStabilizationEnabled ? stabilizationOffset.y * height : 0;
+    ctx.translate(width / 2 + offsetX, height / 2 + offsetY);
+    ctx.scale(zoom * (mirror ? -1 : 1), zoom);
+    ctx.drawImage(source, -width / 2, -height / 2, width, height);
+    ctx.restore();
   }
 
   function renderFrame(scheduleNext = true) {
@@ -809,8 +880,7 @@ export function initCamera() {
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
-        outputContext.clearRect(0, 0, outWidth, outHeight);
-        outputContext.drawImage(glCanvas, 0, 0, outWidth, outHeight);
+        drawStabilizedSource(outputContext, glCanvas, outWidth, outHeight);
       } catch {
         renderer = null;
         renderMode = "Canvas 2D احتياطي";
@@ -821,13 +891,8 @@ export function initCamera() {
       if (!ctx) return;
       const filters = ["none", "brightness(1.08) saturate(1.1)", "sepia(.18) saturate(1.12)", "hue-rotate(145deg) saturate(1.2)", "saturate(1.45) contrast(1.04)", "sepia(.42) contrast(1.05)", "grayscale(1) contrast(1.08)"];
       ctx.save();
-      ctx.clearRect(0, 0, outWidth, outHeight);
       ctx.filter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
-      if (facing === "user") {
-        ctx.translate(outWidth, 0);
-        ctx.scale(-1, 1);
-      }
-      ctx.drawImage(video, 0, 0, outWidth, outHeight);
+      drawStabilizedSource(ctx, video, outWidth, outHeight, facing === "user");
       ctx.restore();
       renderMode = "Canvas 2D";
     } else {
@@ -835,10 +900,17 @@ export function initCamera() {
     }
     const outputContext = renderCanvas.getContext("2d");
     if (outputContext) {
+      estimateOpticalFlow();
+      outputContext.save();
+      if (cameraStabilizationEnabled) {
+        outputContext.translate(outWidth / 2 + stabilizationOffset.x * outWidth, outHeight / 2 + stabilizationOffset.y * outHeight);
+        outputContext.scale(1.06, 1.06);
+        outputContext.translate(-outWidth / 2, -outHeight / 2);
+      }
       drawLivingMetal(outputContext, outWidth, outHeight);
       renderTemporalMemory(outputContext, outWidth, outHeight);
-      estimateOpticalFlow();
       drawOpticalFlow(outputContext, outWidth, outHeight);
+      outputContext.restore();
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
@@ -905,6 +977,7 @@ export function initCamera() {
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
       ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
+      ["NOX Smart Stabilizer", cameraStabilizationEnabled ? "تثبيت إلكتروني نشط — ثقة " + Math.round(stabilizationConfidence * 100) + "% / إزاحة " + (stabilizationOffset.x * 100).toFixed(1) + "%, " + (stabilizationOffset.y * 100).toFixed(1) + "%" : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -946,6 +1019,7 @@ export function initCamera() {
     qualityTier = lowPower ? 1 : 0;
     resetTemporalMemory();
     resetOpticalFlow();
+    resetCameraStabilization();
     clearSubjectLock();
     stopTracks(stream);
     stream = null;
@@ -1147,6 +1221,7 @@ export function initCamera() {
   $("#nox-region-follow-toggle")?.addEventListener("click", () => setRegionFollowEnabled(!regionFollowEnabled));
   $("#nox-subject-lock-toggle")?.addEventListener("click", () => setSubjectLockEnabled(!subjectLockEnabled));
   $("#nox-motion-prediction-toggle")?.addEventListener("click", () => setMotionPredictionEnabled(!motionPredictionEnabled));
+  $("#nox-stabilizer-toggle")?.addEventListener("click", () => setCameraStabilizationEnabled(!cameraStabilizationEnabled));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
