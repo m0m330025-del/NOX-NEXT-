@@ -11,7 +11,8 @@ export function initSocialUI() {
  $("#nox-camera-back")?.addEventListener("click",()=>{window.location.hash="#home";});
  let faceLandmarker=null,faceModelPromise=null,faceAnimationFrame=0,lastFaceDetection=0,faceLandmarks=null,arLens="none";
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
- const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator");
+ const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator"),recordingTime=$("#nox-recording-time");
+ let recordingClock=null,recordingStartedAt=0;
  let sticker="";
  function setCameraControls(active){if(start)start.hidden=active;if(stop)stop.disabled=!active;if(capture)capture.disabled=!active;if(record)record.disabled=!active;if(flip)flip.disabled=!active;}
  function revokeOutput(){if(outputUrl){URL.revokeObjectURL(outputUrl);outputUrl=null;}if(download){download.removeAttribute("href");download.hidden=true;}if(imageOutput){imageOutput.hidden=true;imageOutput.removeAttribute("src");}if(videoOutput){videoOutput.pause();videoOutput.hidden=true;videoOutput.removeAttribute("src");}}
@@ -100,6 +101,7 @@ export function initSocialUI() {
  function syncLiveOverlay(){if(stickerLayer)stickerLayer.textContent=sticker;if(captionLayer)captionLayer.textContent=captionInput?.value.trim()||"";}
  async function stopRecording(){
   if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
+  if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
   if(recorder&&recorder.state!=="inactive")recorder.stop();
   if(recordingIndicator)recordingIndicator.hidden=true;
   if(record)record.textContent="●";
@@ -182,6 +184,7 @@ export function initSocialUI() {
    recorder=new MediaRecorder(recordStream,mime?{mimeType:mime}:undefined);
    recorder.ondataavailable=event=>{if(event.data?.size)recordedChunks.push(event.data);};
    recorder.onstop=()=>{
+    if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
     if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;
     if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";
     if(!recordedChunks.length){notice("لم يتم إنشاء ملف فيديو.");return;}
@@ -189,7 +192,7 @@ export function initSocialUI() {
     videoOutput.src=outputUrl;videoOutput.hidden=false;output.hidden=false;$("#nox-output-label").textContent="الفيديو جاهز — لم يتم رفعه.";
     download.href=outputUrl;download.download="nox-video.webm";download.hidden=false;notice("انتهى التسجيل. يمكنك مشاهدة الفيديو وحفظه.");
    };
-   recorder.start();record.textContent="■";recordingIndicator.hidden=false;notice("بدأ تسجيل الفيديو");
+   recorder.start();record.textContent="■";recordingIndicator.hidden=false;recordingStartedAt=Date.now();if(recordingTime)recordingTime.textContent="00:00";recordingClock=setInterval(()=>{const seconds=Math.floor((Date.now()-recordingStartedAt)/1000);if(recordingTime)recordingTime.textContent=String(Math.floor(seconds/60)).padStart(2,"0")+":"+String(seconds%60).padStart(2,"0");},500);notice("بدأ تسجيل الفيديو");
   }catch(error){notice("تعذر بدء تسجيل الفيديو على هذا المتصفح.");}
  });
  gallery?.addEventListener("click",()=>fileInput?.click());
