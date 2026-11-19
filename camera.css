@@ -123,3 +123,9 @@
 .nox-low-light-panel #nox-low-light-mode{width:100%;min-height:42px;border:1px solid #d6bd83;border-radius:12px;background:linear-gradient(120deg,#fff8e8,#ead6a7);color:#35270e;padding:8px;font:inherit}
 
 .nox-detail-recovery-panel #nox-detail-recovery-mode{width:100%;min-height:42px;border:1px solid #d6bd83;border-radius:12px;background:linear-gradient(120deg,#fff8e8,#ead6a7);color:#35270e;padding:8px;font:inherit}
+
+.nox-motion-freeze-panel{display:grid;gap:8px;padding:12px;border:1px solid #e7b96b;border-radius:15px;background:linear-gradient(135deg,#382817,#202b43);color:#fff}
+.nox-motion-freeze-panel>b{font-size:12px;letter-spacing:.07em;color:#ffe0a6}
+.nox-motion-freeze-panel button{min-height:42px;padding:9px 12px;border:1px solid #f0cf91;border-radius:11px;background:linear-gradient(120deg,#fff0cb,#e6bd76);color:#382817;font:800 12px Cairo,sans-serif;cursor:pointer}
+.nox-motion-freeze-panel button[aria-pressed="true"]{background:linear-gradient(120deg,#c8f5e9,#8ed8c4);border-color:#a4f1db;color:#10362d}
+.nox-motion-freeze-panel small{font-size:11px;line-height:1.7;color:#f0dfc6}
