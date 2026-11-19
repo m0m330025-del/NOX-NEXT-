@@ -8,6 +8,7 @@ export function initSocialUI() {
 
  const video=$("#nox-camera-video"),empty=$("#nox-camera-empty"),start=$("#nox-camera-start"),stop=$("#nox-camera-stop"),capture=$("#nox-camera-capture"),record=$("#nox-camera-record"),flip=$("#nox-camera-flip"),canvas=$("#nox-camera-canvas"),recordCanvas=$("#nox-record-canvas");
  const stage=$("#nox-camera-stage"),stickerLayer=$("#nox-live-sticker"),captionLayer=$("#nox-live-caption"),captionInput=$("#nox-camera-caption-input"),faceCanvas=$("#nox-face-overlay");
+ $("#nox-camera-back")?.addEventListener("click",()=>{window.location.hash="#home";});
  let faceLandmarker=null,faceModelPromise=null,faceAnimationFrame=0,lastFaceDetection=0,faceLandmarks=null,arLens="none";
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
  const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator");
