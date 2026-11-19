@@ -330,3 +330,12 @@ Build a reusable effect graph with four cooperating layers:
 - Canvas 2D fallback does not reproduce the physical shader; the mode selection is preserved but the effect is WebGL-only.
 - These are physically inspired visual approximations, not material identification, spectroscopy, refractive-index measurement, real ray tracing, or recovery of wavelengths absent from the RGB sensor. The atmospheric mode uses image position as a rough sky proxy and is not semantic sky segmentation.
 - Next research candidates: lightweight lucky-frame selection, glare/flare modeling, polarization-inspired appearance (visual only), fluorescence-inspired emission, and depth/refocus experiments. True light-field reconstruction, UV/IR capture, event-camera timing, and true spectral imaging require additional sensor data or specialized hardware.
+
+
+## P17 — NOX Science Optics Lab v1 (experimental visual simulations)
+
+- Adds WebGL shader modes for diffraction-inspired wave fringes, fluorescence-inspired emission, polarization-inspired appearance, monocular depth/refocus styling, lens flare/glare styling, spectral-inspired RGB remapping, atmospheric halos/haze, and material-appearance palettes.
+- Modes reuse the existing camera texture and render loop; no extra full-resolution readback or persistent frame stack is introduced.
+- Lucky Frame is exposed as a capture-assist concept only. This version does not claim multi-shot burst ranking or sensor-level shutter control; a true best-frame selector requires a bounded frame buffer and a validated full-resolution frame-preservation path.
+- Polarization is not measured; fluorescence is not chemical analysis; Light Field Lab uses monocular luminance as a depth proxy and is not a true light-field camera; spectral styling does not recover UV/IR or missing wavelengths; atmospheric styling does not identify sky/weather; flare and material modes are illustrative, not physical reconstruction.
+- These effects are WebGL-only. Canvas 2D fallback keeps the camera running but does not reproduce the science simulations. Visual quality and performance remain unverified on physical Android/iOS devices, including Galaxy M12.
