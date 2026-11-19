@@ -34,8 +34,10 @@ jobs:
         run: |
           cp core/camera.js /tmp/camera.mjs
           cp app.js /tmp/app.mjs
+          cp core/nox-filter-engine.js /tmp/filter-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
+          node --check /tmp/filter-engine.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
