@@ -121,6 +121,17 @@
             <button type="button" id="nox-region-mask-clear">مسح القناع</button>
             <small id="nox-region-mask-hint" role="status">حدد منطقة من الصورة لاستخدامها مع المؤثرات الموضعية</small>
           </section>
+          <section class="nox-temporal-panel" aria-label="الذاكرة الزمنية NOX">
+            <b>NOX TEMPORAL MEMORY</b>
+            <label for="nox-temporal-mode">مؤثرات الإطارات السابقة</label>
+            <select id="nox-temporal-mode">
+              <option value="off">إيقاف الذاكرة الزمنية</option>
+              <option value="motion-trace">Motion Trace — آثار الحركة</option>
+              <option value="time-echo">Time Echo — صدى اللحظة</option>
+            </select>
+            <button type="button" id="nox-temporal-clear">مسح الإطارات المحفوظة</button>
+            <small id="nox-temporal-hint" role="status">ذاكرة مصغّرة منخفضة الاستهلاك — لا تغادر الإطارات الجهاز</small>
+          </section>
           <section class="nox-living-metal-panel" aria-label="تأثير Living Metal">
             <b>NOX REALITY SKIN</b>
             <button type="button" id="nox-living-metal-toggle" aria-pressed="false">تشغيل Living Metal</button>
