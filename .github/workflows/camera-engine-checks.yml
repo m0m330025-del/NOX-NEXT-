@@ -154,7 +154,7 @@ jobs:
             if (!js.includes(token)) throw new Error('NOX Temporal Detail Fusion safety or selection guard missing: ' + token);
           }
           console.log('NOX Temporal Detail Fusion conservative tile selection and cleanup guards verified');
-          for (const token of ['buildPhotonConfidenceMap', 'clearPhotonConfidenceMap', 'photonConfidenceCounts', 'difference / samples <= 14', 'agreeing >= 2', 'photonConfidenceReferenceIndex']) {
+          for (const token of ['buildPhotonConfidenceMap', 'clearPhotonConfidenceMap', 'photonConfidenceCounts', 'difference / samples <= 14', 'agreeing >= 2', 'context.drawImage(reference.canvas, 0, 0)', 'photonConfidenceReferenceIndex']) {
             if (!js.includes(token)) throw new Error('NOX Temporal Confidence Map classification or invalidation guard missing: ' + token);
           }
           console.log('NOX Temporal Confidence Map evidence categories and reference invalidation verified');
