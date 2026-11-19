@@ -1,11 +1,11 @@
 export function initSocialUI() {
  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
- const toast=$("#toast");let timer,stream=null,filter="none",facingMode="user",recorder=null,recordedChunks=[],outputUrl=null;
+ const toast=$("#toast");let timer,stream=null,filter="none",facingMode="user",recorder=null,recordedChunks=[],outputUrl=null,recordStream=null,recordFrame=0;
  function notice(message){const status=$("#nox-camera-status");if(status)status.textContent=message;if(!toast)return;toast.textContent=message;toast.classList.add("show");clearTimeout(timer);timer=setTimeout(()=>toast.classList.remove("show"),2600);}
  $("#nox-id-submit")?.addEventListener("click",()=>{const id=$("#nox-id-search")?.value.trim();notice(id?"واجهة البحث جاهزة؛ ربط البحث وإرسال طلب الصداقة بقاعدة البيانات في المرحلة التالية.":"اكتب NOX ID للبحث.");});
  $("#nox-id-search")?.addEventListener("keydown",e=>{if(e.key==="Enter")$("#nox-id-submit")?.click();});
 
- const video=$("#nox-camera-video"),empty=$("#nox-camera-empty"),start=$("#nox-camera-start"),stop=$("#nox-camera-stop"),capture=$("#nox-camera-capture"),record=$("#nox-camera-record"),flip=$("#nox-camera-flip"),canvas=$("#nox-camera-canvas");
+ const video=$("#nox-camera-video"),empty=$("#nox-camera-empty"),start=$("#nox-camera-start"),stop=$("#nox-camera-stop"),capture=$("#nox-camera-capture"),record=$("#nox-camera-record"),flip=$("#nox-camera-flip"),canvas=$("#nox-camera-canvas"),recordCanvas=$("#nox-record-canvas");
  const stage=$("#nox-camera-stage"),stickerLayer=$("#nox-live-sticker"),captionLayer=$("#nox-live-caption"),captionInput=$("#nox-camera-caption-input");
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
  const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator");
