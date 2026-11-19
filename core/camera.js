@@ -1,6 +1,7 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
+import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -387,6 +388,8 @@ export function initCamera() {
   let photonGhostGuardCounts = { blocked: 0, clear: 0 };
   const faceDetectionEngine = new NOXFaceDetectionEngine();
   const faceTrackingEngine = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 0.58 });
+  const faceRegionEngine = new NOXFaceRegionEngine();
+  let trackedFaceRegions = null;
   let faceDetectionState = "idle";
   let faceDetectionInFlight = false;
   let faceDetectionLastAt = 0;
@@ -407,6 +410,8 @@ export function initCamera() {
     faceDetectionInFlight = false;
     faceDetectionLastAt = 0;
     trackedFace = null;
+    trackedFaceRegions = null;
+    faceRegionEngine.reset();
     faceTrackingEngine.reset();
     faceDetectionState = "idle";
   }
@@ -423,15 +428,18 @@ export function initCamera() {
       if (result.state === "ok") {
         const tracked = faceTrackingEngine.update(result.faces);
         trackedFace = tracked.face;
+        trackedFaceRegions = tracked.face ? faceRegionEngine.analyze(tracked.face) : null;
         faceDetectionState = tracked.state;
       } else {
         trackedFace = null;
+        trackedFaceRegions = null;
         faceDetectionState = result.state;
         faceTrackingEngine.reset();
       }
     }).catch(() => {
       if (session === faceDetectionSession) {
         trackedFace = null;
+        trackedFaceRegions = null;
         faceDetectionState = "detection-error";
         faceTrackingEngine.reset();
       }
@@ -462,6 +470,15 @@ export function initCamera() {
           ctx.arc(px, py, Math.max(2, width * 0.003), 0, Math.PI * 2);
           ctx.fill();
         }
+      }
+    }
+    if (trackedFaceRegions?.regions) {
+      ctx.lineWidth = Math.max(1.5, width * 0.0018);
+      ctx.strokeStyle = "rgba(255,220,120,.92)";
+      for (const region of Object.values(trackedFaceRegions.regions)) {
+        const area = region.bounds;
+        const rx = (facing === "user" ? 1 - area.x - area.width : area.x) * width;
+        ctx.strokeRect(rx, area.y * height, area.width * width, area.height * height);
       }
     }
     ctx.restore();
