@@ -37,3 +37,7 @@
 .nox-camera-v2-note{font-size:11px;line-height:1.8;color:#cbbce2;min-height:24px}
 @media(max-width:760px){.nox-camera-page{padding:12px 8px!important}.nox-camera-v2{grid-template-columns:minmax(0,1fr);gap:18px;padding:10px;border-radius:18px}.nox-camera-v2-stage{width:min(100%,390px);min-height:0;max-height:none;aspect-ratio:9/16;border-radius:20px}.nox-camera-v2-tools{padding:4px 5px}.nox-lens-orbit{width:min(84vw,300px);--orbit-radius:clamp(84px,29vw,112px)}.nox-camera-v2-empty h3{font-size:18px}.nox-camera-v2-empty p{font-size:11px}}
 @media(max-width:360px){.nox-camera-v2-controls button{min-width:56px}.nox-camera-v2-controls #nox-camera-capture{width:68px;height:68px;min-width:68px}#nox-camera-capture i{width:50px;height:50px}}
+
+.nox-camera-v2-actions{display:flex;gap:8px;pointer-events:auto}
+.nox-camera-v2-actions button{min-width:44px;min-height:42px;padding:0 12px;border:1px solid #ffffff55;border-radius:22px;background:#170b35d9;color:#fff;font:700 11px Cairo,sans-serif}
+.nox-camera-v2-actions button:disabled{opacity:.4}
