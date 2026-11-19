@@ -135,3 +135,68 @@ A capture package may contain these optional, versioned components:
 
 **Specification only — not implemented and not device-tested.** The concept requires a separate prior-art/patent search before making any novelty, ownership, or patentability claim. It must be implemented incrementally on the camera feature branch and pass the existing verification gates before any merge or release.
 
+## P3 — experimental signature direction: NOX REALITY SKIN
+
+**Approved concept direction:** a material-and-motion visual-effects engine in which a filter is not merely a color grade or a sticker overlay. The user assigns a virtual material and behavior to selected regions or tracked subjects; the effect then responds consistently to movement and scene changes across successive frames.
+
+This is a research and product specification, not a claim that the concept is globally unprecedented, physically accurate, or already implemented. Existing patent literature includes real-time neural stylization on mobile devices and artistic effects applied to live camera streams. A formal prior-art search is required before any novelty or patentability claim.
+
+### Core invention hypothesis — NOX Reality Physics Engine
+
+Build a reusable effect graph with four cooperating layers:
+
+1. **Intent Layer:** user selects a person, object, or manually painted region and assigns a material/behavior. Manual region selection must work without a neural model.
+2. **Continuity Layer:** tracks the selected region across frames, estimates motion, and manages temporary occlusion. If tracking confidence falls, freeze/fade the effect or ask for reselection rather than attaching it to the wrong object.
+3. **Material Layer:** renders a selected visual material using consistent parameters over time. Initial materials may include liquid-metal appearance, energy trails, glass-fragment illusion, smoke-like trails, and flowing-water appearance. These are stylized image effects, not real physical simulations.
+4. **Interaction Layer:** responds to measured motion, touch gestures, and scene changes. Each effect must expose its inputs and limitations; no hidden claim of real-world physics.
+
+### Signature filter experiences
+
+- **Living Metal:** metallic shading and animated highlights follow the tracked subject/region. Highlights are stylized; do not claim true environment reflections unless an environment map is actually captured.
+- **Motion Trace:** a controlled temporal trail follows movement and decays over time. Include trail length, opacity, and direction controls.
+- **Shatter World:** a selected region appears to split into animated virtual fragments when a gesture or motion trigger occurs. The effect must not imply that the real object physically broke.
+- **Matter Shift:** selected regions transition among visual material styles (water-like, smoke-like, energy-like). The engine must preserve region boundaries as far as tracking allows and provide a clear fallback when segmentation is unavailable.
+
+### Rendering and tracking architecture
+
+- Use a single camera stream. Derive effect frames from the existing preview pipeline.
+- Separate tracking/mask generation from material rendering so effects can share masks and motion data.
+- Prefer WebGL shaders for compositing and temporal trails; provide Canvas 2D or reduced-effect fallbacks.
+- Reuse existing frame scheduling and Adaptive Rescue controls. Do not create independent animation loops per filter.
+- Apply confidence-aware temporal smoothing to reduce flicker; reset or fade state on scene cuts, camera switching, permission loss, and tracking failure.
+- Bound all history buffers by time and resolution. Release them when the effect is disabled or the camera stops.
+- Never upload camera frames for processing by default.
+
+### Device tiers
+
+- **Lite (Galaxy M12 priority):** one selected region, manual mask tools, simple motion vectors/centroid tracking where feasible, shader-based materials, short low-resolution trail history, and reduced particle counts. Disable expensive segmentation and fragment simulations.
+- **Standard:** optional lightweight on-device segmentation/tracking if benchmarked and supported; multiple effect parameters and richer temporal trails.
+- **Advanced:** optional higher-resolution masks, more particles, and richer material shading after capability checks. No feature may assume a particular GPU or neural accelerator.
+
+### Accessibility and user control
+
+- Provide obvious Auto/Manual controls; automatic tracking may suggest or follow only after user opt-in.
+- Make effects adjustable and removable at any time; preserve the original capture.
+- Provide reduced-motion mode, intensity controls, touch-friendly selection, and accessible labels.
+- Do not cover essential camera controls with gesture zones.
+
+### Staged implementation and acceptance
+
+- **P3-A — material shader prototype:** implement one material effect on a manually selected static region. Acceptance: stable preview, capture parity, and clean fallback.
+- **P3-B — motion trace:** add a bounded temporal trail driven by measured region movement. Acceptance: no unbounded memory growth, no duplicate animation loop, and stable behavior under frame drops.
+- **P3-C — region continuity:** add tracking/mask continuity and confidence display. Acceptance: effect does not jump to unrelated objects during occlusion; it fades or requests reselection when confidence is low.
+- **P3-D — interactive material events:** add gesture/motion-triggered shatter and matter-shift transitions. Acceptance: triggers are user-configurable, reversible, and clearly stylized.
+- **P3-E — multi-device optimization:** benchmark on Galaxy M12, a newer Android phone, and iPhone Safari where available. Record frame rate, dropped frames, memory, battery impact, thermal behavior only where measurable, and fallback behavior.
+
+### Verification and truthfulness safeguards
+
+- Compare preview, photo capture, and video recording output for visual consistency.
+- Test camera switching, app background/foreground, low memory, denied permissions, scene cuts, and loss of tracking.
+- Label simulated materials and fragments as visual effects. Never imply that the camera measured actual material properties or reconstructed physical events.
+- Keep original captures untouched and distinguish edited outputs.
+- No fake controls: unavailable tiers/effects must be disabled or clearly marked as experimental.
+
+### Status
+
+**Specification only — not implemented and not device-tested.** This is an approved direction for research and staged engineering, not proof of worldwide novelty. Before implementation is described as an invention or patent candidate, search relevant patent claims and research on neural stylization, video object tracking, temporal effects, material rendering, and interactive AR filters.
+
