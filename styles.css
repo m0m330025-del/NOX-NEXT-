@@ -445,3 +445,49 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  body[data-nox-screen="camera"] #camera .nox-creator-tools>.nox-camera-output:not([hidden]){display:grid!important}
  body[data-nox-screen="camera"] #camera .nox-camera-tool-tabs button:focus-visible{outline:2px solid #f5d77e;outline-offset:2px}
 }
+
+
+/* NOX NEXT camera startup visibility and touch-accessibility safeguard */
+/* Keep the permission-triggering action above decorative camera layers on phones. */
+.nox-camera-stage #nox-camera-empty:not([hidden]){
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  z-index:30!important;
+  pointer-events:auto!important;
+}
+.nox-camera-stage #nox-camera-start{
+  position:relative!important;
+  z-index:31!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  visibility:visible!important;
+  opacity:1!important;
+  min-width:176px!important;
+  min-height:48px!important;
+  margin:8px auto 0!important;
+  padding:13px 22px!important;
+  border:1px solid rgba(255,225,138,.9)!important;
+  border-radius:16px!important;
+  color:#fff!important;
+  font:800 15px/1.3 inherit!important;
+  box-shadow:0 8px 26px rgba(0,0,0,.32),0 0 0 3px rgba(245,215,126,.16)!important;
+  cursor:pointer!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent;
+}
+.nox-camera-stage #nox-camera-start:focus-visible{
+  outline:3px solid #ffe18a!important;
+  outline-offset:4px!important;
+}
+@media(max-width:760px){
+ body[data-nox-screen="camera"] #camera .nox-camera-empty:not([hidden]){
+  position:absolute!important;inset:0!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  padding:24px!important;z-index:30!important;pointer-events:auto!important;
+ }
+ body[data-nox-screen="camera"] #camera #nox-camera-start{
+  min-height:52px!important;min-width:190px!important;font-size:16px!important;
+ }
+}
