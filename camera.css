@@ -113,3 +113,6 @@
 .nox-subject-lock-panel button{min-height:42px;padding:9px 12px;border:1px solid #f0cf91;border-radius:11px;background:linear-gradient(120deg,#fff0cb,#e6bd76);color:#382817;font:800 12px Cairo,sans-serif;cursor:pointer}
 .nox-subject-lock-panel button[aria-pressed="true"]{background:linear-gradient(120deg,#c8f5e9,#8ed8c4);border-color:#a4f1db;color:#10362d}
 .nox-subject-lock-panel small{font-size:11px;line-height:1.7;color:#f0dfc6}
+
+.nox-subject-lock-panel #nox-motion-prediction-toggle{background:linear-gradient(120deg,#dcecff,#9bbce8);border-color:#b5d3ff;color:#152a48}
+.nox-subject-lock-panel #nox-motion-prediction-toggle[aria-pressed="true"]{background:linear-gradient(120deg,#d8f4ff,#91c8e7);border-color:#a5e1f6;color:#123349}
