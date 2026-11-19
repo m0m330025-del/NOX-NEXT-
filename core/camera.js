@@ -583,11 +583,15 @@ export function initCamera() {
           }
         }
         if (sad < bestSad) {
-          secondSad = bestSad;
+          if (bestSad < Infinity && (Math.abs(bestX - cx) > 2 || Math.abs(bestY - cy) > 2)) {
+            secondSad = Math.min(secondSad, bestSad);
+          }
           bestSad = sad;
           bestX = cx;
           bestY = cy;
-        } else if (sad < secondSad) secondSad = sad;
+        } else if ((Math.abs(cx - bestX) > 2 || Math.abs(cy - bestY) > 2) && sad < secondSad) {
+          secondSad = sad;
+        }
       }
     }
     const meanSad = bestSad / subjectLockTemplate.length;
