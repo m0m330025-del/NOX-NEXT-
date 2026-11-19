@@ -132,6 +132,16 @@
             <button type="button" id="nox-temporal-clear">مسح الإطارات المحفوظة</button>
             <small id="nox-temporal-hint" role="status">ذاكرة مصغّرة منخفضة الاستهلاك — لا تغادر الإطارات الجهاز</small>
           </section>
+          <section class="nox-flow-panel" aria-label="محرك تقدير الحركة NOX">
+            <b>NOX SPARSE OPTICAL FLOW</b>
+            <label for="nox-flow-mode">عرض اتجاه الحركة</label>
+            <select id="nox-flow-mode">
+              <option value="off">إيقاف تقدير الحركة</option>
+              <option value="vectors">إظهار أسهم الحركة</option>
+            </select>
+            <button type="button" id="nox-flow-clear">إعادة ضبط تقدير الحركة</button>
+            <small id="nox-flow-hint" role="status">تحليل محلي منخفض الدقة — لا يتم رفع إطارات الكاميرا</small>
+          </section>
           <section class="nox-living-metal-panel" aria-label="تأثير Living Metal">
             <b>NOX REALITY SKIN</b>
             <button type="button" id="nox-living-metal-toggle" aria-pressed="false">تشغيل Living Metal</button>
