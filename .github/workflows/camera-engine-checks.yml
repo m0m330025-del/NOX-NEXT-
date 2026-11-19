@@ -91,6 +91,10 @@ jobs:
             }
           }
           console.log('Camera markup hooks present:', required.length);
+          for (const token of ['NOXFaceDetectionEngine', 'NOXFaceTrackingEngine', 'requestFaceDetection(frameNow)', 'drawFaceTrackingOverlay(outputContext, outWidth, outHeight)', 'resetFaceTracking()']) {
+            if (!js.includes(token)) throw new Error('Camera face detection/tracking integration missing: ' + token);
+          }
+          console.log('Camera face detection and geometric tracking integration hooks verified');
           const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
