@@ -47,7 +47,8 @@ jobs:
             'nox-camera-stop', 'nox-camera-capture', 'nox-camera-record',
             'nox-camera-render', 'nox-lens-orbit', 'nox-lens-track',
             'nox-camera-caption', 'nox-camera-file', 'nox-camera-result',
-            'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save'
+            'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save',
+            'nox-living-metal-toggle', 'nox-living-metal-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -60,5 +61,12 @@ jobs:
               process.exit(1);
             }
           }
+          for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion']) {
+            if (!js.includes(token)) {
+              console.error('Living Metal implementation token missing:', token);
+              process.exit(1);
+            }
+          }
           console.log('Camera markup hooks present:', required.length);
+          console.log('Living Metal prototype hooks present: 3');
           NODE
