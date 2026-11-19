@@ -134,12 +134,13 @@ byId("copy-nox-id").addEventListener("click", async () => {
 byId("profile-form").addEventListener("submit", async event => {
   event.preventDefault();
   const name = byId("edit-name").value.trim();
-  const age = Number(byId("edit-age").value);
-  const gender = byId("edit-gender").value;
+  const ageValue = byId("edit-age").value.trim();
+  const age = ageValue === "" ? null : Number(ageValue);
+  const gender = byId("edit-gender").value || null;
   const about = byId("edit-about").value.trim();
   const showGender = byId("show-gender").checked;
-  if (!name || name.length > 60 || !Number.isInteger(age) || age < 13 || age > 120 || !gender) {
-    message("اكتب اسمًا صحيحًا، وعمرًا من 13 إلى 120، واختر النوع.");
+  if (!name || name.length > 60 || (age !== null && (!Number.isInteger(age) || age < 0))) {
+    message("اكتب اسمًا صحيحًا، وإذا أدخلت العمر فتأكد أنه رقم صحيح غير سالب.");
     return;
   }
   const button = byId("save-profile");
@@ -147,13 +148,10 @@ byId("profile-form").addEventListener("submit", async event => {
   button.textContent = "جارٍ الحفظ...";
   try {
     if (name !== currentUser.name) await account.updateName(name);
-    await account.updatePrefs({
-      ...(currentUser.prefs || {}),
-      age,
-      gender,
-      about,
-      showGender
-    });
+    const nextPrefs = { ...(currentUser.prefs || {}), about, showGender };
+    if (age === null) delete nextPrefs.age; else nextPrefs.age = age;
+    if (gender === null) delete nextPrefs.gender; else nextPrefs.gender = gender;
+    await account.updatePrefs(nextPrefs);
     currentUser = await account.get();
     renderProfile();
     message("تم حفظ تعديلات الملف الشخصي.", true);
