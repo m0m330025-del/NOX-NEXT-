@@ -27,3 +27,11 @@ form label:first-child input{direction:rtl;text-align:right}
 .security-note,.back-link{text-align:center;font-size:11px;color:#82799e}
 .back-link{display:block;color:#6424cf;font-weight:800;text-decoration:none;margin-top:14px}
 @media(max-width:480px){body{padding:14px}.auth-card{padding:22px 18px;border-radius:20px}h1{font-size:24px}}
+
+.profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.profile-fields[hidden]{display:none}
+.profile-fields label{display:grid;gap:7px;font-size:13px;font-weight:800;color:#38246f}
+.profile-fields input,.profile-fields select{width:100%;min-width:0;border:1px solid #ded6f5;border-radius:12px;padding:13px 10px;outline:none;background:#fcfbff;color:#24105e;font:inherit}
+.profile-fields input:focus,.profile-fields select:focus{border-color:#8e39e8;box-shadow:0 0 0 3px #8e39e81c}
+.privacy-hint{grid-column:1/-1;margin:0;color:#82799e;font-size:11px;font-weight:500}
+@media(max-width:380px){.profile-fields{grid-template-columns:1fr}}
