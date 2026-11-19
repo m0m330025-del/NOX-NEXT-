@@ -1,0 +1,33 @@
+name: NOX MediaPipe Selfie Provider Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "tests/nox-mediapipe-selfie-provider.test.mjs"
+      - ".github/workflows/mediapipe-selfie-provider-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "tests/nox-mediapipe-selfie-provider.test.mjs"
+      - ".github/workflows/mediapipe-selfie-provider-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  mediapipe-provider-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Prepare ESM source copy
+        run: cp core/nox-mediapipe-selfie-provider.js core/nox-mediapipe-selfie-provider.mjs
+      - name: Check provider syntax
+        run: node --check core/nox-mediapipe-selfie-provider.mjs
+      - name: Run provider contract tests
+        run: node tests/nox-mediapipe-selfie-provider.test.mjs
