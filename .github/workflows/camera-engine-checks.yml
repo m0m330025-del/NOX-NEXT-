@@ -51,7 +51,8 @@ jobs:
             'nox-camera-render', 'nox-lens-orbit', 'nox-lens-track',
             'nox-camera-caption', 'nox-camera-file', 'nox-camera-result',
             'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save',
-            'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select'
+            'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
+            'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -64,7 +65,8 @@ jobs:
               process.exit(1);
             }
           }
-          for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion']) {
+          for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion',
+            'normalizedPoint', 'buildRegionMask', 'drawRegionMaskGuide', 'regionMaskDrawing']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -84,5 +86,6 @@ jobs:
             if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
           }
           console.log('Living Metal prototype hooks present: 3');
+          console.log('Manual region mask hooks present: 3');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
