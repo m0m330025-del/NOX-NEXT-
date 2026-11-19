@@ -549,6 +549,85 @@ export function initCamera() {
     return usable.length % 2 ? usable[middle] : (usable[middle - 1] + usable[middle]) / 2;
   }
 
+  function estimatePhotonAlignment(previousCanvas, currentCanvas) {
+    if (!previousCanvas || !currentCanvas ||
+        previousCanvas.width !== currentCanvas.width ||
+        previousCanvas.height !== currentCanvas.height) return null;
+    const width = currentCanvas.width;
+    const height = currentCanvas.height;
+    if (width < 24 || height < 24) return null;
+    let previousPixels;
+    let currentPixels;
+    try {
+      previousPixels = previousCanvas.getContext("2d", { willReadFrequently: true })
+        .getImageData(0, 0, width, height).data;
+      currentPixels = currentCanvas.getContext("2d", { willReadFrequently: true })
+        .getImageData(0, 0, width, height).data;
+    } catch {
+      return null;
+    }
+    const previousGray = new Uint8Array(width * height);
+    const currentGray = new Uint8Array(width * height);
+    let mean = 0;
+    for (let i = 0, p = 0; i < previousGray.length; i += 1, p += 4) {
+      previousGray[i] = (previousPixels[p] * 77 + previousPixels[p + 1] * 150 + previousPixels[p + 2] * 29) >> 8;
+      currentGray[i] = (currentPixels[p] * 77 + currentPixels[p + 1] * 150 + currentPixels[p + 2] * 29) >> 8;
+      mean += previousGray[i];
+    }
+    mean /= previousGray.length;
+    let variance = 0;
+    for (let i = 0; i < previousGray.length; i += 1) {
+      const delta = previousGray[i] - mean;
+      variance += delta * delta;
+    }
+    const texture = Math.min(1, Math.sqrt(variance / previousGray.length) / 28);
+    if (texture < 0.12) return null;
+
+    const radius = lowPower ? 3 : 5;
+    const margin = radius + 2;
+    let bestSad = Infinity;
+    let secondSad = Infinity;
+    let bestDx = 0;
+    let bestDy = 0;
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        let sad = 0;
+        let count = 0;
+        for (let y = margin; y < height - margin; y += 3) {
+          for (let x = margin; x < width - margin; x += 3) {
+            const a = previousGray[y * width + x];
+            const b = currentGray[(y + dy) * width + x + dx];
+            sad += Math.abs(a - b);
+            count += 1;
+          }
+        }
+        const averageSad = count ? sad / count : Infinity;
+        if (averageSad < bestSad) {
+          secondSad = bestSad;
+          bestSad = averageSad;
+          bestDx = dx;
+          bestDy = dy;
+        } else if (Math.abs(dx - bestDx) > 1 || Math.abs(dy - bestDy) > 1) {
+          if (averageSad < secondSad) secondSad = averageSad;
+        }
+      }
+    }
+    if (!Number.isFinite(bestSad) || bestSad > 38 || !Number.isFinite(secondSad)) return null;
+    const uniqueness = Math.max(0, Math.min(1, (secondSad - bestSad) / (secondSad + 1)));
+    const confidence = uniqueness * texture;
+    if (confidence < 0.035) return null;
+    return { dx: bestDx, dy: bestDy, confidence, error: bestSad };
+  }
+
+  function drawAlignedPhotonSlot(context, slot, width, height) {
+    if (!context || !slot?.meta) return;
+    const scaleX = width / slot.canvas.width;
+    const scaleY = height / slot.canvas.height;
+    const dx = slot.meta.alignmentValid ? slot.meta.alignmentX * scaleX : 0;
+    const dy = slot.meta.alignmentValid ? slot.meta.alignmentY * scaleY : 0;
+    context.drawImage(slot.canvas, dx, dy, width, height);
+  }
+
   function updatePhotonTimelineUI() {
     const toggle = $("#nox-photon-timeline-toggle");
     const scrub = $("#nox-photon-timeline-scrub");
@@ -578,7 +657,7 @@ export function initCamera() {
       const context = preview.getContext("2d");
       if (context) {
         context.clearRect(0, 0, preview.width, preview.height);
-        context.drawImage(selectedSlot.canvas, 0, 0);
+        drawAlignedPhotonSlot(context, selectedSlot, preview.width, preview.height);
       }
     } else if (preview) {
       const context = preview.getContext("2d");
@@ -597,7 +676,9 @@ export function initCamera() {
         const motion = meta.motion === null ? "الحركة غير متاحة" : "الحركة " + meta.motion.toFixed(2);
         hint.textContent = "العينة " + (photonTimelineSelectedIndex + 1) + "/" + photonTimelineOrder.length +
           " — +" + elapsed + "ث — حدة محلية " + meta.sharpness.toFixed(1) +
-          " — " + motion + " — معاينة منخفضة الدقة";
+          " — " + motion +
+          (meta.alignmentValid ? " — محاذاة عامة " + (meta.alignmentConfidence * 100).toFixed(0) + "%" : " — دون محاذاة موثوقة") +
+          " — معاينة منخفضة الدقة";
       }
     }
   }
@@ -616,14 +697,34 @@ export function initCamera() {
       slot.context.drawImage(source, 0, 0, sampleWidth, sampleHeight);
       const sharpness = measurePhotonSharpness(slot.context, sampleWidth, sampleHeight);
       const motion = getPhotonMotionEstimate();
+      const previousIndex = photonTimelineOrder.length
+        ? photonTimelineOrder[photonTimelineOrder.length - 1]
+        : -1;
+      const previousSlot = previousIndex >= 0 ? photonTimelineSlots[previousIndex] : null;
+      const alignment = previousSlot?.meta
+        ? estimatePhotonAlignment(previousSlot.canvas, slot.canvas)
+        : null;
+      const alignmentValid = !previousSlot?.meta || Boolean(alignment);
+      const alignmentX = previousSlot?.meta && alignment
+        ? previousSlot.meta.alignmentX - alignment.dx
+        : 0;
+      const alignmentY = previousSlot?.meta && alignment
+        ? previousSlot.meta.alignmentY - alignment.dy
+        : 0;
       const detailScore = sharpness / (sharpness + 18);
       const motionPenalty = motion === null ? 0.45 : 1 / (1 + motion * 0.75);
-      const score = detailScore * motionPenalty;
+      const alignmentFactor = alignment ? 0.75 + alignment.confidence * 0.25 : (previousSlot?.meta ? 0.65 : 1);
+      const score = detailScore * motionPenalty * alignmentFactor;
       slot.meta = {
         capturedAt: now,
         sharpness,
         motion,
         score,
+        alignmentX,
+        alignmentY,
+        alignmentValid,
+        alignmentConfidence: alignment?.confidence ?? (previousSlot?.meta ? 0 : 1),
+        alignmentError: alignment?.error ?? null,
         sequence: ++photonTimelineSequence
       };
       const droppingOldest = photonTimelineOrder.length >= photonTimelineSlots.length;
@@ -665,10 +766,18 @@ export function initCamera() {
     const slotIndex = photonTimelineOrder[photonTimelineSelectedIndex];
     const slot = photonTimelineSlots[slotIndex];
     if (!slot?.meta) return;
-    slot.canvas.toBlob((blob) => {
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = slot.canvas.width;
+    exportCanvas.height = slot.canvas.height;
+    const exportContext = exportCanvas.getContext("2d");
+    if (!exportContext) return announce("تعذر تجهيز صورة اللحظة.");
+    drawAlignedPhotonSlot(exportContext, slot, exportCanvas.width, exportCanvas.height);
+    exportCanvas.toBlob((blob) => {
+      exportCanvas.width = 1;
+      exportCanvas.height = 1;
       if (!blob) return announce("تعذر حفظ معاينة اللحظة.");
-      showBlob(blob, "image", "nox-photon-moment-preview.jpg");
-      announce("تم تجهيز معاينة اللحظة المختارة بدقة منخفضة؛ الأصل الكامل غير محفوظ في الذاكرة الزمنية.");
+      showBlob(blob, "image", "nox-photon-moment-aligned-preview.jpg");
+      announce("تم تجهيز معاينة منخفضة الدقة بعد المحاذاة العامة؛ الأصل الكامل لم يتغير.");
     }, "image/jpeg", 0.9);
   }
 
