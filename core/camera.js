@@ -95,6 +95,9 @@ export function initCamera() {
   let lastFrameAt = 0;
   let lowPower = false;
   let disposed = false;
+  let livingMetalEnabled = false;
+  let livingMetalRegion = null;
+  let livingMetalPhase = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -192,6 +195,40 @@ export function initCamera() {
     };
   }
 
+  function drawLivingMetal(ctx, width, height) {
+    if (!livingMetalEnabled || !livingMetalRegion) return;
+    livingMetalPhase = (livingMetalPhase + 0.035) % (Math.PI * 2);
+    const cx = livingMetalRegion.x * width;
+    const cy = livingMetalRegion.y * height;
+    const radius = Math.max(34, Math.min(width, height) * 0.16);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.globalCompositeOperation = "screen";
+    const metal = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
+    metal.addColorStop(0, "rgba(105,225,255,.10)");
+    metal.addColorStop(0.32, "rgba(235,250,255,.58)");
+    metal.addColorStop(0.48, "rgba(70,105,150,.34)");
+    metal.addColorStop(0.68, "rgba(255,255,255,.68)");
+    metal.addColorStop(1, "rgba(115,75,205,.18)");
+    ctx.fillStyle = metal;
+    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+    const glintX = cx + Math.cos(livingMetalPhase) * radius * 0.52;
+    const glint = ctx.createRadialGradient(glintX, cy - radius * 0.18, 1, glintX, cy - radius * 0.18, radius * 0.72);
+    glint.addColorStop(0, "rgba(255,255,255,.72)");
+    glint.addColorStop(1, "rgba(180,225,255,0)");
+    ctx.fillStyle = glint;
+    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.lineWidth = Math.max(2, width * 0.0025);
+    ctx.strokeStyle = "rgba(220,245,255,.9)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
     const width = video.videoWidth;
@@ -244,6 +281,8 @@ export function initCamera() {
     } else {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
+    const outputContext = renderCanvas.getContext("2d");
+    if (outputContext) drawLivingMetal(outputContext, outWidth, outHeight);
     if (scheduleNext && stream && !disposed) animationFrame = requestAnimationFrame(() => renderFrame(true));
   }
 
@@ -272,6 +311,7 @@ export function initCamera() {
       ["تسجيل Canvas", supported.canvasCapture ? "متاح" : "غير مدعوم"],
       ["WebGL", supported.webgl ? "متاح" : "غير مدعوم"],
       ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
+      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
       ["الدقة الحالية", stream && video.videoWidth ? video.videoWidth + " × " + video.videoHeight : "لا يوجد بث"]
@@ -416,6 +456,31 @@ export function initCamera() {
     save.href = outputUrl;
     save.download = filename;
   }
+
+  renderCanvas.addEventListener("pointerdown", (event) => {
+    if (!livingMetalEnabled || !stream) return;
+    const rect = renderCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    livingMetalRegion = {
+      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height))
+    };
+    announce("تم تحديد منطقة Living Metal يدويًا", true);
+    renderFrame(false);
+    updateDiagnostics();
+  });
+
+  $("#nox-living-metal-toggle")?.addEventListener("click", () => {
+    livingMetalEnabled = !livingMetalEnabled;
+    if (!livingMetalEnabled) livingMetalRegion = null;
+    const button = $("#nox-living-metal-toggle");
+    button.textContent = livingMetalEnabled ? "إيقاف Living Metal" : "تشغيل Living Metal";
+    button.setAttribute("aria-pressed", String(livingMetalEnabled));
+    const hint = $("#nox-living-metal-hint");
+    if (hint) hint.textContent = livingMetalEnabled ? "المس موضع الجسم أو المنطقة التي تريد إظهار التأثير عليها" : "تأثير معدني تجريبي — تحديد المنطقة باللمس";
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  });
 
   capture.addEventListener("click", () => {
     if (!stream || !video.videoWidth) return announce("انتظر حتى يظهر بث الكاميرا.");
