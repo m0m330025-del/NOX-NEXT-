@@ -135,7 +135,7 @@ export function initSocialUI() {
  const lensCarousel=$(".nox-lens-carousel");
  const lensButtons=$$(".nox-lens");
  let activeLensIndex=Math.max(0,lensButtons.findIndex(button=>button.classList.contains("active")));
- let lensHoldTimer=null,lensHoldStarted=false,lensPointer=null,lensGestureDragged=false,lensWheelStartX=0,lensWheelStartIndex=0;
+ let lensHoldTimer=null,lensHoldStarted=false,lensPointer=null,lensGestureDragged=false,lensWheelStartX=0,lensWheelStartIndex=0,lensPressedButton=null;
  const renderLensWheel=()=>{
   const count=lensButtons.length;
   lensButtons.forEach((button,index)=>{
@@ -146,72 +146,67 @@ export function initSocialUI() {
    button.style.setProperty("--wheel-slot",String(slot));
   });
  };
- const selectLens=(button,syncWheel=true)=>{
+ const selectLens=(button)=>{
+  if(!button)return;
   lensButtons.forEach((item,index)=>{const active=item===button;item.classList.toggle("active",active);item.setAttribute("aria-pressed",String(active));if(active)activeLensIndex=index;});
   filter=button.dataset.filter||"none";
   if(video)video.style.filter=filter;
-  if(syncWheel)renderLensWheel();
+  renderLensWheel();
+ };
+ const clearLensGesture=()=>{
+  clearTimeout(lensHoldTimer);lensHoldTimer=null;lensPointer=null;lensPressedButton=null;lensHoldStarted=false;lensGestureDragged=false;
  };
  renderLensWheel();
  lensCarousel?.addEventListener("pointerdown",event=>{
   if(event.pointerType==="mouse"&&event.button!==0)return;
-  lensGestureDragged=false;lensWheelStartX=event.clientX;lensWheelStartIndex=activeLensIndex;
- },{capture:true});
- lensCarousel?.addEventListener("pointermove",event=>{
-  if(!lensPointer||lensPointer!==event.pointerId)return;
-  const delta=event.clientX-lensWheelStartX;
-  if(Math.abs(delta)>9)lensGestureDragged=true;
-  if(lensGestureDragged){
-   const steps=Math.round(delta/42);
-   const next=(lensWheelStartIndex-steps%lensButtons.length+lensButtons.length)%lensButtons.length;
-   if(next!==activeLensIndex)selectLens(lensButtons[next],true);
-  }
- },{capture:true});
- lensCarousel?.addEventListener("pointerup",()=>{if(lensGestureDragged)renderLensWheel();},{capture:true});
- lensCarousel?.addEventListener("wheel",event=>{
-  if(Math.abs(event.deltaY)>Math.abs(event.deltaX))return;
-  event.preventDefault();
-  const direction=event.deltaX>0?1:-1;
-  activeLensIndex=(activeLensIndex+direction+lensButtons.length)%lensButtons.length;
-  selectLens(lensButtons[activeLensIndex]);
- },{passive:false});
- lensButtons.forEach(button=>button.addEventListener("click",()=>{
-  selectLens(button);
-  if(!stream)notice("تم اختيار الفلتر. شغّل الكاميرا لمعاينته.");
- }));
- lensButtons.forEach(button=>{
-  button.addEventListener("pointerdown",event=>{
-   if(event.pointerType==="mouse"&&event.button!==0)return;
-   event.preventDefault();selectLens(button);
-   lensPointer=event.pointerId;lensHoldStarted=false;lensGestureDragged=false;
-   lensWheelStartX=event.clientX;lensWheelStartIndex=activeLensIndex;
-   try{button.setPointerCapture(event.pointerId);}catch(error){}
-   if(!stream)return;
-   lensHoldTimer=setTimeout(()=>{
-    if(lensGestureDragged)return;
+  const button=event.target.closest?.(".nox-lens");
+  lensPointer=event.pointerId;lensPressedButton=button||null;lensGestureDragged=false;lensHoldStarted=false;
+  lensWheelStartX=event.clientX;lensWheelStartIndex=activeLensIndex;
+  if(button){
+   selectLens(button);
+   if(stream)lensHoldTimer=setTimeout(()=>{
+    if(lensGestureDragged||lensPointer!==event.pointerId)return;
     lensHoldStarted=true;
     if(record?.disabled){notice("تعذر بدء تسجيل الفيديو.");return;}
     record?.click();
     if(recorder?.state==="recording")notice("بدأ تسجيل الفيديو — ارفع إصبعك للإيقاف.");
    },450);
-  });
-  const finishLensPress=event=>{
-   if(lensPointer!==event.pointerId)return;
-   clearTimeout(lensHoldTimer);lensHoldTimer=null;lensPointer=null;
-   if(lensGestureDragged){lensGestureDragged=false;return;}
-   if(lensHoldStarted){if(recorder?.state==="recording")record?.click();}
-   else if(stream)capture?.click();
-  };
-  button.addEventListener("pointerup",finishLensPress);
-  button.addEventListener("pointercancel",event=>{
-   if(lensPointer===event.pointerId){clearTimeout(lensHoldTimer);lensHoldTimer=null;lensPointer=null;lensGestureDragged=false;}
-  });
-  button.addEventListener("lostpointercapture",event=>{
-   if(lensPointer===event.pointerId){clearTimeout(lensHoldTimer);lensHoldTimer=null;lensPointer=null;lensGestureDragged=false;}
-  });
-  button.addEventListener("contextmenu",event=>event.preventDefault());
+  }
+  try{lensCarousel.setPointerCapture(event.pointerId);}catch(error){}
+ },{passive:true});
+ lensCarousel?.addEventListener("pointermove",event=>{
+  if(lensPointer!==event.pointerId)return;
+  const delta=event.clientX-lensWheelStartX;
+  if(Math.abs(delta)>9){
+   if(!lensGestureDragged){lensGestureDragged=true;clearTimeout(lensHoldTimer);lensHoldTimer=null;}
+   const steps=Math.round(delta/42);
+   const next=(lensWheelStartIndex-steps%lensButtons.length+lensButtons.length)%lensButtons.length;
+   if(lensButtons[next]&&next!==activeLensIndex)selectLens(lensButtons[next]);
+  }
  });
-$(".nox-ar-lens").forEach(button=>button.addEventListener("click",()=>enableFaceLens(button.dataset.arLens||"none")));
+ const finishLensGesture=event=>{
+  if(lensPointer!==event.pointerId)return;
+  const dragged=lensGestureDragged,held=lensHoldStarted,pressed=lensPressedButton;
+  clearLensGesture();
+  if(dragged)return;
+  if(held){if(recorder?.state==="recording")record?.click();return;}
+  if(pressed&&stream)capture?.click();
+ };
+ lensCarousel?.addEventListener("pointerup",finishLensGesture);
+ lensCarousel?.addEventListener("pointercancel",clearLensGesture);
+ lensCarousel?.addEventListener("lostpointercapture",clearLensGesture);
+ lensCarousel?.addEventListener("wheel",event=>{
+  if(Math.abs(event.deltaY)>Math.abs(event.deltaX))return;
+  event.preventDefault();
+  const direction=event.deltaX>0?1:-1;
+  selectLens(lensButtons[(activeLensIndex+direction+lensButtons.length)%lensButtons.length]);
+ },{passive:false});
+ lensButtons.forEach(button=>button.addEventListener("click",()=>{
+  selectLens(button);
+  if(!stream)notice("تم اختيار الفلتر. شغّل الكاميرا لمعاينته.");
+ }));
+ lensCarousel?.addEventListener("contextmenu",event=>{if(event.target.closest?.(".nox-lens"))event.preventDefault();});
+ $(".nox-ar-lens").forEach(button=>button.addEventListener("click",()=>enableFaceLens(button.dataset.arLens||"none")));
  $$(".nox-sticker-picker button").forEach(button=>button.addEventListener("click",()=>{
   sticker=button.dataset.sticker||"";$$(".nox-sticker-picker button").forEach(item=>item.classList.toggle("active",item===button));syncLiveOverlay();
  }));
