@@ -13,6 +13,10 @@ export function initNavigation() {
   const applyScreen = () => {
     const hash = window.location.hash || "#home";
     const screen = HASH_TO_SCREEN[hash] || "home";
+    const previous = document.body.dataset.noxScreen || "home";
+    if (previous !== screen) {
+      window.dispatchEvent(new CustomEvent("nox:screenchange", {detail:{from:previous,to:screen}}));
+    }
     document.body.dataset.noxScreen = screen;
 
     links.forEach(link => {
