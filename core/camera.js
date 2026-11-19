@@ -920,6 +920,8 @@ export function initCamera() {
         gl.uniform1f(renderer.variant, selectedFilter ? selectedFilter.variant / 19 : 0);
         gl.uniform1f(renderer.time, performance.now() / 1000);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
+        gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
+        gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
         drawStabilizedSource(outputContext, glCanvas, outWidth, outHeight);
