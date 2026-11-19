@@ -101,7 +101,7 @@ export function initCamera() {
     getUserMedia: Boolean(navigator.mediaDevices?.getUserMedia),
     mediaRecorder: typeof window.MediaRecorder === "function",
     canvasCapture: typeof HTMLCanvasElement.prototype.captureStream === "function",
-    webgl: Boolean(document.createElement("canvas").getContext("webgl", { alpha: false, antialias: false })),
+    webgl: typeof window.WebGLRenderingContext === "function",
     faceDetector: typeof window.FaceDetector === "function"
   };
 
