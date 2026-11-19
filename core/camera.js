@@ -417,7 +417,8 @@ export function initCamera() {
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["مؤثرات الزمن", "تدرجات shader لحظية؛ لا يوجد مخزن إطارات زمني بعد"],
-      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
+      ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
+      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
       ["Adaptive Rescue", QUALITY_TIERS[qualityTier].name + " — " + QUALITY_TIERS[qualityTier].targetFps + " FPS مستهدف"],
@@ -582,15 +583,60 @@ export function initCamera() {
   }
 
   renderCanvas.addEventListener("pointerdown", (event) => {
-    if (!livingMetalEnabled || !stream) return;
-    const rect = renderCanvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    livingMetalRegion = {
-      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
-      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height))
-    };
-    announce("تم تحديد منطقة Living Metal يدويًا", true);
+    if (!regionMaskEnabled || !stream) return;
+    const point = normalizedPoint(event);
+    if (!point) return;
+    regionMaskDrawing = true;
+    regionMaskStart = point;
+    regionMaskPreview = { x: point.x, y: point.y, width: 0, height: 0 };
+    renderCanvas.setPointerCapture?.(event.pointerId);
     renderFrame(false);
+  });
+  renderCanvas.addEventListener("pointermove", (event) => {
+    if (!regionMaskDrawing || !regionMaskStart) return;
+    const point = normalizedPoint(event);
+    if (!point) return;
+    regionMaskPreview = buildRegionMask(regionMaskStart, point);
+    renderFrame(false);
+  });
+  function finishRegionMask(event) {
+    if (!regionMaskDrawing || !regionMaskStart) return;
+    const point = normalizedPoint(event) || regionMaskStart;
+    const next = buildRegionMask(regionMaskStart, point);
+    regionMaskDrawing = false;
+    regionMaskStart = null;
+    regionMaskPreview = null;
+    if (next.width >= 0.025 && next.height >= 0.025) {
+      livingMetalRegion = next;
+      announce("تم حفظ قناع المنطقة اليدوي لإعادة استخدامه مع المؤثرات الموضعية", true);
+    } else {
+      announce("المنطقة صغيرة جدًا؛ اسحب لتحديد مساحة أكبر", true);
+    }
+    renderFrame(false);
+    updateDiagnostics();
+  }
+  renderCanvas.addEventListener("pointerup", finishRegionMask);
+  renderCanvas.addEventListener("pointercancel", finishRegionMask);
+  $("#nox-region-mask-toggle")?.addEventListener("click", () => {
+    regionMaskEnabled = !regionMaskEnabled;
+    regionMaskDrawing = false;
+    regionMaskStart = null;
+    regionMaskPreview = null;
+    const button = $("#nox-region-mask-toggle");
+    button.textContent = regionMaskEnabled ? "إيقاف تحديد المنطقة" : "تحديد منطقة يدويًا";
+    button.setAttribute("aria-pressed", String(regionMaskEnabled));
+    const hint = $("#nox-region-mask-hint");
+    if (hint) hint.textContent = regionMaskEnabled ? "اسحب بإصبعك فوق الصورة لرسم مستطيل حول المنطقة المطلوبة" : "حدد منطقة من الصورة لاستخدامها مع المؤثرات الموضعية";
+    announce(regionMaskEnabled ? "وضع تحديد المنطقة نشط" : "تم إيقاف وضع التحديد", Boolean(stream));
+    updateDiagnostics();
+  });
+  $("#nox-region-mask-clear")?.addEventListener("click", () => {
+    livingMetalRegion = null;
+    regionMaskPreview = null;
+    regionMaskDrawing = false;
+    regionMaskStart = null;
+    if (stream) renderFrame(false);
+    announce("تم مسح قناع المنطقة", Boolean(stream));
     updateDiagnostics();
   });
 
@@ -601,7 +647,7 @@ export function initCamera() {
     button.textContent = livingMetalEnabled ? "إيقاف Living Metal" : "تشغيل Living Metal";
     button.setAttribute("aria-pressed", String(livingMetalEnabled));
     const hint = $("#nox-living-metal-hint");
-    if (hint) hint.textContent = livingMetalEnabled ? "المس موضع الجسم أو المنطقة التي تريد إظهار التأثير عليها" : "تأثير معدني تجريبي — تحديد المنطقة باللمس";
+    if (hint) hint.textContent = livingMetalEnabled ? (livingMetalRegion ? "التأثير يعمل داخل قناع المنطقة المحدد" : "فعّل تحديد المنطقة واسحب فوق الصورة أولًا") : "تأثير معدني تجريبي داخل قناع مستطيل يدوي";
     if (stream) renderFrame(false);
     updateDiagnostics();
   });
