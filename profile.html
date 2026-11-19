@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#21105b">
+  <title>ملفي الشخصي — NOX NEXT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./auth.css">
+  <link rel="stylesheet" href="./profile.css">
+  <script type="module" src="./core/profile-page.js"></script>
+</head>
+<body>
+  <main class="auth-shell">
+    <a class="brand" href="./index.html"><span class="brand-symbol">N</span><span><b>NOX NEXT</b><small>NOX Social Universe</small></span></a>
+    <section class="auth-card profile-card">
+      <div class="auth-heading"><span class="eyebrow">حسابك في NOX NEXT</span><h1>الملف الشخصي</h1><p>بياناتك الأساسية وإعدادات حسابك</p></div>
+      <div class="profile-avatar" aria-hidden="true">N</div>
+      <div class="profile-data">
+        <div><span>الاسم</span><b id="profile-name">—</b></div>
+        <div><span>البريد الإلكتروني</span><b id="profile-email">—</b></div>
+        <div><span>العمر</span><b id="profile-age">—</b></div>
+        <div><span>النوع</span><b id="profile-gender">—</b></div>
+      </div>
+      <form id="profile-form" novalidate>
+        <h2>تعديل بيانات الملف الشخصي</h2>
+        <label>العمر
+          <input id="edit-age" type="number" min="13" max="120" inputmode="numeric" required>
+        </label>
+        <label>النوع
+          <select id="edit-gender" required>
+            <option value="">اختر النوع</option>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
+            <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
+          </select>
+        </label>
+        <p class="form-message" id="profile-message" role="status" aria-live="polite"></p>
+        <button class="submit-button" id="save-profile" type="submit">حفظ التعديلات</button>
+      </form>
+      <a class="back-link" href="./index.html">العودة إلى NOX NEXT</a>
+    </section>
+  </main>
+</body>
+</html>
