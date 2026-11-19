@@ -32,6 +32,20 @@
         <label id="name-field" hidden>الاسم
           <input id="name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="اسمك داخل NOX NEXT">
         </label>
+        <div id="profile-fields" class="profile-fields" hidden>
+          <label>العمر
+            <input id="age" name="age" type="number" inputmode="numeric" min="13" max="120" required placeholder="اكتب عمرك">
+          </label>
+          <label>النوع
+            <select id="gender" name="gender" required>
+              <option value="">اختر النوع</option>
+              <option value="male">ذكر</option>
+              <option value="female">أنثى</option>
+              <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
+            </select>
+          </label>
+          <p class="privacy-hint">تقدر تعدّل البيانات دي لاحقًا من ملفك الشخصي.</p>
+        </div>
         <label>البريد الإلكتروني
           <input id="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com">
         </label>
