@@ -277,3 +277,11 @@ Build a reusable effect graph with four cooperating layers:
 - The original anchor template is never silently replaced after a match, to limit drift. Diagnostics report attempts and whether a match was reacquired.
 - This is local grayscale patch matching, not semantic object identity, person recognition, robust occlusion reasoning, or guaranteed reacquisition. Similar textures, motion beyond the search window, camera motion, lighting changes, and occlusion can still cause loss. The conservative thresholds favor false negatives over incorrect jumps.
 - Uses the existing low-resolution grayscale frame only. Mobile device performance and visual behavior remain unverified until tested on physical devices.
+
+
+## P11 — NOX Smart Motion Prediction (experimental)
+
+- Adds opt-in short-horizon motion prediction to the existing visual patch lock. A bounded velocity estimate is updated only after a confident patch match using an exponential blend (0.62 prior velocity / 0.38 observed displacement).
+- The next search center is shifted by at most 4 sample pixels on low-power devices and 6 on standard devices. Search remains bounded by frame edges and the existing local search window. Disabling prediction clears velocity and returns matching to the last confirmed center.
+- Prediction does not extrapolate across failed matches, does not alter the camera stream, and does not predict semantic intent. It is a short local motion lead intended to reduce apparent lag during steady movement; acceleration, abrupt direction changes, camera shake, occlusion, or repetitive textures can reduce accuracy.
+- This remains a grayscale template tracker, not AI object tracking or guaranteed prediction. No physical-device performance claim is made until tested on target phones.
