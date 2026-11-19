@@ -361,43 +361,42 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
 @media(max-width:360px){body[data-nox-screen="camera"] #camera .nox-lens{width:54px;height:64px}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(1){--lens-angle:-68deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(2){--lens-angle:-45deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(3){--lens-angle:-22deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(5){--lens-angle:22deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(6){--lens-angle:45deg}body[data-nox-screen="camera"] #camera .nox-lens:nth-child(7){--lens-angle:68deg}}
 
 
-/* NOX NEXT — interactive radial lens wheel */
+/* NOX NEXT — radial lens wheel: high-specificity mobile overrides */
 @media(max-width:760px){
- .nox-creator-tools .creator-tool-group:first-child{overflow:hidden}
- .nox-lens-carousel{
-  position:relative;display:block!important;width:min(100%,360px);height:166px;margin:4px auto 0;padding:0!important;
-  overflow:hidden!important;touch-action:pan-y;overscroll-behavior:contain;cursor:grab;
+ body[data-nox-screen="camera"] #camera .nox-creator-tools .creator-tool-group:first-child{overflow:visible}
+ body[data-nox-screen="camera"] #camera .nox-lens-carousel{
+  position:relative!important;display:block!important;width:min(100%,360px)!important;height:166px!important;margin:4px auto 0!important;padding:0!important;
+  overflow:hidden!important;touch-action:pan-y;overscroll-behavior:contain;cursor:grab
  }
- .nox-lens-carousel:before{
+ body[data-nox-screen="camera"] #camera .nox-lens-carousel:before{
   content:"";position:absolute;left:50%;bottom:-112px;width:224px;height:224px;transform:translateX(-50%);
-  border:1px solid rgba(211,166,67,.48);border-radius:50%;
-  background:radial-gradient(circle at 50% 50%,rgba(103,47,176,.12),rgba(28,12,75,.025) 66%,transparent 67%);
-  box-shadow:0 -5px 28px rgba(126,70,207,.10);pointer-events:none
+  border:1px solid rgba(211,166,67,.58);border-radius:50%;
+  background:radial-gradient(circle,rgba(103,47,176,.13),rgba(28,12,75,.025) 66%,transparent 67%);
+  box-shadow:0 -5px 28px rgba(126,70,207,.12);pointer-events:none
  }
- .nox-lens-carousel:after{
-  content:"اسحب لتدوير العدسات";position:absolute;left:50%;bottom:5px;transform:translateX(-50%);
-  color:#9a8bbd;font-size:9px;white-space:nowrap;letter-spacing:.2px;pointer-events:none
+ body[data-nox-screen="camera"] #camera .nox-lens-carousel:after{
+  content:"اسحب يمينًا أو يسارًا لتدوير العدسات";position:absolute;left:50%;bottom:5px;transform:translateX(-50%);
+  color:#9a8bbd;font-size:9px;white-space:nowrap;pointer-events:none
  }
- .nox-lens{
-  position:absolute;left:50%;top:100%;width:66px;height:72px;flex:none;padding:6px 3px;
-  border:1px solid rgba(218,190,255,.24);border-radius:18px;background:linear-gradient(155deg,#26134f,#160d36);
-  color:#e9dcff;box-shadow:0 7px 17px rgba(17,7,48,.24);
-  transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-112px) rotate(calc(0deg - var(--wheel-angle,0deg)));
-  transition:left .22s ease,top .22s ease,filter .22s ease,opacity .22s ease,box-shadow .22s ease,border-color .22s ease;
-  z-index:1;touch-action:pan-y;user-select:none;-webkit-user-select:none
+ body[data-nox-screen="camera"] #camera .nox-lens{
+  position:absolute!important;display:grid!important;left:50%!important;top:100%!important;width:66px!important;height:72px!important;min-width:0!important;
+  padding:6px 3px!important;border:1px solid rgba(218,190,255,.3)!important;border-radius:18px!important;
+  background:linear-gradient(155deg,#26134f,#160d36)!important;color:#e9dcff!important;
+  box-shadow:0 7px 17px rgba(17,7,48,.24)!important;
+  transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-112px) rotate(calc(0deg - var(--wheel-angle,0deg)))!important;
+  transition:transform .22s ease,filter .22s ease,box-shadow .22s ease,border-color .22s ease!important;
+  z-index:1!important;touch-action:pan-y;user-select:none;-webkit-user-select:none
  }
- .nox-lens>span{width:33px;height:33px;background:linear-gradient(145deg,#4a2b78,#28144f);color:#f7d987;font-size:19px}
- .nox-lens b{font-size:9px;color:#eee4ff}
- .nox-lens.active{
-  z-index:3;border:1px solid #f4d47c;background:linear-gradient(155deg,#50317e,#26134e);
-  box-shadow:0 0 0 2px rgba(244,212,124,.2),0 0 24px rgba(225,181,77,.35);filter:brightness(1.13)
+ body[data-nox-screen="camera"] #camera .nox-lens>span{width:33px;height:33px;background:linear-gradient(145deg,#4a2b78,#28144f)!important;color:#f7d987!important;font-size:19px}
+ body[data-nox-screen="camera"] #camera .nox-lens b{font-size:9px;color:#eee4ff}
+ body[data-nox-screen="camera"] #camera .nox-lens.active{
+  z-index:3!important;border:1px solid #f4d47c!important;background:linear-gradient(155deg,#50317e,#26134e)!important;
+  box-shadow:0 0 0 2px rgba(244,212,124,.2),0 0 24px rgba(225,181,77,.35)!important;filter:brightness(1.13)
  }
- .nox-lens.active>span{background:linear-gradient(135deg,#f5d77e,#b7832d);color:#27164e}
- .nox-lens:focus-visible{outline:2px solid #f5d77e;outline-offset:3px}
+ body[data-nox-screen="camera"] #camera .nox-lens.active>span{background:linear-gradient(135deg,#f5d77e,#b7832d)!important;color:#27164e!important}
 }
 @media(max-width:380px){
- .nox-lens-carousel{height:154px}
- .nox-lens{width:59px;height:67px}
- .nox-lens{transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-104px) rotate(calc(0deg - var(--wheel-angle,0deg)))}
- .nox-lens-carousel:before{width:208px;height:208px;bottom:-104px}
+ body[data-nox-screen="camera"] #camera .nox-lens-carousel{height:154px!important}
+ body[data-nox-screen="camera"] #camera .nox-lens{width:59px!important;height:67px!important;transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-104px) rotate(calc(0deg - var(--wheel-angle,0deg)))!important}
+ body[data-nox-screen="camera"] #camera .nox-lens-carousel:before{width:208px;height:208px;bottom:-104px}
 }
