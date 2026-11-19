@@ -301,3 +301,10 @@ Build a reusable effect graph with four cooperating layers:
 - The shader reuses the current camera texture and adds four nearby texture samples only when the feature is enabled. No extra full-resolution canvas readback, temporal stack, remote upload, or neural model is used.
 - Canvas 2D fallback uses conservative brightness/contrast/saturation filters; it does not reproduce the WebGL edge-aware smoothing. Strong mode may soften fine texture and cannot restore detail that the sensor never captured.
 - This is image enhancement, not true long-exposure night capture, multi-frame denoising, RAW processing, sensor gain control, or AI detail reconstruction. It can brighten noise as well as the scene. Performance and visual quality still require testing on the Galaxy M12 and other target devices.
+
+
+## P14 — NOX True Detail Recovery v1 (experimental)
+
+- Adds Off / Natural / Strong modes. The WebGL path samples four immediate neighbors, estimates a local luminance high-pass signal, applies a threshold gate to suppress changes in near-flat regions, and adds a restrained luminance detail signal. It reuses the existing camera texture and texel-size uniforms.
+- The Canvas 2D fallback uses mild contrast only; it does not implement spatial sharpening. Diagnostics expose the selected mode.
+- Important limitation: this enhances edge/detail contrast already present in the captured frame. It cannot reconstruct lost texture, recover clipped highlights/shadows, reverse motion blur, increase sensor resolution, or replace multi-frame super-resolution / AI reconstruction. Strong mode can emphasize sensor noise, halos, and compression artifacts. The effect must be evaluated on real devices before claiming image-quality gains.
