@@ -90,8 +90,12 @@ form.addEventListener("submit", async event => {
     }
     stage = "تحميل بيانات الحساب";
     const user = await account.get();
-    sessionStorage.setItem("nox.auth.notice", "مرحبًا " + (user.name || "بك") + "، تم تسجيل الدخول بنجاح.");
-    window.location.replace("./profile.html");
+    const notice = submittedMode === "signup"
+      ? "مرحبًا " + (user.name || "بك") + "، تم إنشاء حسابك بنجاح."
+      : "مرحبًا بعودتك " + (user.name || "إلى NOX NEXT") + "، تم تسجيل الدخول بنجاح.";
+    sessionStorage.setItem("nox.auth.notice", notice);
+    // New accounts go to profile setup; returning members go straight to the home feed.
+    window.location.replace(submittedMode === "signup" ? "./profile.html" : "./index.html");
   } catch (error) {
     console.error("NOX authentication failed at stage:", stage, error);
     const code = Number(error?.code);
