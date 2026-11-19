@@ -202,7 +202,7 @@ export function initCamera() {
     }
     try {
       chunks = [];
-      const canvas = renderCanvas;
+      const canvas = $("#nox-camera-record-canvas") || renderCanvas;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       recording = true;
