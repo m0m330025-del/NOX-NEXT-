@@ -1,4 +1,6 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
+import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
+import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -383,6 +385,13 @@ export function initCamera() {
   let photonGhostGuardReferenceIndex = -1;
   let photonGhostGuardTiles = new Set();
   let photonGhostGuardCounts = { blocked: 0, clear: 0 };
+  const faceDetectionEngine = new NOXFaceDetectionEngine();
+  const faceTrackingEngine = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 0.58 });
+  let faceDetectionState = "idle";
+  let faceDetectionInFlight = false;
+  let faceDetectionLastAt = 0;
+  let faceDetectionSession = 0;
+  let trackedFace = null;
 
   const supported = {
     secure: window.isSecureContext,
@@ -392,6 +401,71 @@ export function initCamera() {
     webgl: typeof window.WebGLRenderingContext === "function",
     faceDetector: typeof window.FaceDetector === "function"
   };
+
+  function resetFaceTracking() {
+    faceDetectionSession += 1;
+    faceDetectionInFlight = false;
+    faceDetectionLastAt = 0;
+    trackedFace = null;
+    faceTrackingEngine.reset();
+    faceDetectionState = "idle";
+  }
+
+  function requestFaceDetection(now) {
+    if (!stream || disposed || !faceDetectionEngine.detector || faceDetectionInFlight) return;
+    const interval = lowPower ? 650 : 360;
+    if (now - faceDetectionLastAt < interval) return;
+    faceDetectionLastAt = now;
+    faceDetectionInFlight = true;
+    const session = faceDetectionSession;
+    faceDetectionEngine.detect(video).then((result) => {
+      if (session !== faceDetectionSession || !stream || disposed) return;
+      if (result.state === "ok") {
+        const tracked = faceTrackingEngine.update(result.faces);
+        trackedFace = tracked.face;
+        faceDetectionState = tracked.state;
+      } else {
+        trackedFace = null;
+        faceDetectionState = result.state;
+        faceTrackingEngine.reset();
+      }
+    }).catch(() => {
+      if (session === faceDetectionSession) {
+        trackedFace = null;
+        faceDetectionState = "detection-error";
+        faceTrackingEngine.reset();
+      }
+    }).finally(() => {
+      if (session === faceDetectionSession) faceDetectionInFlight = false;
+    });
+  }
+
+  function drawFaceTrackingOverlay(ctx, width, height) {
+    if (!trackedFace?.box || !["acquired", "tracking", "coasting"].includes(faceDetectionState)) return;
+    const box = trackedFace.box;
+    const x = (facing === "user" ? 1 - box.x - box.width : box.x) * width;
+    const y = box.y * height;
+    const w = box.width * width;
+    const h = box.height * height;
+    ctx.save();
+    ctx.strokeStyle = faceDetectionState === "coasting" ? "rgba(255,190,80,.82)" : "rgba(75,235,190,.92)";
+    ctx.lineWidth = Math.max(2, width * 0.0025);
+    ctx.setLineDash(faceDetectionState === "coasting" ? [8, 6] : []);
+    ctx.strokeRect(x, y, w, h);
+    if (Array.isArray(trackedFace.landmarks)) {
+      ctx.fillStyle = "rgba(255,255,255,.92)";
+      for (const landmark of trackedFace.landmarks) {
+        for (const point of landmark.points || []) {
+          const px = (facing === "user" ? 1 - point.x : point.x) * width;
+          const py = point.y * height;
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(2, width * 0.003), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
 
   function announce(message, live = Boolean(stream)) {
     if (status) status.textContent = message;
@@ -1947,6 +2021,7 @@ export function initCamera() {
     } else {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
+    requestFaceDetection(frameNow);
     const outputContext = renderCanvas.getContext("2d");
     if (outputContext) {
       estimateOpticalFlow();
@@ -1961,6 +2036,7 @@ export function initCamera() {
       renderTemporalMemory(outputContext, outWidth, outHeight);
       drawOpticalFlow(outputContext, outWidth, outHeight);
       outputContext.restore();
+      drawFaceTrackingOverlay(outputContext, outWidth, outHeight);
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
@@ -2078,6 +2154,7 @@ export function initCamera() {
     resetOpticalFlow();
     resetCameraStabilization();
     clearSubjectLock();
+    resetFaceTracking();
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -2112,6 +2189,7 @@ export function initCamera() {
       resetPhotonTimeline();
       resetOpticalFlow();
       resetCameraStabilization();
+      resetFaceTracking();
       const base = lowPower
         ? { width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
         : { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 30, max: 30 } };
@@ -2129,6 +2207,8 @@ export function initCamera() {
       video.muted = true;
       await video.play();
       await waitForVideo();
+      const faceSupport = await faceDetectionEngine.initialize();
+      faceDetectionState = faceSupport.available ? "ready" : "unsupported";
       try { renderer = renderer || createRenderer(); } catch { renderer = null; }
       renderMode = renderer ? "WebGL" : "Canvas 2D";
       renderFrame();
