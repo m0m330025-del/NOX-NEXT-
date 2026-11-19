@@ -248,3 +248,14 @@ Build a reusable effect graph with four cooperating layers:
 - Optional vector overlay draws the estimated directions over the camera output. The estimator resets when disabled, when the camera stops, or when the user clears it.
 - This is sparse block matching, not dense Farnebäck/Lucas–Kanade optical flow, neural flow, semantic object tracking, face tracking, or guaranteed physical motion. Low-texture, repetitive, fast, or occluded scenes can produce missing or incorrect vectors.
 - Pixel analysis is local in a tiny scratch canvas; no camera frames are uploaded to an external service. Actual device performance and vector quality on Galaxy M12/iPhone remain unverified.
+
+
+## P8 — NOX Reality Follow (v1)
+
+- Connects the manual rectangular Reality Skin region to the sparse optical-flow vectors.
+- Uses only vectors whose sample positions fall inside the current region; computes a confidence-weighted average and requires at least two vectors before moving the region.
+- Applies a conservative 0.55 motion scale and clamps each update to ±2.5% of frame width/height to reduce sudden jumps. The same flow sample is never applied more than once.
+- Corrects the block-matching displacement sign (the matched prior-frame location is opposite the feature's forward displacement) and maps horizontal motion into preview coordinates for the mirrored front camera.
+- The follow control automatically enables the sparse optical-flow sampler. Turning optical flow off disables region following; clearing the manual mask leaves no region to follow.
+- This is region translation from sparse local motion, not object identity tracking. It can drift or stop when the selected area has too few reliable features, and it does not distinguish the intended subject from other moving texture inside the rectangle.
+- Device validation on Galaxy M12/iPhone remains pending; no claim of production-grade tracking is made.
