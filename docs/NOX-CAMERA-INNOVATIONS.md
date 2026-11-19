@@ -259,3 +259,12 @@ Build a reusable effect graph with four cooperating layers:
 - The follow control automatically enables the sparse optical-flow sampler. Turning optical flow off disables region following; clearing the manual mask leaves no region to follow.
 - This is region translation from sparse local motion, not object identity tracking. It can drift or stop when the selected area has too few reliable features, and it does not distinguish the intended subject from other moving texture inside the rectangle.
 - Device validation on Galaxy M12/iPhone remains pending; no claim of production-grade tracking is made.
+
+
+## P9 — NOX Subject Lock (experimental visual anchor)
+
+- Adds an opt-in local template-matching anchor centered inside the manually selected rectangle. The anchor is a 5×5 grayscale patch sampled from the existing low-resolution optical-flow frame; it is not a face or object embedding.
+- Searches a bounded neighborhood around the previous anchor (±5 low-power, ±7 standard) and translates the selected region only when mean absolute patch error and confidence pass conservative thresholds.
+- Rejects low-texture anchors, reports confidence, and freezes movement when the match is weak. The fixed template is not silently re-learned, reducing drift at the cost of losing lock under major appearance/lighting changes.
+- Disabling, clearing the manual region, or stopping the camera clears the lock state. Subject Lock and Reality Follow are mutually exclusive to avoid competing region updates.
+- This is a lightweight visual patch lock, not semantic subject recognition, face identification, segmentation, re-identification after full occlusion, or guaranteed tracking. Similar textures can cause false matches; device validation remains pending.
