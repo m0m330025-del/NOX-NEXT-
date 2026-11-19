@@ -2,7 +2,7 @@ import { initNavigation } from "./core/navigation.js";
 import { initTheme } from "./core/theme.js";
 import { initApp } from "./core/app.js";
 import { initSocialUI } from "./core/social-ui.js";
-import { initCamera } from "./core/camera.js";
+import { initCamera } from "./core/camera.js?v=2";
 import { initProfileAvatar } from "./core/profile-avatar.js";
 import { initSections } from "./core/sections.js";
 
