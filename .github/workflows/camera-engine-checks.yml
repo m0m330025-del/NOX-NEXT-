@@ -77,7 +77,7 @@ jobs:
           const groups = JSON.parse(catalogMatch[1]);
           const totalFilters = groups.reduce((sum, group) => sum + group[1].length, 0);
           if (totalFilters !== 200 || groups.length !== 10) throw new Error('Expected 200 filters in 10 groups, got ' + totalFilters);
-          for (const token of ['u_variant', 'u_time', 'family < 9.5']) {
+          for (const token of ['u_variant', 'u_time', 'family < 8.5']) {
             if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
           }
           console.log('Living Metal prototype hooks present: 3');
