@@ -35,8 +35,13 @@ export function initNavigation() {
 
     if (hash === "#friends") {
       requestAnimationFrame(() => document.getElementById("friends")?.scrollIntoView({block:"start",behavior:"smooth"}));
-    } else {
+    } else if (screen === "home") {
       window.scrollTo({top:0,behavior:"auto"});
+    } else {
+      requestAnimationFrame(() => {
+        const target = document.getElementById(screen === "stories" ? "stories-view" : screen);
+        target?.scrollIntoView({block:"start",behavior:"smooth"});
+      });
     }
   };
 
