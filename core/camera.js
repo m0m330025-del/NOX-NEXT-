@@ -28,6 +28,7 @@ uniform float u_time;
 uniform float u_mirror;
 uniform float u_variant;
 uniform float u_lowLight;
+uniform float u_detail;
 uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
@@ -118,6 +119,19 @@ void main() {
     vec3 soft = (color.rgb + n1*w1 + n2*w2 + n3*w3 + n4*w4) / (1.0 + w1 + w2 + w3 + w4);
     c = mix(c, soft, darkMask * strength * 0.24);
     c = mix(vec3(dot(c, vec3(0.299,0.587,0.114))), c, 1.0 - darkMask * strength * 0.10);
+  }
+  if (u_detail > 0.5) {
+    vec3 n1 = texture2D(u_image, uv + vec2(u_texel.x, 0.0)).rgb;
+    vec3 n2 = texture2D(u_image, uv - vec2(u_texel.x, 0.0)).rgb;
+    vec3 n3 = texture2D(u_image, uv + vec2(0.0, u_texel.y)).rgb;
+    vec3 n4 = texture2D(u_image, uv - vec2(0.0, u_texel.y)).rgb;
+    float centerLum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    float averageLum = dot(n1 + n2 + n3 + n4, vec3(0.299, 0.587, 0.114)) * 0.25;
+    float detailSignal = centerLum - averageLum;
+    float detailGate = smoothstep(0.012, 0.075, abs(detailSignal));
+    float gain = u_detail > 1.5 ? 0.62 : 0.34;
+    float protectedDetail = detailSignal * detailGate * gain;
+    c = clamp(c + vec3(protectedDetail), 0.0, 1.0);
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -219,6 +233,7 @@ export function initCamera() {
   let stabilizationTarget = { x: 0, y: 0 };
   let stabilizationConfidence = 0;
   let lowLightMode = "off";
+  let detailRecoveryMode = "off";
 
   const supported = {
     secure: window.isSecureContext,
@@ -316,6 +331,7 @@ export function initCamera() {
       variant: gl.getUniformLocation(program, "u_variant"),
       time: gl.getUniformLocation(program, "u_time"),
       lowLight: gl.getUniformLocation(program, "u_lowLight"),
+      detail: gl.getUniformLocation(program, "u_detail"),
       texel: gl.getUniformLocation(program, "u_texel")
     };
   }
@@ -819,6 +835,20 @@ export function initCamera() {
     updateDiagnostics();
   }
 
+  function setDetailRecoveryMode(mode) {
+    detailRecoveryMode = mode === "strong" || mode === "natural" ? mode : "off";
+    const control = $("#nox-detail-recovery-mode");
+    if (control) control.value = detailRecoveryMode;
+    const hint = $("#nox-detail-recovery-hint");
+    if (hint) hint.textContent = detailRecoveryMode === "strong"
+      ? "تفاصيل أوضح بقوة أعلى — قد يبرز التشويش والحواف المصطنعة"
+      : detailRecoveryMode === "natural"
+        ? "حدة طبيعية خفيفة مع عتبة لحماية المناطق المسطحة"
+        : "متوقف — لا توجد زيادة حدة";
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  }
+
   function resetCameraStabilization() {
     stabilizationOffset = { x: 0, y: 0 };
     stabilizationTarget = { x: 0, y: 0 };
@@ -921,6 +951,7 @@ export function initCamera() {
         gl.uniform1f(renderer.time, performance.now() / 1000);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
+        gl.uniform1f(renderer.detail, detailRecoveryMode === "strong" ? 2 : detailRecoveryMode === "natural" ? 1 : 0);
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -937,7 +968,8 @@ export function initCamera() {
       ctx.save();
       const baseFilter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
       const lowLightFilter = lowLightMode === "strong" ? "brightness(1.28) contrast(1.08) saturate(1.04)" : lowLightMode === "gentle" ? "brightness(1.14) contrast(1.04) saturate(1.02)" : "none";
-      ctx.filter = baseFilter === "none" ? lowLightFilter : baseFilter + " " + lowLightFilter;
+      const detailFilter = detailRecoveryMode === "strong" ? "contrast(1.16) saturate(1.03)" : detailRecoveryMode === "natural" ? "contrast(1.08)" : "none";
+      ctx.filter = [baseFilter, lowLightFilter, detailFilter].filter(value => value !== "none").join(" ") || "none";
       drawStabilizedSource(ctx, video, outWidth, outHeight, facing === "user");
       ctx.restore();
       renderMode = "Canvas 2D";
@@ -1025,6 +1057,7 @@ export function initCamera() {
       ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
       ["NOX Smart Stabilizer", cameraStabilizationEnabled ? "تثبيت إلكتروني نشط — ثقة " + Math.round(stabilizationConfidence * 100) + "% / إزاحة " + (stabilizationOffset.x * 100).toFixed(1) + "%, " + (stabilizationOffset.y * 100).toFixed(1) + "%" : "متوقف"],
       ["NOX Low-Light Rescue", lowLightMode === "off" ? "متوقف" : lowLightMode === "gentle" ? "إنقاذ متوازن" : "إنقاذ قوي"],
+      ["NOX True Detail Recovery", detailRecoveryMode === "off" ? "متوقف" : detailRecoveryMode === "natural" ? "حدة طبيعية — WebGL" : "حدة قوية — WebGL"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -1274,6 +1307,7 @@ export function initCamera() {
   $("#nox-motion-prediction-toggle")?.addEventListener("click", () => setMotionPredictionEnabled(!motionPredictionEnabled));
   $("#nox-stabilizer-toggle")?.addEventListener("click", () => setCameraStabilizationEnabled(!cameraStabilizationEnabled));
   $("#nox-low-light-mode")?.addEventListener("change", (event) => setLowLightMode(event.target.value));
+  $("#nox-detail-recovery-mode")?.addEventListener("change", (event) => setDetailRecoveryMode(event.target.value));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
