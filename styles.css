@@ -120,3 +120,13 @@ body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 @media(max-width:760px){.nox-camera-workspace{grid-template-columns:1fr;padding:10px;gap:17px}.nox-camera-stage{width:min(100%,390px);min-height:0;max-height:68svh;aspect-ratio:9/16;border-radius:23px}.nox-camera-bottom-controls{bottom:16px}.nox-shutter{width:70px;height:70px}.nox-shutter span{width:52px;height:52px}.nox-camera-stage-actions{width:100%}.nox-creator-tools{gap:13px}.nox-lens-carousel{display:flex;overflow-x:auto;scrollbar-width:none;padding:2px 1px 7px}.nox-lens-carousel::-webkit-scrollbar{display:none}.nox-lens{flex:0 0 78px}.nox-sticker-picker{justify-content:flex-start}}
 @media(max-width:380px){.nox-camera-stage{max-height:63svh}.nox-camera-bottom-controls{gap:8px}.nox-camera-small{min-width:50px;min-height:50px}}
 @media(prefers-reduced-motion:reduce){.nox-camera-stage *{transition:none!important}}
+
+/* Respect hidden state for elements with explicit component display styles */
+.nox-camera-empty[hidden],
+.nox-camera-stage video[hidden],
+.nox-recording-indicator[hidden],
+.nox-camera-output[hidden],
+.nox-camera-output img[hidden],
+.nox-camera-output video[hidden],
+.nox-download-link[hidden]{display:none!important}
+.nox-camera-stage.is-front>video{transform:scaleX(-1)}
