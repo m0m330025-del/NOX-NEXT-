@@ -1,3 +1,5 @@
+import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
+
 const $ = (selector) => document.querySelector(selector);
 
 const LENSES = [
@@ -47,9 +49,49 @@ void main() {
     c = vec3(dot(c, vec3(0.393,0.769,0.189)),
              dot(c, vec3(0.349,0.686,0.168)),
              dot(c, vec3(0.272,0.534,0.131)));
-  } else if (u_mode > 5.5) {
+  } else if (u_mode > 5.5 && u_mode < 9.5) {
     float gray = dot(c, vec3(0.299,0.587,0.114));
     c = vec3(gray);
+  } else if (u_mode > 9.5) {
+    float family = floor(u_mode - 10.0 + 0.5);
+    float v = clamp(u_variant, 0.0, 1.0);
+    float lum = dot(c, vec3(0.299,0.587,0.114));
+    if (family < 0.5) {
+      float metalBand = 0.5 + 0.5 * sin((uv.x + uv.y) * 18.0 + u_time * (0.7 + v));
+      vec3 metalTint = mix(vec3(0.30,0.42,0.62), vec3(0.88,0.94,1.0), metalBand);
+      c = mix(c, metalTint * (0.48 + lum * 0.72), 0.18 + v * 0.20);
+    } else if (family < 1.5) {
+      float streak = 0.5 + 0.5 * sin((uv.x * 0.8 + uv.y * 0.2) * 85.0 + u_time * 2.0);
+      c = mix(c, c * vec3(0.72,0.90,1.18) + vec3(streak * 0.08), 0.12 + v * 0.16);
+    } else if (family < 2.5) {
+      c = vec3(c.r * (1.0 + 0.18 * v), c.g * (0.92 + 0.16 * sin(u_time + v)), c.b * (1.12 + 0.22 * v));
+      c = mix(c, vec3(0.12,0.82,1.0), clamp((lum - 0.58) * (0.25 + v * 0.35), 0.0, 0.28));
+    } else if (family < 3.5) {
+      vec3 worldTint = mix(vec3(0.08,0.34,0.48), vec3(0.62,0.28,0.72), uv.y);
+      c = mix(c, c * 0.72 + worldTint * 0.34, 0.16 + v * 0.15);
+    } else if (family < 4.5) {
+      float speedLines = 0.5 + 0.5 * sin((uv.x * 0.7 + uv.y) * 110.0);
+      c = clamp((c - 0.5) * (1.12 + v * 0.42) + 0.5 + speedLines * 0.025, 0.0, 1.0);
+    } else if (family < 5.5) {
+      c = mix(c, vec3(lum * 1.05, lum * 0.92, lum * 0.88), 0.10 + v * 0.12);
+      c = clamp(c * (1.04 + v * 0.06) + vec3(0.012), 0.0, 1.0);
+    } else if (family < 6.5) {
+      vec3 weatherTint = mix(vec3(0.12,0.32,0.58), vec3(0.72,0.86,1.0), uv.y);
+      c = mix(c, c * 0.70 + weatherTint * 0.38, 0.14 + v * 0.18);
+    } else if (family < 7.5) {
+      c = vec3(dot(c,vec3(0.42,0.36,0.22)), dot(c,vec3(0.34,0.42,0.24)), dot(c,vec3(0.24,0.30,0.18)));
+      c = clamp((c - 0.42) * (1.18 + v * 0.28) + 0.46, 0.0, 1.0);
+    } else if (family < 8.5) {
+      vec3 leftC = texture2D(u_image, uv + vec2(0.002 + v * 0.002, 0.0)).rgb;
+      vec3 rightC = texture2D(u_image, uv - vec2(0.002 + v * 0.002, 0.0)).rgb;
+      float edge = length(leftC - rightC);
+      c = mix(c, vec3(0.12,0.90,1.0), clamp(edge * (1.2 + v * 2.0), 0.0, 0.32));
+      c = clamp(c * (1.08 + v * 0.16), 0.0, 1.0);
+    } else {
+      float wave = 0.5 + 0.5 * sin((uv.x * 7.0 + uv.y * 11.0 + lum * 2.0) * 6.28318 + u_time);
+      c = mix(c, vec3(wave, 0.25 + 0.65 * (1.0-wave), 0.72), 0.12 + v * 0.22);
+      c = clamp(c * (1.04 + v * 0.14), 0.0, 1.0);
+    }
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -77,12 +119,12 @@ export function initCamera() {
   const result = $("#nox-camera-result");
   const photo = $("#nox-camera-photo");
   const videoResult = $("#nox-camera-video-result");
-  const save = $("#nox-camera-save");
+  const save = $("#nox-camera-save");\n  const filterSelect = $("#nox-filter-select");
   if (!video || !stage || !renderCanvas || !startButton) return;
 
   let stream = null;
   let facing = "user";
-  let selectedLens = 0;
+  let selectedLens = 0;\n  let selectedFilter = null;
   let recorder = null;
   let recordingStream = null;
   let chunks = [];
@@ -270,7 +312,7 @@ export function initCamera() {
       const filters = ["none", "brightness(1.08) saturate(1.1)", "sepia(.18) saturate(1.12)", "hue-rotate(145deg) saturate(1.2)", "saturate(1.45) contrast(1.04)", "sepia(.42) contrast(1.05)", "grayscale(1) contrast(1.08)"];
       ctx.save();
       ctx.clearRect(0, 0, outWidth, outHeight);
-      ctx.filter = filters[selectedLens];
+      ctx.filter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
       if (facing === "user") {
         ctx.translate(outWidth, 0);
         ctx.scale(-1, 1);
@@ -311,7 +353,7 @@ export function initCamera() {
       ["تسجيل Canvas", supported.canvasCapture ? "متاح" : "غير مدعوم"],
       ["WebGL", supported.webgl ? "متاح" : "غير مدعوم"],
       ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
-      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
+      ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],\n      ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],\n      ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],\n      ["مؤثرات الزمن", "تدرجات shader لحظية؛ لا يوجد مخزن إطارات زمني بعد"],\n      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
       ["الدقة الحالية", stream && video.videoWidth ? video.videoWidth + " × " + video.videoHeight : "لا يوجد بث"]
@@ -554,7 +596,7 @@ export function initCamera() {
     updateDiagnostics();
   }
 
-  function buildLensWheel() {
+  function buildFilterLibrary() {\n    if (!filterSelect) return;\n    filterSelect.replaceChildren();\n    const placeholder = document.createElement("option");\n    placeholder.value = "";\n    placeholder.textContent = "اختر فلترًا من مكتبة NOX (200)";\n    filterSelect.append(placeholder);\n    NOX_FILTER_GROUPS.forEach((group, family) => {\n      const optgroup = document.createElement("optgroup");\n      optgroup.label = group[0];\n      NOX_FILTERS.filter((filter) => filter.family === family).forEach((filter) => {\n        const option = document.createElement("option");\n        option.value = String(filter.id);\n        option.textContent = filter.name;\n        optgroup.append(option);\n      });\n      filterSelect.append(optgroup);\n    });\n    filterSelect.addEventListener("change", () => {\n      const id = Number(filterSelect.value);\n      selectedFilter = filterSelect.value === "" ? null : (NOX_FILTERS[id] || null);\n      if (stream) renderFrame(false);\n      announce(selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));\n      updateDiagnostics();\n    });\n  }\n\n  function buildLensWheel() {
     if (!orbit || !track) return;
     track.replaceChildren();
     LENSES.forEach((lens, index) => {
