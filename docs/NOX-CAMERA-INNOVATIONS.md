@@ -293,3 +293,11 @@ Build a reusable effect graph with four cooperating layers:
 - Applies inverse, smoothed frame translation with a bounded accumulated offset of ±2.5% per axis and a fixed 1.06× crop to hide exposed edges. The same transform is applied to the rendered source and visual overlays so effects remain aligned. It reuses the existing low-resolution flow pass; no extra full-resolution pixel readback is introduced.
 - Enabling stabilization automatically enables the existing optical-flow sampling if it was off. Disabling optical flow disables stabilization. Stopping the camera resets the accumulated offsets.
 - This is software/electronic stabilization, not optical OIS, gyroscope-based stabilization, or a full EIS pipeline. Median global flow can mistake intentional camera panning for shake; low texture, moving foregrounds, rolling shutter, abrupt movement, or insufficient vectors can reduce effectiveness. It does not promise a shake-free result, and needs physical-device testing.
+
+
+## P13 — NOX Low-Light Rescue v1 (experimental)
+
+- Adds three user-selectable states: off, gentle, and strong. WebGL uses a luminance-dependent shadow lift, restrained gamma adjustment, and a four-neighbor edge-aware smoothing pass weighted more strongly in darker areas. A small saturation restraint helps avoid amplifying chroma noise.
+- The shader reuses the current camera texture and adds four nearby texture samples only when the feature is enabled. No extra full-resolution canvas readback, temporal stack, remote upload, or neural model is used.
+- Canvas 2D fallback uses conservative brightness/contrast/saturation filters; it does not reproduce the WebGL edge-aware smoothing. Strong mode may soften fine texture and cannot restore detail that the sensor never captured.
+- This is image enhancement, not true long-exposure night capture, multi-frame denoising, RAW processing, sensor gain control, or AI detail reconstruction. It can brighten noise as well as the scene. Performance and visual quality still require testing on the Galaxy M12 and other target devices.
