@@ -56,7 +56,7 @@ jobs:
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
             'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
-            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint'
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -72,7 +72,8 @@ jobs:
           for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion',
             'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
             'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
-            'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode']) {
+            'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode',
+            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -101,5 +102,9 @@ jobs:
             if (!js.includes(token)) throw new Error('Optical flow low-resolution bounded sampling missing: ' + token);
           }
           console.log('Sparse optical flow bounded sampling hooks verified');
+          for (const token of ['dx: -bestDx / sampleWidth', 'regionFollowLastSequence', 'count < 2', 'Math.max(-0.025']) {
+            if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
+          }
+          console.log('Reality Follow confidence and displacement guards verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
