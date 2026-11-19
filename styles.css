@@ -69,3 +69,9 @@ body[data-nox-screen="reels"] .mobile-nav [data-nav="reels"]{color:#ffda75}
 
 /* Shared NOX profile-photo treatment */
 .nox-profile-avatar{outline:2px solid #d9aa45;outline-offset:2px;box-shadow:0 0 0 5px #6722ed2b,0 3px 12px #29135c35!important}
+
+/* Make the account photo itself a clear profile navigation target */
+.profile-avatar-link{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;text-decoration:none;cursor:pointer;flex:0 0 auto}
+.profile-avatar-link:focus-visible,.profile-name-link:focus-visible{outline:3px solid var(--gold);outline-offset:5px;border-radius:8px}
+.profile-name-link{color:inherit;text-decoration:none}
+.profile-name-link:hover{color:var(--purple)}
