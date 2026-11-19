@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#21105b">
+  <title>ملفي الشخصي — NOX NEXT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./auth.css">
+  <link rel="stylesheet" href="./profile.css">
+  <script type="module" src="./core/profile-page.js"></script>
+</head>
+<body class="nox-profile-page">
+  <main class="profile-app">
+    <header class="profile-topbar">
+      <a class="profile-brand" href="./index.html"><span class="brand-symbol">N</span><span><b>NOX NEXT</b><small>NOX Social Universe</small></span></a>
+      <nav aria-label="التنقل الرئيسي">
+        <a href="./index.html">الرئيسية</a>
+        <a href="./index.html#messages">المحادثات</a>
+        <a class="current" href="./profile.html">ملفي الشخصي</a>
+      </nav>
+      <a class="back-home" href="./index.html">العودة للتطبيق <span>←</span></a>
+    </header>
+
+    <section class="profile-cover-card">
+      <div class="profile-cover" aria-label="غلاف NOX الشخصي">
+        <span class="cover-orbit orbit-one"></span><span class="cover-orbit orbit-two"></span>
+        <span class="cover-mark">NOX <i>✦</i> NEXT</span>
+      </div>
+      <div class="profile-identity">
+        <div class="identity-main">
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar-frame" id="profile-avatar-frame">
+              <img id="profile-photo" alt="صورتك الشخصية" hidden>
+              <span id="profile-avatar-fallback" aria-hidden="true">N</span>
+              <span class="profile-avatar-shine" aria-hidden="true"></span>
+            </div>
+            <label class="photo-edit-button" for="profile-photo-input" title="اختيار صورة شخصية" aria-label="اختيار صورة شخصية">✎</label>
+            <input id="profile-photo-input" class="visually-hidden" type="file" accept="image/png,image/jpeg,image/webp">
+          </div>
+          <div class="identity-copy">
+            <div class="profile-name-line"><h1 id="profile-name">جارٍ تحميل الملف...</h1><span class="gender-emblem" id="profile-gender-emblem" hidden aria-label="رمز النوع"></span></div>
+            <div class="profile-id-row"><span>NOX ID</span><b id="profile-nox-id">...</b><button id="copy-nox-id" type="button">نسخ</button></div>
+            <p id="profile-about-preview" class="identity-about">مساحتك في عالم NOX NEXT</p>
+          </div>
+        </div>
+        <div class="identity-actions">
+          <button class="primary-profile-action" id="edit-profile-toggle" type="button">✎ تعديل الملف الشخصي</button>
+          <button class="secondary-profile-action" id="upload-profile-photo" type="button">＋ تغيير الصورة</button>
+        </div>
+      </div>
+      <div class="profile-social-nav" role="tablist" aria-label="أقسام الملف الشخصي">
+        <button type="button" class="profile-tab active" data-profile-tab="posts" role="tab" aria-selected="true">المنشورات</button>
+        <button type="button" class="profile-tab" data-profile-tab="photos" role="tab" aria-selected="false">الصور</button>
+        <button type="button" class="profile-tab" data-profile-tab="friends" role="tab" aria-selected="false">الأصدقاء</button>
+        <button type="button" class="profile-tab" data-profile-tab="about" role="tab" aria-selected="false">حول</button>
+      </div>
+    </section>
+
+    <div class="profile-content-layout">
+      <aside class="profile-side-column">
+        <section class="profile-panel intro-panel">
+          <h2>نبذة عني</h2>
+          <p id="about-card-text">لم تضف نبذة شخصية بعد.</p>
+          <div class="profile-side-divider"></div>
+          <div class="profile-side-row"><span class="side-icon">✦</span><span>عضو في مجتمع <b>NOX NEXT</b></span></div>
+          <div class="profile-side-row"><span class="side-icon">◎</span><span>معرّف NOX الخاص بك</span></div>
+          <b class="side-nox-id" id="side-nox-id">...</b>
+        </section>
+        <section class="profile-panel privacy-summary">
+          <h2>خصوصيتك أولًا</h2>
+          <p>البريد الإلكتروني والعمر ومعلومات الحساب الخاصة لا تظهر للآخرين.</p>
+          <button type="button" id="privacy-edit-link">إدارة بياناتي الخاصة</button>
+        </section>
+      </aside>
+
+      <section class="profile-main-column">
+        <section class="profile-panel profile-editor" id="profile-editor" hidden>
+          <div class="panel-heading"><div><span class="panel-eyebrow">YOUR ACCOUNT</span><h2>تعديل الملف الشخصي</h2></div><button type="button" class="close-editor" id="close-profile-editor" aria-label="إغلاق">×</button></div>
+          <form id="profile-form" novalidate>
+            <label>الاسم المعروض
+              <input id="edit-name" type="text" maxlength="60" autocomplete="name" required>
+            </label>
+            <label>نبذة قصيرة
+              <textarea id="edit-about" maxlength="160" rows="3" placeholder="اكتب شيئًا تحب أن يعرفه الآخرون عنك..."></textarea>
+              <small class="field-hint">حتى 160 حرفًا</small>
+            </label>
+            <div class="form-grid">
+              <label>العمر <span class="private-hint">خاص افتراضيًا</span>
+                <input id="edit-age" type="number" min="0" inputmode="numeric" placeholder="اختياري">
+              </label>
+              <label>النوع
+                <select id="edit-gender">
+                  <option value="">اختر النوع</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                  <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
+                </select>
+              </label>
+            </div>
+            <label class="privacy-toggle">
+              <input id="show-gender" type="checkbox">
+              <span><b>إظهار رمز النوع في ملفي العام</b><small>مغلق افتراضيًا ويمكنك تغييره في أي وقت</small></span>
+            </label>
+            <p class="profile-privacy-note">العمر والبريد الإلكتروني خاصان بك ولا يظهران في الملف العام. إعداد إظهار النوع يُحفظ كتفضيل للحساب.</p>
+            <div class="private-account-fields">
+              <div><span>البريد الإلكتروني (خاص)</span><b id="profile-email">—</b></div>
+              <div><span>العمر المسجل (خاص)</span><b id="profile-age">—</b></div>
+              <div><span>النوع المسجل (خاص)</span><b class="gender-value"><span id="profile-gender-symbol" aria-hidden="true"></span><span id="profile-gender">—</span></b></div>
+            </div>
+            <p class="form-message" id="profile-message" role="status" aria-live="polite"></p>
+            <button class="submit-button" id="save-profile" type="submit">حفظ التعديلات</button>
+          </form>
+        </section>
+
+        <section class="profile-tab-panel profile-panel" id="panel-posts" role="tabpanel">
+          <div class="panel-heading"><div><span class="panel-eyebrow">YOUR SPACE</span><h2>منشوراتك</h2></div></div>
+          <div class="empty-social-state"><span class="empty-social-icon">▤</span><h3>مساحتك تبدأ من هنا</h3><p>ستظهر منشوراتك هنا عندما تنشر أول مشاركة على NOX NEXT.</p><a href="./index.html#home">الذهاب إلى الصفحة الرئيسية</a></div>
+        </section>
+        <section class="profile-tab-panel profile-panel" id="panel-photos" role="tabpanel" hidden>
+          <div class="panel-heading"><div><span class="panel-eyebrow">YOUR MOMENTS</span><h2>صورك</h2></div></div>
+          <div class="empty-social-state"><span class="empty-social-icon">▧</span><h3>ألبوم الصور</h3><p>ستظهر الصور التي تشاركها على NOX NEXT هنا. صورة الملف الشخصي لا تُضاف تلقائيًا إلى ألبومك.</p></div>
+        </section>
+        <section class="profile-tab-panel profile-panel" id="panel-friends" role="tabpanel" hidden>
+          <div class="panel-heading"><div><span class="panel-eyebrow">YOUR CIRCLE</span><h2>أصدقاؤك</h2></div></div>
+          <div class="empty-social-state"><span class="empty-social-icon">♧</span><h3>دائرتك الاجتماعية</h3><p>ستظهر قائمة أصدقائك بعد ربط نظام الصداقة بقاعدة البيانات.</p><a href="./index.html#friends">اكتشاف الأصدقاء</a></div>
+        </section>
+        <section class="profile-tab-panel profile-panel" id="panel-about" role="tabpanel" hidden>
+          <div class="panel-heading"><div><span class="panel-eyebrow">ABOUT YOU</span><h2>معلومات عامة</h2></div></div>
+          <div class="about-detail"><span>النبذة الشخصية</span><p id="about-detail-text">لم تضف نبذة شخصية بعد.</p></div>
+          <div class="about-detail"><span>NOX ID</span><b id="about-nox-id">...</b></div>
+          <div class="about-detail"><span>النوع</span><b id="public-gender-value">غير معروض</b></div>
+        </section>
+      </section>
+    </div>
+    <p class="profile-message-global" id="profile-message-global" role="status" aria-live="polite"></p>
+  </main>
+</body>
+</html>

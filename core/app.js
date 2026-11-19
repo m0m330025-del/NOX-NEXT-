@@ -12,6 +12,32 @@ export function initApp() {
 
   window.addEventListener("nox:notice", event => showNotice(event.detail));
 
+  const authNotice = sessionStorage.getItem("nox.auth.notice");
+  if (authNotice) {
+    showNotice(authNotice);
+    sessionStorage.removeItem("nox.auth.notice");
+  }
+
+  // Keep the public interface usable even if the Appwrite SDK/CDN is unavailable.
+  import("./appwrite.js")
+    .then(({ account }) => account.get())
+    .then(user => {
+      const name = document.querySelector(".topbar-user b");
+      if (name) name.textContent = user.name || "حسابي";
+    })
+    .catch(() => {});
+
+  document.querySelector('[data-action="logout"]')?.addEventListener("click", async () => {
+    try {
+      const { account } = await import("./appwrite.js");
+      await account.deleteSession("current");
+      showNotice("تم تسجيل الخروج بنجاح");
+      window.setTimeout(() => window.location.assign("./auth.html"), 500);
+    } catch (error) {
+      showNotice("تعذر تسجيل الخروج الآن. تأكد من الاتصال وحاول مرة أخرى.");
+    }
+  });
+
   document.querySelectorAll('[data-action="demo-notice"]').forEach(button => {
     button.addEventListener("click", () => {
       showNotice("هذه الخاصية واجهة تجريبية وستُفعّل في مرحلة لاحقة");

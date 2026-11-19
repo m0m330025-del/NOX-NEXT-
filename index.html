@@ -16,7 +16,7 @@
 <div class="app-frame">
   <header class="mobile-header">
     <a class="brand brand-mobile" href="#home"><span class="brand-symbol">N</span><span><b>NOX NEXT</b><small>NOX Social Universe</small></span></a>
-    <div class="mobile-actions"><button class="icon-button" aria-label="بحث" data-action="focus-search">⌕</button><button class="icon-button notification-button" aria-label="الإشعارات">♧<i>12</i></button></div>
+    <div class="mobile-actions"><a class="icon-button" href="./profile.html" aria-label="الملف الشخصي" style="font-size:13px;text-decoration:none;color:white">ملفي</a><button class="icon-button" aria-label="بحث" data-action="focus-search">⌕</button><button class="icon-button notification-button" aria-label="الإشعارات">♧<i>12</i></button></div>
   </header>
 
   <aside class="sidebar">
@@ -25,20 +25,20 @@
       <a class="nav-link active" href="#home" data-nav="home"><span>⌂</span>الرئيسية</a>
       <a class="nav-link" href="#friends" data-nav="friends"><span>♧</span>الأصدقاء</a>
       <a class="nav-link" href="#messages" data-nav="messages"><span>☏</span>المحادثات <i class="nav-count">3</i></a>
-      <a class="nav-link" href="#calls" data-nav="calls"><span>◖</span>المكالمات</a>
-      <a class="nav-link" href="#stories" data-nav="stories"><span>◉</span>الحالات</a>
+      <a class="nav-link" href="#camera" data-nav="camera"><span>◎</span>الكاميرا</a>
+      <a class="nav-link" href="#stories-view" data-nav="stories"><span>◉</span>الحالات</a>
       <a class="nav-link" href="#reels" data-nav="reels"><span>▷</span>المقاطع</a>
       <a class="nav-link" href="./nox-kiss.html"><span>♡</span>NOX KISS</a>
       <a class="nav-link" href="#gifts" data-nav="gifts"><span>♙</span>الهدايا</a>
       <a class="nav-link" href="#settings" data-nav="settings"><span>⚙</span>الإعدادات</a>
     </nav>
-    <button class="logout-button" type="button" data-action="demo-notice">تسجيل الخروج <span>⇥</span></button>
+    <button class="logout-button" type="button" data-action="logout">تسجيل الخروج <span>⇥</span></button>
   </aside>
 
   <div class="workspace">
     <header class="topbar">
       <label class="search-box"><span>⌕</span><input id="global-search" type="search" placeholder="ابحث عن الأصدقاء أو المحتوى..." aria-label="بحث عام"></label>
-      <div class="topbar-user"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces" alt=""><b>ريم</b><span>⌄</span><button class="icon-button notification-button" aria-label="الإشعارات">♧<i>12</i></button></div>
+      <div class="topbar-user"><a class="account-link" href="./profile.html">الملف الشخصي</a><img data-profile-avatar class="nox-profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces" alt="الصورة الشخصية"><b>حسابي</b><span>⌄</span><button class="icon-button notification-button" aria-label="الإشعارات">♧<i>12</i></button></div>
     </header>
 
     <main class="feed-layout" id="home">
@@ -56,7 +56,7 @@
         </section>
 
         <section class="composer card">
-          <div class="composer-top"><img class="avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces" alt=""><button class="composer-prompt" data-action="demo-notice">ماذا يدور في ذهنك؟ ...</button><span class="smile">☺</span></div>
+          <div class="composer-top"><img data-profile-avatar class="avatar nox-profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=96&h=96&fit=crop&crop=faces" alt="الصورة الشخصية"><button class="composer-prompt" data-action="demo-notice">ماذا يدور في ذهنك؟ ...</button><span class="smile">☺</span></div>
           <div class="composer-actions"><button data-action="demo-notice"><span class="photo-icon">▣</span>إضافة صور</button><button data-action="demo-notice"><span class="video-icon">▶</span>إضافة فيديوهات</button><button data-action="demo-notice"><span class="gift-icon">♔</span>إرسال هدية</button><button class="publish-button" data-action="demo-notice">نشر <span>➤</span></button></div>
         </section>
 
@@ -82,14 +82,33 @@
         <a class="kiss-promo" href="./nox-kiss.html"><span class="crown">♛</span><b>NOX KISS</b><strong>غرفة الترفيه والمرح</strong><span class="kiss-cta">ادخل الآن　➜</span></a>
       </aside>
     </main>
+
+    <section class="social-feature-section" id="messages">
+      <header class="feature-heading"><div><small>NOX CONNECT</small><h2>المحادثات</h2><p>المحادثة تظهر للطرفين بعد قبول طلب الصداقة فقط</p></div><span class="feature-tag">واجهة تجريبية</span></header>
+      <div class="messages-shell"><aside class="message-contacts card"><label class="nox-id-search">⌕ <input id="nox-id-search" placeholder="ابحث باستخدام NOX ID فقط"></label><button class="nox-id-submit" id="nox-id-submit">بحث عن NOX ID</button><div class="empty-chat"><b>لا توجد محادثات بعد</b><small>ابحث عن صديق وأرسل طلب صداقة</small></div></aside><section class="message-preview card"><div class="locked-chat"><span>♙</span><h3>مساحة المحادثة</h3><p>ستظهر هنا بعد قبول طلب الصداقة من الطرفين.</p><small>إرسال الرسائل غير متاح قبل الموافقة</small></div></section></div>
+    </section>
+    <section class="social-feature-section" id="camera">
+      <header class="feature-heading"><div><small>NOX CREATOR</small><h2>كاميرا NOX</h2><p>معاينة الكاميرا والفلاتر على جهازك</p></div><span class="feature-tag">محلي فقط</span></header>
+      <div class="camera-layout card"><div class="camera-stage"><video id="nox-camera-video" autoplay playsinline muted hidden></video><div class="camera-empty" id="nox-camera-empty"><span>◎</span><b>كاميرتك الإبداعية</b><small>اسمح للمتصفح باستخدام الكاميرا لعرض المعاينة</small></div><canvas id="nox-camera-canvas" hidden></canvas></div><aside class="camera-controls"><h3>الفلاتر</h3><div class="nox-filters"><button class="nox-filter active" data-filter="none">طبيعي</button><button class="nox-filter" data-filter="grayscale(1)">أبيض وأسود</button><button class="nox-filter" data-filter="sepia(.55)">دافئ</button><button class="nox-filter" data-filter="saturate(1.55)">حيوي</button><button class="nox-filter" data-filter="contrast(1.2)">واضح</button><button class="nox-filter" data-filter="hue-rotate(28deg)">حالم</button></div><div class="camera-buttons"><button id="nox-camera-start" class="feature-primary">تشغيل الكاميرا</button><button id="nox-camera-stop" class="feature-secondary" disabled>إيقاف</button><button id="nox-camera-capture" class="feature-secondary" disabled>التقاط صورة</button></div><p class="feature-note">لا يتم رفع الصورة أو نشرها. التخزين والنشر يحتاجان ربطًا لاحقًا.</p><div id="nox-capture-preview" hidden><b>معاينة الصورة</b><img id="nox-captured-image" alt="الصورة الملتقطة"><button id="nox-capture-close" class="feature-secondary">إغلاق</button></div></aside></div>
+    </section>
+    <section class="social-feature-section" id="stories-view">
+      <header class="feature-heading"><div><small>NOX MOMENTS</small><h2>الحالات</h2><p>اختر حالة لعرض معاينة شكلية</p></div><a class="feature-primary feature-link" href="#camera">＋ إضافة حالة</a></header>
+      <div class="story-preview-grid"><button class="story-preview-card" data-story-preview="حالتك الجديدة"><span>＋</span><b>حالتك</b></button><button class="story-preview-card" data-story-preview="حالة سارة"><span>س</span><b>سارة</b></button><button class="story-preview-card" data-story-preview="حالة مريم"><span>م</span><b>مريم</b></button><button class="story-preview-card" data-story-preview="حالة أحمد"><span>أ</span><b>أحمد</b></button></div>
+      <div class="story-preview-result card" id="nox-story-result"><b>اختار حالة لعرض معاينتها</b><small>أمثلة تصميمية وليست حالات منشورة</small></div>
+    </section>
+    <section class="social-feature-section" id="reels">
+      <header class="feature-heading"><div><small>NOX SHORTS</small><h2>المقاطع والريلز</h2><p>قالب عرض المقاطع القصيرة</p></div><span class="feature-tag">تجريبي</span></header>
+      <div class="reels-preview-grid"><article class="reel-preview-card card"><div class="reel-artwork reel-artwork-one">NOX<br>VIBES</div><div class="reel-preview-info"><b>لحظات تستحق المشاركة</b><small>لا يوجد فيديو منشور — معاينة تصميم</small><button data-reel-like>♡ إعجاب</button></div></article><article class="reel-preview-card card"><div class="reel-artwork reel-artwork-two">MAKE<br>IT YOURS</div><div class="reel-preview-info"><b>اصنع يومك بطريقتك</b><small>لا يوجد فيديو منشور — معاينة تصميم</small><button data-reel-like>♡ إعجاب</button></div></article></div>
+    </section>
   </div>
 
   <nav class="mobile-nav" aria-label="تنقل الهاتف">
     <a class="active" href="#home" data-nav="home"><span>⌂</span>الرئيسية</a>
     <a href="#friends" data-nav="friends"><span>♧</span>الأصدقاء</a>
     <a href="#messages" data-nav="messages"><span>☏</span>المحادثات<i class="nav-count">3</i></a>
+    <a href="#camera" data-nav="camera"><span>◎</span>الكاميرا</a>
+    <a href="#stories-view" data-nav="stories"><span>◉</span>الحالات</a>
     <a href="#reels" data-nav="reels"><span>▷</span>المقاطع</a>
-    <button type="button" data-action="more-menu"><span>•••</span>المزيد</button>
   </nav>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </div>

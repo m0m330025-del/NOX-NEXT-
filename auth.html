@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#21105b">
+  <meta name="description" content="تسجيل الدخول وإنشاء حساب في NOX NEXT">
+  <title>الدخول إلى NOX NEXT</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./auth.css?v=auth-fix-20261119-1">
+  <script type="module" src="./core/auth-page.js?v=auth-fix-20261119-1"></script>
+</head>
+<body>
+  <main class="auth-shell">
+    <a class="brand" href="./index.html" aria-label="العودة إلى NOX NEXT">
+      <span class="brand-symbol">N</span>
+      <span><b>NOX NEXT</b><small>NOX Social Universe</small></span>
+    </a>
+    <section class="auth-card">
+      <div class="auth-heading">
+        <span class="eyebrow">مرحبًا بك في عالم NOX</span>
+        <h1 id="form-title">تسجيل الدخول</h1>
+        <p id="form-subtitle">ادخل إلى حسابك وتابع عالمك الاجتماعي.</p>
+      </div>
+      <div class="auth-tabs" role="tablist" aria-label="نوع العملية">
+        <button type="button" class="active" data-mode="login" role="tab" aria-selected="true">تسجيل الدخول</button>
+        <button type="button" data-mode="signup" role="tab" aria-selected="false">إنشاء حساب</button>
+      </div>
+      <form id="auth-form" novalidate>
+        <label id="name-field" hidden>الاسم
+          <input id="name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="اسمك داخل NOX NEXT">
+        </label>
+        <div id="profile-fields" class="profile-fields" hidden>
+          <label>العمر
+            <input id="age" name="age" type="number" inputmode="numeric" min="0" placeholder="اختياري">
+          </label>
+          <label>النوع
+            <select id="gender" name="gender">
+              <option value="">اختياري</option>
+              <option value="male">ذكر</option>
+              <option value="female">أنثى</option>
+              <option value="prefer_not_to_say">أفضل عدم الإجابة</option>
+            </select>
+          </label>
+          <p class="privacy-hint">تقدر تعدّل البيانات دي لاحقًا من ملفك الشخصي.</p>
+        </div>
+        <label>البريد الإلكتروني
+          <input id="email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com">
+        </label>
+        <label>كلمة المرور
+          <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="256" placeholder="8 أحرف على الأقل">
+        </label>
+        <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+        <button class="submit-button" id="submit-button" type="submit">دخول إلى NOX NEXT</button>
+      </form>
+      <p class="security-note">اتصال آمن عبر Appwrite. لا تشارك كلمة المرور مع أي شخص.</p>
+      <a class="back-link" href="./index.html">العودة إلى الصفحة الرئيسية</a>
+    </section>
+  </main>
+</body>
+</html>
