@@ -258,37 +258,40 @@ export function initCamera() {
   function drawLivingMetal(ctx, width, height) {
     if (!livingMetalEnabled || !livingMetalRegion) return;
     livingMetalPhase = (livingMetalPhase + 0.035) % (Math.PI * 2);
-    const cx = livingMetalRegion.x * width;
-    const cy = livingMetalRegion.y * height;
-    const radius = Math.max(34, Math.min(width, height) * 0.16);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
+    const x = livingMetalRegion.x * width, y = livingMetalRegion.y * height;
+    const w = livingMetalRegion.width * width, h = livingMetalRegion.height * height;
+    if (w < 2 || h < 2) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
     ctx.globalCompositeOperation = "screen";
-    const metal = ctx.createLinearGradient(cx - radius, cy - radius, cx + radius, cy + radius);
-    metal.addColorStop(0, "rgba(105,225,255,.10)");
-    metal.addColorStop(0.32, "rgba(235,250,255,.58)");
-    metal.addColorStop(0.48, "rgba(70,105,150,.34)");
-    metal.addColorStop(0.68, "rgba(255,255,255,.68)");
-    metal.addColorStop(1, "rgba(115,75,205,.18)");
-    ctx.fillStyle = metal;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-    const glintX = cx + Math.cos(livingMetalPhase) * radius * 0.52;
-    const glint = ctx.createRadialGradient(glintX, cy - radius * 0.18, 1, glintX, cy - radius * 0.18, radius * 0.72);
-    glint.addColorStop(0, "rgba(255,255,255,.72)");
+    const sweep = x + ((Math.sin(livingMetalPhase) + 1) * 0.5) * w;
+    const metal = ctx.createLinearGradient(x, y, x + w, y + h);
+    metal.addColorStop(0, "rgba(105,225,255,.08)");
+    metal.addColorStop(.32, "rgba(235,250,255,.48)");
+    metal.addColorStop(.5, "rgba(70,105,150,.24)");
+    metal.addColorStop(.72, "rgba(255,255,255,.52)");
+    metal.addColorStop(1, "rgba(115,75,205,.14)");
+    ctx.fillStyle = metal; ctx.fillRect(x, y, w, h);
+    const glint = ctx.createRadialGradient(sweep, y + h * .28, 1, sweep, y + h * .28, Math.max(12, Math.min(w,h) * .55));
+    glint.addColorStop(0, "rgba(255,255,255,.68)");
     glint.addColorStop(1, "rgba(180,225,255,0)");
-    ctx.fillStyle = glint;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-    ctx.globalCompositeOperation = "source-over";
-    ctx.lineWidth = Math.max(2, width * 0.0025);
-    ctx.strokeStyle = "rgba(220,245,255,.9)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    ctx.fillStyle = glint; ctx.fillRect(x, y, w, h); ctx.restore();
   }
-
+  function normalizedPoint(event) {
+    const rect = renderCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    return { x: Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)), y: Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height)) };
+  }
+  function buildRegionMask(start, end) {
+    return { x: Math.min(start.x,end.x), y: Math.min(start.y,end.y), width: Math.abs(end.x-start.x), height: Math.abs(end.y-start.y) };
+  }
+  function drawRegionMaskGuide(ctx,width,height) {
+    const r = regionMaskPreview || (regionMaskEnabled ? livingMetalRegion : null);
+    if (!r || !regionMaskEnabled) return;
+    const x=r.x*width,y=r.y*height,w=r.width*width,h=r.height*height;
+    if(w<2||h<2)return;
+    ctx.save(); ctx.strokeStyle="rgba(255,225,145,.95)"; ctx.lineWidth=Math.max(2,width*.002);
+    ctx.setLineDash([Math.max(6,width*.012),Math.max(4,width*.007)]); ctx.strokeRect(x,y,w,h); ctx.restore();
+  }
   function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
     const frameNow = performance.now();
@@ -352,7 +355,7 @@ export function initCamera() {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
     const outputContext = renderCanvas.getContext("2d");
-    if (outputContext) drawLivingMetal(outputContext, outWidth, outHeight);
+    if (outputContext) { drawLivingMetal(outputContext, outWidth, outHeight); drawRegionMaskGuide(outputContext, outWidth, outHeight); }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
     lastRenderedAt = performance.now();
