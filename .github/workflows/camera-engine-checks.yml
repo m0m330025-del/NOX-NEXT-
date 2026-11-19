@@ -18,6 +18,9 @@ on:
     paths:
       - "core/camera.js"
       - "core/nox-filter-engine.js"
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "core/nox-beauty-vision-provider.js"
+      - "core/nox-skin-segmentation-engine.js"
       - "docs/NOX-CAMERA-INNOVATIONS.md"
       - "app.js"
       - "index.html"
