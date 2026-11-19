@@ -25,10 +25,11 @@ async function loadProfile() {
 }
 byId("profile-form").addEventListener("submit", async event => {
   event.preventDefault();
-  const age = Number(byId("edit-age").value);
-  const gender = byId("edit-gender").value;
-  if (!Number.isInteger(age) || age < 13 || age > 120 || !gender) {
-    message("اكتب عمرًا صحيحًا واختر النوع.");
+  const ageValue = byId("edit-age").value.trim();
+  const age = ageValue === "" ? null : Number(ageValue);
+  const gender = byId("edit-gender").value || null;
+  if (age !== null && (!Number.isInteger(age) || age < 0)) {
+    message("إذا أدخلت العمر، يجب أن يكون رقمًا صحيحًا غير سالب.");
     return;
   }
   const button = byId("save-profile");
@@ -36,10 +37,13 @@ byId("profile-form").addEventListener("submit", async event => {
   button.textContent = "جارٍ الحفظ...";
   try {
     // Appwrite Web SDK 17 expects the preferences object directly.
-    await account.updatePrefs({ ...(currentUser.prefs || {}), age, gender });
+    const nextPrefs = { ...(currentUser.prefs || {}) };
+    if (age === null) delete nextPrefs.age; else nextPrefs.age = age;
+    if (gender === null) delete nextPrefs.gender; else nextPrefs.gender = gender;
+    await account.updatePrefs(nextPrefs);
     currentUser = await account.get();
-    byId("profile-age").textContent = age + " سنة";
-    byId("profile-gender").textContent = labels[gender];
+    byId("profile-age").textContent = age === null ? "لم يُضف بعد" : age + " سنة";
+    byId("profile-gender").textContent = labels[gender] || "لم يُحدد";
     byId("profile-gender-symbol").textContent = genderSymbols[gender] || "";
     message("تم حفظ بيانات الملف الشخصي.", true);
   } catch (error) {
