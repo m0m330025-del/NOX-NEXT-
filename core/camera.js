@@ -472,7 +472,7 @@ export function initCamera() {
         }
       }
     }
-    if (trackedFaceRegions?.regions) {
+    if (faceDetectionState !== "coasting" && trackedFaceRegions?.regions) {
       ctx.lineWidth = Math.max(1.5, width * 0.0018);
       ctx.strokeStyle = "rgba(255,220,120,.92)";
       for (const region of Object.values(trackedFaceRegions.regions)) {
