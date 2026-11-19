@@ -778,6 +778,8 @@ export function initCamera() {
     const selectedSlot = hasFrames && photonTimelineSelectedIndex >= 0
       ? photonTimelineSlots[photonTimelineOrder[Math.min(photonTimelineSelectedIndex, photonTimelineOrder.length - 1)]]
       : null;
+    const hasFusion = Boolean(photonFusionCanvas && photonFusionReferenceIndex ===
+      (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
     if (preview && selectedSlot?.meta) {
       if (preview.width !== selectedSlot.canvas.width || preview.height !== selectedSlot.canvas.height) {
         preview.width = selectedSlot.canvas.width;
@@ -795,8 +797,6 @@ export function initCamera() {
     }
     if (bestButton) bestButton.disabled = !hasFrames;
     if (saveButton) saveButton.disabled = !selectedSlot?.meta;
-    const hasFusion = Boolean(photonFusionCanvas && photonFusionReferenceIndex ===
-      (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
     if (fusionButton) fusionButton.disabled = photonTimelineOrder.length < 2 || !hasFrames;
     if (fusionSaveButton) fusionSaveButton.disabled = !hasFusion;
     if (hint) {
