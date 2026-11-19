@@ -151,3 +151,9 @@
 .nox-photon-timeline-panel label{font-size:12px;font-weight:800;color:#e8dcff}
 #nox-photon-timeline-preview{display:block;width:100%;max-height:190px;aspect-ratio:16/9;object-fit:contain;border:1px solid #806b9f;border-radius:10px;background:#0b1020}
 #nox-photon-timeline-scrub{width:100%;accent-color:#c9a7f1;touch-action:pan-y}
+
+
+/* NOX TEMPORAL DETAIL FUSION — explicit, low-resolution preview controls */
+.nox-photon-timeline-panel #nox-photon-fusion-build{background:linear-gradient(120deg,#d8f5e8,#a9dfcf);border-color:#a5e7d3;color:#15392f}
+.nox-photon-timeline-panel #nox-photon-fusion-save{background:linear-gradient(120deg,#e7e0ff,#c5d6f4);border-color:#c5b6ee;color:#292044}
+.nox-photon-timeline-panel #nox-photon-fusion-build:disabled,.nox-photon-timeline-panel #nox-photon-fusion-save:disabled{opacity:.42;cursor:not-allowed}
