@@ -35,7 +35,8 @@ byId("profile-form").addEventListener("submit", async event => {
   button.disabled = true;
   button.textContent = "جارٍ الحفظ...";
   try {
-    await account.updatePrefs({ prefs: { ...(currentUser.prefs || {}), age, gender } });
+    // Appwrite Web SDK 17 expects the preferences object directly.
+    await account.updatePrefs({ ...(currentUser.prefs || {}), age, gender });
     currentUser = await account.get();
     byId("profile-age").textContent = age + " سنة";
     byId("profile-gender").textContent = labels[gender];
