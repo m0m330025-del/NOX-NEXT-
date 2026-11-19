@@ -1,0 +1,50 @@
+name: NOX Face Tracking Engine Checks
+
+on:
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-face-tracking-engine.js"
+      - ".github/workflows/nox-face-tracking-checks.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-face-tracking-engine.js"
+      - ".github/workflows/nox-face-tracking-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  face-tracking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check module syntax
+        run: |
+          cp core/nox-face-tracking-engine.js /tmp/nox-face-tracking-engine.mjs
+          node --check /tmp/nox-face-tracking-engine.mjs
+      - name: Test acquisition, smoothing, coasting, and loss
+        run: |
+          cp core/nox-face-tracking-engine.js /tmp/nox-face-tracking-engine.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const { NOXFaceTrackingEngine } = await import('file:///tmp/nox-face-tracking-engine.mjs');
+          const tracker = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 1 });
+          const face = { box: { x: 0.2, y: 0.2, width: 0.3, height: 0.4 }, landmarks: [] };
+          assert.equal(tracker.update([face]).state, 'acquired');
+          const moved = { box: { x: 0.22, y: 0.2, width: 0.3, height: 0.4 }, landmarks: [] };
+          const tracking = tracker.update([moved]);
+          assert.equal(tracking.state, 'tracking');
+          assert.equal(tracking.face.box.x, 0.22);
+          assert.equal(tracker.update([]).state, 'coasting');
+          assert.equal(tracker.update([]).state, 'coasting');
+          assert.equal(tracker.update([]).state, 'lost');
+          assert.equal(tracker.update([]).face, null);
+          tracker.reset();
+          assert.equal(tracker.update([face]).state, 'acquired');
+          console.log('Face tracking lifecycle tests passed');
+          NODE
