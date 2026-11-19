@@ -284,14 +284,21 @@ export function initCamera() {
   function buildRegionMask(start, end) {
     return { x: Math.min(start.x,end.x), y: Math.min(start.y,end.y), width: Math.abs(end.x-start.x), height: Math.abs(end.y-start.y) };
   }
-  function drawRegionMaskGuide(ctx,width,height) {
-    const r = regionMaskPreview || (regionMaskEnabled ? livingMetalRegion : null);
-    if (!r || !regionMaskEnabled) return;
-    const x=r.x*width,y=r.y*height,w=r.width*width,h=r.height*height;
-    if(w<2||h<2)return;
-    ctx.save(); ctx.strokeStyle="rgba(255,225,145,.95)"; ctx.lineWidth=Math.max(2,width*.002);
-    ctx.setLineDash([Math.max(6,width*.012),Math.max(4,width*.007)]); ctx.strokeRect(x,y,w,h); ctx.restore();
+  function updateRegionMaskOverlay() {
+    const overlay = $("#nox-region-mask-overlay");
+    const region = regionMaskPreview || (regionMaskEnabled ? livingMetalRegion : null);
+    if (!overlay) return;
+    if (!region || !regionMaskEnabled || region.width < 0.01 || region.height < 0.01) {
+      overlay.hidden = true;
+      return;
+    }
+    overlay.hidden = false;
+    overlay.style.left = (region.x * 100) + "%";
+    overlay.style.top = (region.y * 100) + "%";
+    overlay.style.width = (region.width * 100) + "%";
+    overlay.style.height = (region.height * 100) + "%";
   }
+
   function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
     const frameNow = performance.now();
@@ -355,7 +362,7 @@ export function initCamera() {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
     const outputContext = renderCanvas.getContext("2d");
-    if (outputContext) { drawLivingMetal(outputContext, outWidth, outHeight); drawRegionMaskGuide(outputContext, outWidth, outHeight); }
+    if (outputContext) drawLivingMetal(outputContext, outWidth, outHeight);
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
     lastRenderedAt = performance.now();
@@ -597,6 +604,7 @@ export function initCamera() {
     const point = normalizedPoint(event);
     if (!point) return;
     regionMaskPreview = buildRegionMask(regionMaskStart, point);
+    updateRegionMaskOverlay();
     renderFrame(false);
   });
   function finishRegionMask(event) {
@@ -606,6 +614,7 @@ export function initCamera() {
     regionMaskDrawing = false;
     regionMaskStart = null;
     regionMaskPreview = null;
+    updateRegionMaskOverlay();
     if (next.width >= 0.025 && next.height >= 0.025) {
       livingMetalRegion = next;
       announce("تم حفظ قناع المنطقة اليدوي لإعادة استخدامه مع المؤثرات الموضعية", true);
@@ -627,12 +636,14 @@ export function initCamera() {
     button.setAttribute("aria-pressed", String(regionMaskEnabled));
     const hint = $("#nox-region-mask-hint");
     if (hint) hint.textContent = regionMaskEnabled ? "اسحب بإصبعك فوق الصورة لرسم مستطيل حول المنطقة المطلوبة" : "حدد منطقة من الصورة لاستخدامها مع المؤثرات الموضعية";
+    updateRegionMaskOverlay();
     announce(regionMaskEnabled ? "وضع تحديد المنطقة نشط" : "تم إيقاف وضع التحديد", Boolean(stream));
     updateDiagnostics();
   });
   $("#nox-region-mask-clear")?.addEventListener("click", () => {
     livingMetalRegion = null;
     regionMaskPreview = null;
+    updateRegionMaskOverlay();
     regionMaskDrawing = false;
     regionMaskStart = null;
     if (stream) renderFrame(false);
