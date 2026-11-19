@@ -235,6 +235,6 @@ Build a reusable effect graph with four cooperating layers:
 - Samples at a maximum cadence of one frame per 180 ms on low-power profiles or 120 ms on standard profiles. The buffer is local in-memory canvas data and is cleared when the camera stops, the mode changes, or the user presses Clear.
 - Added two live compositing modes: Motion Trace (low-opacity screen blend of prior frames) and Time Echo (low-opacity offset blend). They use the same rendered output canvas as photo capture and video recording.
 - This is short visual frame history, not optical-flow motion estimation, object tracking, semantic segmentation, long-term recording, AI reconstruction, or a true playback timeline. Effects require a short warm-up after enabling.
-- Estimated pixel storage is bounded below approximately 0.45 MB for low-power buffers and 0.77 MB for standard buffers (excluding browser canvas overhead).
+- Estimated pixel storage is approximately 0.30 MiB for low-power buffers and 0.77 MiB for standard buffers (excluding browser canvas overhead).
 - The previously referenced region-mask state variables are now explicitly declared so the existing manual mask controls do not read undeclared identifiers.
 - Automated syntax/markup checks do not replace real camera validation. Galaxy M12 and iPhone testing remains pending.
