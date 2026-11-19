@@ -1,0 +1,29 @@
+:root{font-family:'Cairo',system-ui,sans-serif;color:#20164d;background:#f4f0ff;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 10%,#d9c8ff 0,transparent 38%),linear-gradient(135deg,#f8f6ff,#ece5ff);display:grid;place-items:center;padding:24px}
+button,input{font:inherit}
+.auth-shell{width:min(100%,470px);display:grid;gap:22px}
+.brand{display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;color:inherit}
+.brand-symbol{width:54px;height:54px;border:2px solid #ffd65f;border-radius:16px;display:grid;place-items:center;background:#21105b;color:#ffe28a;font: bold 34px Georgia;box-shadow:0 0 20px #d09cff66}
+.brand b{display:block;color:#3b1b8d;font-size:20px;letter-spacing:.4px}
+.brand small{display:block;color:#766b9a;font-size:11px;direction:ltr;text-align:right}
+.auth-card{background:#fff;border:1px solid #e3dcff;border-radius:26px;padding:30px;box-shadow:0 18px 60px #32116b18}
+.auth-heading{text-align:center}
+.eyebrow{color:#8b35dc;font-size:12px;font-weight:800}
+h1{font-size:27px;margin:8px 0 4px;color:#24105e}
+.auth-heading p{margin:0;color:#77719a;font-size:13px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;background:#f3efff;padding:5px;border-radius:14px;margin:24px 0 20px}
+.auth-tabs button{border:0;background:transparent;border-radius:10px;padding:10px 5px;color:#675b8d;font-weight:800;font-size:13px}
+.auth-tabs button.active{background:#fff;color:#6124d9;box-shadow:0 2px 9px #32116b12}
+form{display:grid;gap:15px}
+form label{display:grid;gap:7px;font-size:13px;font-weight:800;color:#38246f}
+form input{width:100%;border:1px solid #ded6f5;border-radius:12px;padding:13px 14px;outline:none;background:#fcfbff;color:#24105e;direction:ltr;text-align:left}
+form input:focus{border-color:#8e39e8;box-shadow:0 0 0 3px #8e39e81c}
+form label:first-child input{direction:rtl;text-align:right}
+.submit-button{border:0;border-radius:13px;padding:13px;background:linear-gradient(105deg,#a52bed,#5320df);color:#fff;font-weight:900;box-shadow:0 8px 18px #6422d333}
+.submit-button:disabled{opacity:.65;cursor:wait}
+.form-message{min-height:20px;margin:0;font-size:12px;color:#b42355}
+.form-message.success{color:#16834a}
+.security-note,.back-link{text-align:center;font-size:11px;color:#82799e}
+.back-link{display:block;color:#6424cf;font-weight:800;text-decoration:none;margin-top:14px}
+@media(max-width:480px){body{padding:14px}.auth-card{padding:22px 18px;border-radius:20px}h1{font-size:24px}}
