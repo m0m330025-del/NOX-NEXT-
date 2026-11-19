@@ -72,7 +72,8 @@ export function initSocialUI() {
   catch(error){arLens="none";paintFaceCanvas();notice("تعذر تحميل محرك تتبّع الوجه. تحقق من اتصال الإنترنت ثم أعد المحاولة.");}
  }
  function trackFaceFrame(){
-  if(!stream||!video||video.readyState<2)return;
+  if(!stream||!video)return;
+  if(video.readyState<2){faceAnimationFrame=requestAnimationFrame(trackFaceFrame);return;}
   const now=performance.now();
   if(faceLandmarker&&now-lastFaceDetection>33){
    lastFaceDetection=now;
@@ -111,7 +112,7 @@ export function initSocialUI() {
    if(stream){await stopRecording();stream.getTracks().forEach(track=>track.stop());}
    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1280},height:{ideal:720}}});
    video.srcObject=stream;video.style.filter=filter;video.hidden=false;stage?.classList.toggle("is-front",facingMode==="user");if(faceCanvas)faceCanvas.style.display=arLens==="none"?"none":"block";empty.hidden=true;
-   await video.play();setCameraControls(true);notice(facingMode==="user"?"الكاميرا الأمامية جاهزة":"الكاميرا الخلفية جاهزة");
+   await video.play();setCameraControls(true);notice(facingMode==="user"?"الكاميرا الأمامية جاهزة":"الكاميرا الخلفية جاهزة");if(arLens!=="none"){if(faceCanvas)faceCanvas.style.display="block";loadFaceTracker().then(()=>{if(stream&&!faceAnimationFrame)trackFaceFrame();}).catch(()=>notice("تعذر تحميل عدسة الوجه. تحقق من اتصال الإنترنت."));}
   }catch(error){stream=null;notice(error?.name==="NotAllowedError"?"لم يتم السماح بالكاميرا. راجع إذن المتصفح.":error?.name==="NotFoundError"?"لم يتم العثور على كاميرا متاحة.":"تعذر تشغيل الكاميرا على هذا الجهاز.");}
  }
  start?.addEventListener("click",startCamera);
