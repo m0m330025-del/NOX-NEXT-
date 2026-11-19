@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "core/nox-face-region-engine.js"
+      - "core/camera.js"
       - "tests/nox-face-region-engine.test.mjs"
       - ".github/workflows/face-region-engine-checks.yml"
   push:
@@ -33,3 +34,8 @@ jobs:
         run: |
           cp core/nox-face-region-engine.js core/nox-face-region-engine.mjs
           node tests/nox-face-region-engine.test.mjs
+      - name: Verify camera integration
+        run: |
+          grep -q 'NOXFaceRegionEngine' core/camera.js
+          grep -q 'faceRegionEngine.analyze(tracked.face)' core/camera.js
+          grep -q 'trackedFaceRegions?.regions' core/camera.js
