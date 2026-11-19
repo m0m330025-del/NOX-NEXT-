@@ -144,6 +144,18 @@
             <button type="button" id="nox-temporal-clear">مسح الإطارات المحفوظة</button>
             <small id="nox-temporal-hint" role="status">ذاكرة مصغّرة منخفضة الاستهلاك — لا تغادر الإطارات الجهاز</small>
           </section>
+          <section class="nox-photon-timeline-panel" aria-label="آلة الزمن الضوئي NOX">
+            <b>NOX PHOTON TIME MACHINE</b>
+            <small>سجل زمني قصير لإطارات الكاميرا — تحليل محلي وليس تسجيلًا لفوتونات منفردة</small>
+            <button type="button" id="nox-photon-timeline-toggle" aria-pressed="false">تشغيل آلة الزمن الضوئي</button>
+            <canvas id="nox-photon-timeline-preview" width="256" height="144" aria-label="معاينة اللحظة المختارة"></canvas>
+            <label for="nox-photon-timeline-scrub">استعراض اللحظات المحفوظة</label>
+            <input id="nox-photon-timeline-scrub" type="range" min="0" max="0" value="0" disabled>
+            <button type="button" id="nox-photon-timeline-best" disabled>اختيار أفضل لحظة محفوظة</button>
+            <button type="button" id="nox-photon-timeline-save" disabled>حفظ معاينة اللحظة المختارة</button>
+            <button type="button" id="nox-photon-timeline-clear">مسح السجل الزمني</button>
+            <small id="nox-photon-timeline-hint" role="status">المحرك متوقف — شغّله لتسجيل تسلسل زمني قصير</small>
+          </section>
           <section class="nox-low-light-panel" aria-label="تحسين التصوير في الإضاءة الضعيفة NOX">
             <b>NOX LOW-LIGHT RESCUE</b>
             <label for="nox-low-light-mode">تحسين الإضاءة الليلية</label>
