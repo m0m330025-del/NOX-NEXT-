@@ -37,7 +37,7 @@ export function initSocialUI() {
   try{
    if(stream)stream.getTracks().forEach(track=>track.stop());
    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facingMode},width:{ideal:1280},height:{ideal:720}}});
-   video.srcObject=stream;video.style.filter=filter;video.hidden=false;empty.hidden=true;
+   video.srcObject=stream;video.style.filter=filter;video.hidden=false;stage?.classList.toggle("is-front",facingMode==="user");empty.hidden=true;
    await video.play();setCameraControls(true);notice(facingMode==="user"?"الكاميرا الأمامية جاهزة":"الكاميرا الخلفية جاهزة");
   }catch(error){stream=null;notice(error?.name==="NotAllowedError"?"لم يتم السماح بالكاميرا. راجع إذن المتصفح.":error?.name==="NotFoundError"?"لم يتم العثور على كاميرا متاحة.":"تعذر تشغيل الكاميرا على هذا الجهاز.");}
  }
@@ -56,7 +56,7 @@ export function initSocialUI() {
  capture?.addEventListener("click",()=>{
   if(!stream||!video.videoWidth){notice("انتظر حتى تعمل معاينة الكاميرا.");return;}
   const width=video.videoWidth,height=video.videoHeight;canvas.width=width;canvas.height=height;
-  const context=canvas.getContext("2d");context.save();context.filter=filter;context.drawImage(video,0,0,width,height);context.restore();drawOverlay(context,width,height);
+  const context=canvas.getContext("2d");context.save();context.filter=filter;if(facingMode==="user"){context.translate(width,0);context.scale(-1,1);}context.drawImage(video,0,0,width,height);context.restore();drawOverlay(context,width,height);
   canvas.toBlob(blob=>{
    if(!blob){notice("تعذر تجهيز الصورة.");return;}
    revokeOutput();outputUrl=URL.createObjectURL(blob);imageOutput.src=outputUrl;imageOutput.hidden=false;
