@@ -704,11 +704,12 @@ export function initCamera() {
       const alignment = previousSlot?.meta
         ? estimatePhotonAlignment(previousSlot.canvas, slot.canvas)
         : null;
-      const alignmentValid = !previousSlot?.meta || Boolean(alignment);
-      const alignmentX = previousSlot?.meta && alignment
+      const alignmentValid = !previousSlot?.meta ||
+        (previousSlot.meta.alignmentValid && Boolean(alignment));
+      const alignmentX = previousSlot?.meta && alignmentValid && alignment
         ? previousSlot.meta.alignmentX - alignment.dx
         : 0;
-      const alignmentY = previousSlot?.meta && alignment
+      const alignmentY = previousSlot?.meta && alignmentValid && alignment
         ? previousSlot.meta.alignmentY - alignment.dy
         : 0;
       const detailScore = sharpness / (sharpness + 18);
