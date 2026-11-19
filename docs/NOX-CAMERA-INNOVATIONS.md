@@ -285,3 +285,11 @@ Build a reusable effect graph with four cooperating layers:
 - The next search center is shifted by at most 4 sample pixels on low-power devices and 6 on standard devices. Search remains bounded by frame edges and the existing local search window. Disabling prediction clears velocity and returns matching to the last confirmed center.
 - Prediction does not extrapolate across failed matches, does not alter the camera stream, and does not predict semantic intent. It is a short local motion lead intended to reduce apparent lag during steady movement; acceleration, abrupt direction changes, camera shake, occlusion, or repetitive textures can reduce accuracy.
 - This remains a grayscale template tracker, not AI object tracking or guaranteed prediction. No physical-device performance claim is made until tested on target phones.
+
+
+## P12 — NOX Smart Stabilizer v1 (electronic)
+
+- Adds an opt-in electronic image stabilizer driven by the existing sparse optical-flow samples. It takes the median horizontal and vertical motion from vectors with confidence >= 0.16 and requires at least four usable vectors before updating.
+- Applies inverse, smoothed frame translation with a bounded accumulated offset of ±2.5% per axis and a fixed 1.06× crop to hide exposed edges. The same transform is applied to the rendered source and visual overlays so effects remain aligned. It reuses the existing low-resolution flow pass; no extra full-resolution pixel readback is introduced.
+- Enabling stabilization automatically enables the existing optical-flow sampling if it was off. Disabling optical flow disables stabilization. Stopping the camera resets the accumulated offsets.
+- This is software/electronic stabilization, not optical OIS, gyroscope-based stabilization, or a full EIS pipeline. Median global flow can mistake intentional camera panning for shake; low texture, moving foregrounds, rolling shutter, abrupt movement, or insufficient vectors can reduce effectiveness. It does not promise a shake-free result, and needs physical-device testing.
