@@ -101,3 +101,9 @@
 #nox-flow-mode option{background:#10212f;color:#fff}
 .nox-flow-panel button{min-height:40px;padding:8px 12px;border:1px solid #9de5e9;border-radius:10px;background:linear-gradient(120deg,#d8ffff,#8bcbd1);color:#102b35;font:800 12px Cairo,sans-serif;cursor:pointer}
 .nox-flow-panel small{font-size:11px;line-height:1.7;color:#c7e8ec}
+
+.nox-region-follow-panel{display:grid;gap:8px;padding:12px;border:1px solid #c5a4ed;border-radius:15px;background:linear-gradient(135deg,#251a3d,#182b45);color:#fff}
+.nox-region-follow-panel>b{font-size:12px;letter-spacing:.08em;color:#e1c8ff}
+.nox-region-follow-panel button{min-height:42px;padding:9px 12px;border:1px solid #d0b5f1;border-radius:11px;background:linear-gradient(120deg,#f0e5ff,#c6a7eb);color:#26183d;font:800 12px Cairo,sans-serif;cursor:pointer}
+.nox-region-follow-panel button[aria-pressed="true"]{background:linear-gradient(120deg,#c8f5e9,#8ed8c4);border-color:#a4f1db;color:#10362d}
+.nox-region-follow-panel small{font-size:11px;line-height:1.7;color:#e0d4f0}
