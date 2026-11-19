@@ -116,3 +116,6 @@
 
 .nox-subject-lock-panel #nox-motion-prediction-toggle{background:linear-gradient(120deg,#dcecff,#9bbce8);border-color:#b5d3ff;color:#152a48}
 .nox-subject-lock-panel #nox-motion-prediction-toggle[aria-pressed="true"]{background:linear-gradient(120deg,#d8f4ff,#91c8e7);border-color:#a5e1f6;color:#123349}
+
+.nox-stabilizer-panel #nox-stabilizer-toggle{background:linear-gradient(120deg,#f5e6c5,#d7b56e);border-color:#e6c77e;color:#33240b}
+.nox-stabilizer-panel #nox-stabilizer-toggle[aria-pressed="true"]{background:linear-gradient(120deg,#e8f5ff,#a7d5ed);border-color:#a5d8f1;color:#123349}
