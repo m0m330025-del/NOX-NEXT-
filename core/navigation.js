@@ -1,6 +1,7 @@
 const labels = {
   friends: "قسم الأصدقاء",
   messages: "قسم المحادثات",
+  camera: "قسم الكاميرا",
   calls: "قسم المكالمات",
   stories: "قسم الحالات",
   reels: "قسم المقاطع",
@@ -13,7 +14,7 @@ export function initNavigation() {
   links.forEach(link => {
     link.addEventListener("click", event => {
       const key = link.dataset.nav;
-      if (key !== "home" && key !== "stories" && key !== "friends") {
+      if (!["home", "stories", "friends", "messages", "camera", "reels"].includes(key)) {
         event.preventDefault();
         window.dispatchEvent(new CustomEvent("nox:notice", {
           detail: labels[key] || "هذا القسم قيد التجهيز"
