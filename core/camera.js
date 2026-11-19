@@ -290,12 +290,14 @@ export function initCamera() {
   async function stopCamera() {
     recording = false;
     if (recorder && recorder.state !== "inactive") {
-      try { recorder.stop(); } catch {}
+      try { recorder.stop(); } catch { stopTracks(recordingStream); recordingStream = null; }
+    } else {
+      stopTracks(recordingStream);
+      recordingStream = null;
     }
+    if (recordButton) recordButton.textContent = "فيديو";
     if (animationFrame) cancelAnimationFrame(animationFrame);
     animationFrame = 0;
-    stopTracks(recordingStream);
-    recordingStream = null;
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -451,6 +453,7 @@ export function initCamera() {
       recorder.onerror = () => { recording = false; announce("حدث خطأ أثناء التسجيل."); };
       recorder.onstop = () => {
         recording = false;
+        if (recordButton) recordButton.textContent = "فيديو";
         stopTracks(recordingStream);
         recordingStream = null;
         if (!chunks.length) return announce("لم ينتج ملف فيديو.");
