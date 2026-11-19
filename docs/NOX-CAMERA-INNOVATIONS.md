@@ -268,3 +268,12 @@ Build a reusable effect graph with four cooperating layers:
 - Rejects low-texture anchors, reports confidence, and freezes movement when the match is weak. The fixed template is not silently re-learned, reducing drift at the cost of losing lock under major appearance/lighting changes.
 - Disabling, clearing the manual region, or stopping the camera clears the lock state. Subject Lock and Reality Follow are mutually exclusive to avoid competing region updates.
 - This is a lightweight visual patch lock, not semantic subject recognition, face identification, segmentation, re-identification after full occlusion, or guaranteed tracking. Similar textures can cause false matches; device validation remains pending.
+
+
+## P10 — NOX Smart Re-Acquire (experimental)
+
+- Extends the fixed 5×5 grayscale visual anchor with a wider bounded search after two consecutive low-confidence frames: ±9 samples on low-power devices and ±14 on standard devices.
+- Re-acquisition requires a strict patch error ceiling (mean SAD <= 25) and a distinct-best-match margin (>= 1.5 grayscale levels) against the next-best candidate. Ambiguous matches are rejected; the region remains frozen rather than jumping to a similar texture.
+- The original anchor template is never silently replaced after a match, to limit drift. Diagnostics report attempts and whether a match was reacquired.
+- This is local grayscale patch matching, not semantic object identity, person recognition, robust occlusion reasoning, or guaranteed reacquisition. Similar textures, motion beyond the search window, camera motion, lighting changes, and occlusion can still cause loss. The conservative thresholds favor false negatives over incorrect jumps.
+- Uses the existing low-resolution grayscale frame only. Mobile device performance and visual behavior remain unverified until tested on physical devices.
