@@ -180,6 +180,11 @@ export function initCamera() {
   let regionFollowEnabled = false;
   let regionFollowLastSequence = -1;
   let regionFollowVectorCount = 0;
+  let subjectLockEnabled = false;
+  let subjectLockTemplate = null;
+  let subjectLockCenter = null;
+  let subjectLockLostFrames = 0;
+  let subjectLockConfidence = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -487,7 +492,119 @@ export function initCamera() {
     opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
     opticalFlowPrevious = gray;
     opticalFlowSequence += 1;
+    updateSubjectLock(gray, sampleWidth, sampleHeight);
     updateTrackedRegionFromFlow();
+  }
+
+  function clearSubjectLock() {
+    subjectLockEnabled = false;
+    subjectLockTemplate = null;
+    subjectLockCenter = null;
+    subjectLockLostFrames = 0;
+    subjectLockConfidence = 0;
+    const button = $("#nox-subject-lock-toggle");
+    if (button) {
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = "تثبيت المنطقة المختارة";
+    }
+    const hint = $("#nox-subject-lock-hint");
+    if (hint) hint.textContent = "القفل البصري متوقف";
+  }
+
+  function setSubjectLockEnabled(enabled) {
+    if (!enabled) {
+      clearSubjectLock();
+      announce("تم إيقاف NOX Subject Lock", Boolean(stream));
+      updateDiagnostics();
+      return;
+    }
+    if (!livingMetalRegion || !opticalFlowPrevious || !opticalFlowWidth || !opticalFlowHeight) {
+      announce("شغّل الكاميرا وحدد منطقة وانتظر اكتمال أول عينتين للحركة", Boolean(stream));
+      return;
+    }
+    const centerX = Math.round((livingMetalRegion.x + livingMetalRegion.width / 2) * opticalFlowWidth);
+    const centerY = Math.round((livingMetalRegion.y + livingMetalRegion.height / 2) * opticalFlowHeight);
+    const radius = 2;
+    if (centerX < radius || centerY < radius || centerX >= opticalFlowWidth - radius || centerY >= opticalFlowHeight - radius) {
+      announce("مركز المنطقة قريب جدًا من حافة الصورة؛ حدد منطقة أبعد للداخل", Boolean(stream));
+      return;
+    }
+    const patch = [];
+    for (let y = -radius; y <= radius; y += 1) {
+      for (let x = -radius; x <= radius; x += 1) {
+        patch.push(opticalFlowPrevious[(centerY + y) * opticalFlowWidth + centerX + x]);
+      }
+    }
+    const mean = patch.reduce((sum, value) => sum + value, 0) / patch.length;
+    const variance = patch.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / patch.length;
+    if (variance < 12) {
+      announce("المنطقة قليلة التفاصيل؛ اختر نقطة أوضح داخل الجسم", Boolean(stream));
+      return;
+    }
+    subjectLockTemplate = patch;
+    subjectLockCenter = { x: centerX, y: centerY };
+    subjectLockLostFrames = 0;
+    subjectLockConfidence = 1;
+    subjectLockEnabled = true;
+    setRegionFollowEnabled(false);
+    const button = $("#nox-subject-lock-toggle");
+    if (button) {
+      button.setAttribute("aria-pressed", "true");
+      button.textContent = "إيقاف تثبيت المنطقة";
+    }
+    const hint = $("#nox-subject-lock-hint");
+    if (hint) hint.textContent = "تم حفظ بصمة بصرية محلية — تجنب حجب المنطقة";
+    announce("تم تثبيت بصمة المنطقة بصريًا", Boolean(stream));
+    updateDiagnostics();
+  }
+
+  function updateSubjectLock(gray, width, height) {
+    if (!subjectLockEnabled || !subjectLockTemplate || !subjectLockCenter || !livingMetalRegion) return;
+    const radius = 2;
+    const search = lowPower ? 5 : 7;
+    let bestSad = Infinity;
+    let bestX = subjectLockCenter.x;
+    let bestY = subjectLockCenter.y;
+    for (let cy = Math.max(radius, subjectLockCenter.y - search); cy <= Math.min(height - radius - 1, subjectLockCenter.y + search); cy += 1) {
+      for (let cx = Math.max(radius, subjectLockCenter.x - search); cx <= Math.min(width - radius - 1, subjectLockCenter.x + search); cx += 1) {
+        let sad = 0;
+        let index = 0;
+        for (let py = -radius; py <= radius; py += 1) {
+          for (let px = -radius; px <= radius; px += 1) {
+            sad += Math.abs(gray[(cy + py) * width + cx + px] - subjectLockTemplate[index]);
+            index += 1;
+          }
+        }
+        if (sad < bestSad) {
+          bestSad = sad;
+          bestX = cx;
+          bestY = cy;
+        }
+      }
+    }
+    const meanSad = bestSad / subjectLockTemplate.length;
+    subjectLockConfidence = Math.max(0, Math.min(1, 1 - meanSad / 72));
+    if (meanSad > 38 || subjectLockConfidence < 0.46) {
+      subjectLockLostFrames += 1;
+      const hint = $("#nox-subject-lock-hint");
+      if (hint) hint.textContent = subjectLockLostFrames >= 4
+        ? "فُقدت البصمة مؤقتًا — أوقف الحركة لتجنب الانجراف"
+        : "ثقة القفل منخفضة — جارٍ انتظار تطابق أوضح";
+      return;
+    }
+    subjectLockLostFrames = 0;
+    const dx = Math.max(-0.08, Math.min(0.08, (bestX - subjectLockCenter.x) / width));
+    const dy = Math.max(-0.08, Math.min(0.08, (bestY - subjectLockCenter.y) / height));
+    const displayDx = facing === "user" ? -dx : dx;
+    const region = livingMetalRegion;
+    livingMetalRegion = {
+      ...region,
+      x: Math.max(0, Math.min(1 - region.width, region.x + displayDx)),
+      y: Math.max(0, Math.min(1 - region.height, region.y + dy))
+    };
+    subjectLockCenter = { x: bestX, y: bestY };
+    const hint = $("#nox-subject-lock-hint");
+    if (hint) hint.textContent = "القفل البصري نشط — ثقة المطابقة " + Math.round(subjectLockConfidence * 100) + "%";
   }
 
   function updateTrackedRegionFromFlow() {
@@ -735,6 +852,7 @@ export function initCamera() {
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
+      ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames : "متوقف"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -776,6 +894,7 @@ export function initCamera() {
     qualityTier = lowPower ? 1 : 0;
     resetTemporalMemory();
     resetOpticalFlow();
+    clearSubjectLock();
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -958,6 +1077,7 @@ export function initCamera() {
   });
   $("#nox-region-mask-clear")?.addEventListener("click", () => {
     livingMetalRegion = null;
+    clearSubjectLock();
     regionFollowVectorCount = 0;
     regionFollowLastSequence = opticalFlowSequence;
     regionMaskPreview = null;
@@ -972,6 +1092,7 @@ export function initCamera() {
   $("#nox-temporal-mode")?.addEventListener("change", (event) => setTemporalMode(event.target.value));
   $("#nox-flow-mode")?.addEventListener("change", (event) => setOpticalFlowMode(event.target.value));
   $("#nox-region-follow-toggle")?.addEventListener("click", () => setRegionFollowEnabled(!regionFollowEnabled));
+  $("#nox-subject-lock-toggle")?.addEventListener("click", () => setSubjectLockEnabled(!subjectLockEnabled));
   $("#nox-flow-clear")?.addEventListener("click", () => {
     resetOpticalFlow();
     announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
