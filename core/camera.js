@@ -813,6 +813,7 @@ export function initCamera() {
       map.height = height;
       const context = map.getContext("2d");
       if (!context) throw new Error("confidence map context unavailable");
+      context.drawImage(reference.canvas, 0, 0);
       const tileSize = 24;
       const margin = Math.ceil(Math.max(...pixels.map(item =>
         Math.max(Math.abs(item.slot.meta.alignmentX), Math.abs(item.slot.meta.alignmentY))
