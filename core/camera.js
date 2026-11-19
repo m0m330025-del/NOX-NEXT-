@@ -167,6 +167,15 @@ export function initCamera() {
   let temporalLastCaptureAt = 0;
   let temporalSampleWidth = 0;
   let temporalSampleHeight = 0;
+  let opticalFlowMode = "off";
+  let opticalFlowCanvas = null;
+  let opticalFlowContext = null;
+  let opticalFlowPrevious = null;
+  let opticalFlowWidth = 0;
+  let opticalFlowHeight = 0;
+  let opticalFlowLastAt = 0;
+  let opticalFlowVectors = [];
+  let opticalFlowConfidence = 0;
 
   const supported = {
     secure: window.isSecureContext,
@@ -374,6 +383,146 @@ export function initCamera() {
     ctx.restore();
   }
 
+  function resetOpticalFlow() {
+    opticalFlowPrevious = null;
+    opticalFlowLastAt = 0;
+    opticalFlowVectors = [];
+    opticalFlowConfidence = 0;
+    opticalFlowWidth = 0;
+    opticalFlowHeight = 0;
+    if (opticalFlowCanvas) {
+      opticalFlowCanvas.width = 1;
+      opticalFlowCanvas.height = 1;
+    }
+  }
+
+  function ensureOpticalFlowCanvas() {
+    if (opticalFlowCanvas) return;
+    opticalFlowCanvas = document.createElement("canvas");
+    opticalFlowContext = opticalFlowCanvas.getContext("2d", { willReadFrequently: true, alpha: false });
+  }
+
+  function estimateOpticalFlow() {
+    if (opticalFlowMode === "off" || !video.videoWidth || !video.videoHeight) return;
+    const now = performance.now();
+    const interval = lowPower ? 240 : 160;
+    if (opticalFlowLastAt && now - opticalFlowLastAt < interval) return;
+    ensureOpticalFlowCanvas();
+    if (!opticalFlowContext) return;
+    const sampleWidth = lowPower ? 48 : 64;
+    const sampleHeight = lowPower ? 36 : 48;
+    if (opticalFlowCanvas.width !== sampleWidth || opticalFlowCanvas.height !== sampleHeight) {
+      opticalFlowCanvas.width = sampleWidth;
+      opticalFlowCanvas.height = sampleHeight;
+      opticalFlowPrevious = null;
+    }
+    opticalFlowContext.drawImage(video, 0, 0, sampleWidth, sampleHeight);
+    let pixels;
+    try {
+      pixels = opticalFlowContext.getImageData(0, 0, sampleWidth, sampleHeight).data;
+    } catch {
+      resetOpticalFlow();
+      return;
+    }
+    const gray = new Uint8Array(sampleWidth * sampleHeight);
+    for (let i = 0, p = 0; i < gray.length; i += 1, p += 4) {
+      gray[i] = (pixels[p] * 77 + pixels[p + 1] * 150 + pixels[p + 2] * 29) >> 8;
+    }
+    opticalFlowLastAt = now;
+    if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {
+      opticalFlowPrevious = gray;
+      opticalFlowWidth = sampleWidth;
+      opticalFlowHeight = sampleHeight;
+      opticalFlowVectors = [];
+      opticalFlowConfidence = 0;
+      return;
+    }
+    const cellStep = lowPower ? 8 : 8;
+    const patchRadius = 1;
+    const searchRadius = lowPower ? 2 : 3;
+    const vectors = [];
+    let confidenceTotal = 0;
+    for (let cy = 3; cy < sampleHeight - 3; cy += cellStep) {
+      for (let cx = 3; cx < sampleWidth - 3; cx += cellStep) {
+        let bestSad = Infinity;
+        let secondSad = Infinity;
+        let bestDx = 0;
+        let bestDy = 0;
+        for (let dy = -searchRadius; dy <= searchRadius; dy += 1) {
+          for (let dx = -searchRadius; dx <= searchRadius; dx += 1) {
+            let sad = 0;
+            for (let py = -patchRadius; py <= patchRadius; py += 1) {
+              for (let px = -patchRadius; px <= patchRadius; px += 1) {
+                const index = (cy + py) * sampleWidth + cx + px;
+                const previousIndex = (cy + dy + py) * sampleWidth + cx + dx + px;
+                sad += Math.abs(gray[index] - opticalFlowPrevious[previousIndex]);
+              }
+            }
+            if (sad < bestSad) {
+              secondSad = bestSad;
+              bestSad = sad;
+              bestDx = dx;
+              bestDy = dy;
+            } else if (sad < secondSad) secondSad = sad;
+          }
+        }
+        const uniqueness = secondSad === Infinity ? 0 : Math.max(0, Math.min(1, (secondSad - bestSad) / (secondSad + 1)));
+        const texture = Math.min(1, secondSad / 90);
+        const confidence = uniqueness * texture;
+        if ((Math.abs(bestDx) + Math.abs(bestDy)) > 0 && confidence > 0.06) {
+          vectors.push({ x: cx / sampleWidth, y: cy / sampleHeight, dx: bestDx / sampleWidth, dy: bestDy / sampleHeight, confidence });
+          confidenceTotal += confidence;
+        }
+      }
+    }
+    opticalFlowVectors = vectors;
+    opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
+    opticalFlowPrevious = gray;
+  }
+
+  function drawOpticalFlow(ctx, width, height) {
+    if (opticalFlowMode !== "vectors" || !opticalFlowVectors.length) return;
+    ctx.save();
+    ctx.strokeStyle = "rgba(105, 235, 255, .88)";
+    ctx.fillStyle = "rgba(210, 250, 255, .95)";
+    ctx.lineWidth = Math.max(1, width / 700);
+    ctx.lineCap = "round";
+    opticalFlowVectors.forEach((vector) => {
+      const x = vector.x * width;
+      const y = vector.y * height;
+      const dx = vector.dx * width * 2.8;
+      const dy = vector.dy * height * 2.8;
+      const endX = x + dx;
+      const endY = y + dy;
+      ctx.globalAlpha = 0.25 + vector.confidence * 0.75;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      const angle = Math.atan2(dy, dx);
+      const head = Math.max(3, width / 180);
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - Math.cos(angle - 0.55) * head, endY - Math.sin(angle - 0.55) * head);
+      ctx.lineTo(endX - Math.cos(angle + 0.55) * head, endY - Math.sin(angle + 0.55) * head);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  function setOpticalFlowMode(mode) {
+    opticalFlowMode = mode === "vectors" ? "vectors" : "off";
+    resetOpticalFlow();
+    const hint = $("#nox-flow-hint");
+    if (hint) hint.textContent = opticalFlowMode === "off"
+      ? "تقدير الحركة متوقف"
+      : "Sparse Optical Flow: أسهم تقديرية لحركة أجزاء الصورة — انتظر إطارين";
+    announce(opticalFlowMode === "off" ? "تم إيقاف تقدير الحركة" : "تم تشغيل تقدير الحركة البصري", Boolean(stream));
+    updateDiagnostics();
+    if (stream) renderFrame(false);
+  }
+
   function setTemporalMode(mode) {
     temporalMode = ["off", "motion-trace", "time-echo"].includes(mode) ? mode : "off";
     resetTemporalMemory();
@@ -454,6 +603,8 @@ export function initCamera() {
     if (outputContext) {
       drawLivingMetal(outputContext, outWidth, outHeight);
       renderTemporalMemory(outputContext, outWidth, outHeight);
+      estimateOpticalFlow();
+      drawOpticalFlow(outputContext, outWidth, outHeight);
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
@@ -516,6 +667,7 @@ export function initCamera() {
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
+      ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -556,6 +708,7 @@ export function initCamera() {
     fpsWindowFrames = 0;
     qualityTier = lowPower ? 1 : 0;
     resetTemporalMemory();
+    resetOpticalFlow();
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -587,6 +740,7 @@ export function initCamera() {
       fpsWindowStart = 0;
       fpsWindowFrames = 0;
       resetTemporalMemory();
+      resetOpticalFlow();
       const base = lowPower
         ? { width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
         : { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 30, max: 30 } };
@@ -747,6 +901,12 @@ export function initCamera() {
   });
 
   $("#nox-temporal-mode")?.addEventListener("change", (event) => setTemporalMode(event.target.value));
+  $("#nox-flow-mode")?.addEventListener("change", (event) => setOpticalFlowMode(event.target.value));
+  $("#nox-flow-clear")?.addEventListener("click", () => {
+    resetOpticalFlow();
+    announce("تم مسح بيانات تقدير الحركة", Boolean(stream));
+    updateDiagnostics();
+  });
   $("#nox-temporal-clear")?.addEventListener("click", () => {
     resetTemporalMemory();
     announce("تم مسح الذاكرة الزمنية", Boolean(stream));
