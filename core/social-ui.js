@@ -11,7 +11,7 @@ export function initSocialUI() {
  $("#nox-camera-back")?.addEventListener("click",()=>{window.location.hash="#home";});
  let faceLandmarker=null,faceModelPromise=null,faceAnimationFrame=0,lastFaceDetection=0,faceLandmarks=null,arLens="none";
  const output=$("#nox-camera-output"),imageOutput=$("#nox-captured-image"),videoOutput=$("#nox-recorded-video"),download=$("#nox-camera-download");
- const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator"),recordingTime=$("#nox-recording-time");
+ const fileInput=$("#nox-camera-file"),gallery=$("#nox-camera-gallery"),recordingIndicator=$("#nox-recording-indicator"),recordingTime=$("#nox-recording-time"),retakeButton=$("#nox-camera-retake"),shareButton=$("#nox-camera-share");
  let recordingClock=null,recordingStartedAt=0;
  let sticker="";
  function setCameraControls(active){if(start)start.hidden=active;if(stop)stop.disabled=!active;if(capture)capture.disabled=!active;if(record)record.disabled=!active;if(flip)flip.disabled=!active;}
@@ -254,6 +254,23 @@ export function initSocialUI() {
   else{revokeOutput();notice("نوع الملف غير مدعوم.");return;}
   $("#nox-output-label").textContent="ملف من جهازك — لم يتم رفعه.";
   download.href=outputUrl;download.download=file.name||"nox-media";download.hidden=false;notice("تم فتح الملف للمعاينة المحلية.");
+ });
+ retakeButton?.addEventListener("click",()=>{
+  revokeOutput();if(output)output.hidden=true;
+  if(!stream)startCamera();
+  notice("جاهز لالتقاط صورة أو فيديو جديد.");
+ });
+ shareButton?.addEventListener("click",async()=>{
+  if(!outputUrl)return notice("لا توجد نتيجة جاهزة للمشاركة.");
+  try{
+   const response=await fetch(outputUrl),blob=await response.blob();
+   const filename=download?.download||"nox-media";
+   const file=new File([blob],filename,{type:blob.type||"application/octet-stream"});
+   if(navigator.share&&navigator.canShare?.({files:[file]})){
+    await navigator.share({files:[file],title:"NOX NEXT",text:"لحظتي من NOX NEXT"});
+   }else if(download?.href){download.click();notice("المشاركة غير مدعومة هنا؛ تم فتح خيار حفظ الملف.");}
+   else notice("المشاركة غير مدعومة في هذا المتصفح.");
+  }catch(error){if(error?.name!=="AbortError")notice("تعذرت المشاركة. يمكنك حفظ الملف على جهازك.");}
  });
  window.addEventListener("nox:screenchange",event=>{if(event.detail?.from==="camera"&&event.detail?.to!=="camera")stopCamera();});
  window.addEventListener("pagehide",()=>{if(stream)stream.getTracks().forEach(track=>track.stop());if(outputUrl)URL.revokeObjectURL(outputUrl);});
