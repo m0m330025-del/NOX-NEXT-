@@ -73,21 +73,19 @@ form.addEventListener("submit", async event => {
     const { account, ID } = await import("./appwrite.js");
     if (submittedMode === "signup") {
       stage = "إنشاء الحساب";
-      await account.create({
-        userId: ID.unique(),
-        email,
-        password,
-        name
-      });
+      // Appwrite Web SDK 17 uses positional arguments for Account.create.
+      await account.create(ID.unique(), email, password, name);
     }
 
     stage = "إنشاء جلسة الدخول";
-    await account.createEmailPasswordSession({ email, password });
+    // Appwrite Web SDK 17 uses positional arguments for email/password sessions.
+    await account.createEmailPasswordSession(email, password);
 
     if (submittedMode === "signup") {
       stage = "حفظ العمر والنوع";
       try {
-        await account.updatePrefs({ prefs: { age, gender } });
+        // Account.updatePrefs accepts the preferences object directly in SDK 17.
+        await account.updatePrefs({ age, gender });
       } catch (prefsError) {
         console.error("NOX profile preferences save failed:", prefsError);
         sessionStorage.setItem("nox.profile.pending", JSON.stringify({ age, gender }));
