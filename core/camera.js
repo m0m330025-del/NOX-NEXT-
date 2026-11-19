@@ -593,6 +593,8 @@ export function initCamera() {
 
   function selectLens(index) {
     selectedLens = (index + LENSES.length) % LENSES.length;
+    selectedFilter = null;
+    if (filterSelect) filterSelect.value = "";
     const buttons = [...page.querySelectorAll(".nox-lens-v2")];
     buttons.forEach((button, buttonIndex) => {
       const active = buttonIndex === selectedLens;
