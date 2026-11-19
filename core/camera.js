@@ -238,7 +238,7 @@ export function initCamera() {
     } else {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
-    if (recording) animationFrame = requestAnimationFrame(renderFrame);
+    if (stream && !disposed) animationFrame = requestAnimationFrame(renderFrame);
   }
 
   async function waitForVideo() {
@@ -265,7 +265,8 @@ export function initCamera() {
       ["MediaRecorder", supported.mediaRecorder ? "متاح" : "غير مدعوم"],
       ["تسجيل Canvas", supported.canvasCapture ? "متاح" : "غير مدعوم"],
       ["WebGL", supported.webgl ? "متاح" : "غير مدعوم"],
-      ["FaceDetector", supported.faceDetector ? "متاح تجريبيًا" : "غير متاح في هذا المتصفح"],
+      ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
+      ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
       ["الدقة الحالية", stream && video.videoWidth ? video.videoWidth + " × " + video.videoHeight : "لا يوجد بث"]
     ];
@@ -328,7 +329,7 @@ export function initCamera() {
       video.muted = true;
       await video.play();
       await waitForVideo();
-      try { renderer = createRenderer(); } catch { renderer = null; }
+      try { renderer = renderer || createRenderer(); } catch { renderer = null; }
       renderMode = renderer ? "WebGL" : "Canvas 2D";
       renderFrame();
       setReady(true);
@@ -453,11 +454,6 @@ export function initCamera() {
         announce("الفيديو جاهز للحفظ.");
       };
       recorder.start(300);
-      animationFrame = requestAnimationFrame(function loop() {
-        if (!recording || !stream) return;
-        renderFrame();
-        animationFrame = requestAnimationFrame(loop);
-      });
       recordButton.textContent = "إيقاف";
       announce("جارٍ تسجيل الفيديو…");
     } catch {
