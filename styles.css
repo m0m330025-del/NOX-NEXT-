@@ -442,6 +442,6 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  }
  body[data-nox-screen="camera"] #camera .nox-creator-tools>.creator-tool-group:not(.nox-camera-output){display:none!important}
  body[data-nox-screen="camera"] #camera .nox-creator-tools>.creator-tool-group.is-active:not(.nox-camera-output){display:block!important}
- body[data-nox-screen="camera"] #camera .nox-creator-tools>.nox-camera-output:not([hidden]){display:block!important}
+ body[data-nox-screen="camera"] #camera .nox-creator-tools>.nox-camera-output:not([hidden]){display:grid!important}
  body[data-nox-screen="camera"] #camera .nox-camera-tool-tabs button:focus-visible{outline:2px solid #f5d77e;outline-offset:2px}
 }
