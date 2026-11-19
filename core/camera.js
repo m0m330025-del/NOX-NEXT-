@@ -2382,12 +2382,12 @@ export function initCamera() {
     filterSelect.replaceChildren();
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "اختر فلترًا من مكتبة NOX (200)";
+    placeholder.textContent = "اختر فلترًا من مكتبة NOX (340)";
     filterSelect.append(placeholder);
     NOX_FILTER_GROUPS.forEach((group, family) => {
       const optgroup = document.createElement("optgroup");
       optgroup.label = group[0];
-      NOX_FILTERS.filter((filter) => filter.family === family).forEach((filter) => {
+      NOX_FILTERS.filter((filter) => filter.groupIndex === family).forEach((filter) => {
         const option = document.createElement("option");
         option.value = String(filter.id);
         option.textContent = filter.name;
