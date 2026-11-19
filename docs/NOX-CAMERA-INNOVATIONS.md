@@ -317,3 +317,16 @@ Build a reusable effect graph with four cooperating layers:
 - The feature only affects still-photo timing. It does not delay video recording, change the live preview, or allocate a new frame-history buffer. Motion sampling remains low-resolution and local to the device.
 - This is not true shutter/exposure control, sensor-level motion freeze, deblurring, frame interpolation, burst-frame selection, or recovery of detail lost to motion blur. Browser camera APIs do not expose consistent shutter-speed/ISO control across target phones. A short wait may not improve a moving subject if the camera or subject keeps moving.
 - Canvas/WebGL processing and actual capture quality still require hands-on testing on the Galaxy M12, other Android devices, and iPhone Safari before making performance or image-quality claims.
+
+
+## P16 — NOX Wave Matter Engine v1 (physics-inspired visual simulation)
+
+- Research basis: thin-film interference produces angle/thickness/wavelength-dependent color in soap films and oil layers; refraction/dispersion separates wavelengths; Rayleigh scattering contributes to blue-sky and atmospheric color effects.
+- Adds three optional WebGL modes:
+  - Thin-film interference approximation using separate red/green/blue phase terms derived from a simplified optical-path model.
+  - Subtle wavelength-dispersion-inspired channel offsets near image edges.
+  - A Rayleigh-inspired atmospheric color grade with an image-position sky weighting.
+- Reuses the existing camera texture, render loop, time value, and texel-size uniform. It adds no frame-history buffer and no extra full-resolution readback.
+- Canvas 2D fallback does not reproduce the physical shader; the mode selection is preserved but the effect is WebGL-only.
+- These are physically inspired visual approximations, not material identification, spectroscopy, refractive-index measurement, real ray tracing, or recovery of wavelengths absent from the RGB sensor. The atmospheric mode uses image position as a rough sky proxy and is not semantic sky segmentation.
+- Next research candidates: lightweight lucky-frame selection, glare/flare modeling, polarization-inspired appearance (visual only), fluorescence-inspired emission, and depth/refocus experiments. True light-field reconstruction, UV/IR capture, event-camera timing, and true spectral imaging require additional sensor data or specialized hardware.
