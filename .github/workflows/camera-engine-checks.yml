@@ -6,6 +6,9 @@ on:
     paths:
       - "core/camera.js"
       - "core/nox-filter-engine.js"
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "core/nox-beauty-vision-provider.js"
+      - "core/nox-skin-segmentation-engine.js"
       - "app.js"
       - "index.html"
       - "camera.css"
@@ -37,9 +40,15 @@ jobs:
           cp core/camera.js /tmp/camera.mjs
           cp app.js /tmp/app.mjs
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
+          cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
+          cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
+          cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
+          node --check /tmp/mediapipe-selfie-provider.mjs
+          node --check /tmp/beauty-vision-provider.mjs
+          node --check /tmp/skin-segmentation-engine.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -95,6 +104,19 @@ jobs:
             if (!js.includes(token)) throw new Error('Camera face detection/tracking integration missing: ' + token);
           }
           console.log('Camera face detection and geometric tracking integration hooks verified');
+          for (const token of [
+            'NOXMediaPipeSelfieProvider', 'NOXBeautyVisionProvider',
+            'NOXSkinSegmentationEngine', 'NOX BEAUTY VISION — REAL AI',
+            'runBeautyMaskPreview', 'await releaseBeautyVision()',
+            'maxInputDimension: 256', 'beautySkinEngine.validateMask'
+          ]) {
+            if (!js.includes(token)) throw new Error('Real Beauty Vision camera integration missing: ' + token);
+          }
+          const cameraCss = fs.readFileSync('camera.css', 'utf8');
+          if (!cameraCss.includes('.nox-beauty-ai-panel')) {
+            throw new Error('Beauty Vision panel styles are missing');
+          }
+          console.log('Opt-in MediaPipe face-skin preview and cleanup hooks verified');
           const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
