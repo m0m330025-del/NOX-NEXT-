@@ -31,3 +31,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 7. Deny permission, revoke permission, and test a device with no camera.
 8. Test on a low-memory phone and verify the diagnostics report the active renderer and actual stream dimensions.
 9. Navigate away and back; verify camera indicator turns off after leaving.
+
+
+## Expanded filter catalog (340 presets)
+
+- The original 200 presets remain in their original ten visual families.
+- 140 additional named presets are exposed in seven new picker groups: face makeup, skin/beauty looks, hair looks, eyes/brows/lashes, backgrounds, depth/portrait looks, and particles/decorations.
+- These 140 are currently mapped to existing shared WebGL color-grade families so they can be previewed immediately in the live camera picker. They are **not** dedicated semantic effects: no face-landmark makeup placement, hair segmentation/color isolation, eye/brow tracking, background removal, depth estimation, or particle-follow engine is claimed as implemented.
+- The picker grouping and 340-entry catalog are source-level changes. Camera permission, live rendering, and recording still require physical-device testing.
+- Galaxy M12 performance should be checked with the adaptive quality tiers; the new presets do not create 140 separate shader programs.
