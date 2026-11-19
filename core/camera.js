@@ -326,6 +326,10 @@ export function initCamera() {
   let photonConfidenceCanvas = null;
   let photonConfidenceReferenceIndex = -1;
   let photonConfidenceCounts = { corroborated: 0, single: 0, uncertain: 0 };
+  let photonGhostGuardCanvas = null;
+  let photonGhostGuardReferenceIndex = -1;
+  let photonGhostGuardTiles = new Set();
+  let photonGhostGuardCounts = { blocked: 0, clear: 0 };
 
   const supported = {
     secure: window.isSecureContext,
@@ -498,8 +502,17 @@ export function initCamera() {
     photonConfidenceCounts = { corroborated: 0, single: 0, uncertain: 0 };
   }
 
+  function clearPhotonGhostGuard() {
+    if (photonGhostGuardCanvas) { photonGhostGuardCanvas.width = 1; photonGhostGuardCanvas.height = 1; }
+    photonGhostGuardCanvas = null;
+    photonGhostGuardReferenceIndex = -1;
+    photonGhostGuardTiles = new Set();
+    photonGhostGuardCounts = { blocked: 0, clear: 0 };
+  }
+
   function clearPhotonDetailFusion() {
     clearPhotonConfidenceMap();
+    clearPhotonGhostGuard();
     if (photonFusionCanvas) {
       photonFusionCanvas.width = 1;
       photonFusionCanvas.height = 1;
@@ -743,6 +756,8 @@ export function initCamera() {
             }
             const meanDifference = count ? difference / count : Infinity;
             if (meanDifference > 14) continue;
+            if (photonGhostGuardReferenceIndex === referenceSlotIndex &&
+                photonGhostGuardTiles.has(x + ":" + y)) continue;
             const sharpness = tileSharpness(candidate.pixels, x, y, tileSize, tileSize);
             if (sharpness > bestSharpness * 1.12 && sharpness > bestSharpness + 1.5) {
               best = candidate;
@@ -862,6 +877,101 @@ export function initCamera() {
     }
   }
 
+  function buildPhotonGhostGuard() {
+    if (photonTimelineOrder.length < 2 || photonTimelineSelectedIndex < 0) {
+      announce("يلزم وجود عينتين على الأقل لاكتشاف الأشباح", Boolean(stream));
+      return;
+    }
+    const referenceSlotIndex = photonTimelineOrder[photonTimelineSelectedIndex];
+    const referenceSlot = photonTimelineSlots[referenceSlotIndex];
+    if (!referenceSlot?.meta?.alignmentValid) {
+      announce("العينة المرجعية لا تملك محاذاة موثوقة؛ اختر عينة أخرى", Boolean(stream));
+      return;
+    }
+    const width = referenceSlot.canvas.width;
+    const height = referenceSlot.canvas.height;
+    const scratch = [];
+    try {
+      for (const slotIndex of photonTimelineOrder) {
+        const slot = photonTimelineSlots[slotIndex];
+        if (!slot?.meta?.alignmentValid) continue;
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d", { alpha: false, willReadFrequently: true });
+        if (!context) continue;
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, width, height);
+        drawAlignedPhotonSlot(context, slot, width, height);
+        scratch.push({ slot, canvas, data: context.getImageData(0, 0, width, height).data });
+      }
+      if (scratch.length < 2 || !scratch.some(item => item.slot === referenceSlot)) {
+        announce("لا توجد عينات محاذاة كافية لفحص الحركة الزمنية", Boolean(stream));
+        scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+        return;
+      }
+      const map = document.createElement("canvas");
+      map.width = width;
+      map.height = height;
+      const context = map.getContext("2d");
+      if (!context) throw new Error("ghost guard context unavailable");
+      context.drawImage(referenceSlot.canvas, 0, 0, width, height);
+      const tileSize = 24;
+      const maxOffset = Math.max(...scratch.map(item =>
+        Math.max(Math.abs(item.slot.meta.alignmentX), Math.abs(item.slot.meta.alignmentY))));
+      const margin = Math.ceil(maxOffset) + 2;
+      const nextMask = new Set();
+      const counts = { blocked: 0, clear: 0 };
+      const luminance = (data, x, y) => {
+        const p = (y * width + x) * 4;
+        return (data[p] * 77 + data[p + 1] * 150 + data[p + 2] * 29) / 256;
+      };
+      for (let y = margin; y + tileSize <= height - margin; y += tileSize) {
+        for (let x = margin; x + tileSize <= width - margin; x += tileSize) {
+          let rangeTotal = 0;
+          let samples = 0;
+          for (let py = y; py < y + tileSize; py += 3) {
+            for (let px = x; px < x + tileSize; px += 3) {
+              let low = 255;
+              let high = 0;
+              for (const item of scratch) {
+                const value = luminance(item.data, px, py);
+                low = Math.min(low, value);
+                high = Math.max(high, value);
+              }
+              rangeTotal += high - low;
+              samples += 1;
+            }
+          }
+          const temporalRange = samples ? rangeTotal / samples : 0;
+          const key = x + ":" + y;
+          const blocked = temporalRange > 18;
+          if (blocked) {
+            nextMask.add(key);
+            counts.blocked += 1;
+            context.fillStyle = "rgba(239, 68, 68, 0.56)";
+          } else {
+            counts.clear += 1;
+            context.fillStyle = "rgba(34, 197, 94, 0.18)";
+          }
+          context.fillRect(x, y, tileSize, tileSize);
+        }
+      }
+      clearPhotonGhostGuard();
+      photonGhostGuardCanvas = map;
+      photonGhostGuardReferenceIndex = referenceSlotIndex;
+      photonGhostGuardTiles = nextMask;
+      photonGhostGuardCounts = counts;
+      scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      updatePhotonTimelineUI();
+      announce("Ghost Guard: حجب " + counts.blocked + " منطقة متغيرة زمنيًا، وترك " +
+        counts.clear + " منطقة دون حجب", Boolean(stream));
+    } catch {
+      scratch.forEach(item => { item.canvas.width = 1; item.canvas.height = 1; });
+      announce("تعذر إنشاء خريطة Ghost Guard؛ العينات الأصلية لم تتغير", Boolean(stream));
+    }
+  }
+
   function updatePhotonTimelineUI() {
     const toggle = $("#nox-photon-timeline-toggle");
     const scrub = $("#nox-photon-timeline-scrub");
@@ -874,6 +984,8 @@ export function initCamera() {
     const confidenceButton = $("#nox-photon-confidence-build");
     const confidenceCanvas = $("#nox-photon-confidence-map");
     const confidenceHint = $("#nox-photon-confidence-hint");
+    const ghostCanvas = $("#nox-photon-ghost-map");
+    const ghostHint = $("#nox-photon-ghost-hint");
     const hasFrames = photonTimelineOrder.length > 0;
     if (toggle) {
       toggle.setAttribute("aria-pressed", String(photonTimelineEnabled));
@@ -891,6 +1003,8 @@ export function initCamera() {
     const hasFusion = Boolean(photonFusionCanvas && photonFusionReferenceIndex ===
       (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
     const hasConfidence = Boolean(photonConfidenceCanvas && photonConfidenceReferenceIndex ===
+      (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
+    const hasGhostGuard = Boolean(photonGhostGuardCanvas && photonGhostGuardReferenceIndex ===
       (hasFrames ? photonTimelineOrder[photonTimelineSelectedIndex] : -1));
     if (preview && selectedSlot?.meta) {
       if (preview.width !== selectedSlot.canvas.width || preview.height !== selectedSlot.canvas.height) {
@@ -925,6 +1039,22 @@ export function initCamera() {
         if (confidenceContext) confidenceContext.clearRect(0, 0, confidenceCanvas.width, confidenceCanvas.height);
       }
     }
+    if (ghostCanvas) {
+      if (hasGhostGuard) {
+        if (ghostCanvas.width !== photonGhostGuardCanvas.width || ghostCanvas.height !== photonGhostGuardCanvas.height) {
+          ghostCanvas.width = photonGhostGuardCanvas.width;
+          ghostCanvas.height = photonGhostGuardCanvas.height;
+        }
+        const ghostContext = ghostCanvas.getContext("2d");
+        if (ghostContext) ghostContext.drawImage(photonGhostGuardCanvas, 0, 0);
+      } else {
+        const ghostContext = ghostCanvas.getContext("2d");
+        if (ghostContext) ghostContext.clearRect(0, 0, ghostCanvas.width, ghostCanvas.height);
+      }
+    }
+    if (ghostHint) ghostHint.textContent = hasGhostGuard
+      ? "مناطق محجوبة: " + photonGhostGuardCounts.blocked + " — مناطق غير محجوبة: " + photonGhostGuardCounts.clear + " — حد زمني تقريبي"
+      : "الأحمر اختلاف زمني مرتفع؛ الأخضر اختلاف أقل — ليس كشفًا مضمونًا للأجسام";
     if (confidenceHint) confidenceHint.textContent = hasConfidence
       ? "مدعومة بإطارين إضافيين: " + photonConfidenceCounts.corroborated +
         " — عينة واحدة: " + photonConfidenceCounts.single +
@@ -2123,6 +2253,7 @@ export function initCamera() {
   $("#nox-photon-fusion-build")?.addEventListener("click", buildPhotonDetailFusion);
   $("#nox-photon-fusion-save")?.addEventListener("click", savePhotonDetailFusion);
   $("#nox-photon-confidence-build")?.addEventListener("click", buildPhotonConfidenceMap);
+  $("#nox-photon-ghost-build")?.addEventListener("click", buildPhotonGhostGuard);
   $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
     resetPhotonTimeline();
     announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
