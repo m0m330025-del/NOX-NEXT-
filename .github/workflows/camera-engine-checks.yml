@@ -55,7 +55,8 @@ jobs:
             'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save',
             'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
             'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
-            'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint'
+            'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint'
           ];
           const missing = required.filter(id => !html.includes('id="' + id + '"'));
           if (missing.length) {
@@ -70,7 +71,8 @@ jobs:
           }
           for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion',
             'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
-            'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode']) {
+            'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
+            'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -95,5 +97,9 @@ jobs:
             throw new Error('Temporal memory must retain bounded low-power and standard buffer sizes');
           }
           console.log('Temporal memory engine hooks and bounded buffer profile verified');
+          for (const token of ['lowPower ? 48 : 64', 'lowPower ? 36 : 48', 'lowPower ? 2 : 3', 'getImageData']) {
+            if (!js.includes(token)) throw new Error('Optical flow low-resolution bounded sampling missing: ' + token);
+          }
+          console.log('Sparse optical flow bounded sampling hooks verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
