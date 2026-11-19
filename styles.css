@@ -312,3 +312,6 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  .nox-lens{flex-basis:60px}
  .nox-camera-bottom-controls{bottom:calc(env(safe-area-inset-bottom) + 12px)}
 }
+
+.nox-recording-indicator time{font-variant-numeric:tabular-nums;direction:ltr;min-width:38px;text-align:center;color:#ffe18a;font-weight:900}
+@media(max-width:760px){.nox-recording-indicator{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #ff5b7866;backdrop-filter:blur(12px)}}
