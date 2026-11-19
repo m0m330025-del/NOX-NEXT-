@@ -68,29 +68,45 @@ form.addEventListener("submit", async event => {
   submitButton.disabled = true;
   tabs.forEach(tab => { tab.disabled = true; });
   submitButton.textContent = submittedMode === "signup" ? "جارٍ إنشاء الحساب..." : "جارٍ تسجيل الدخول...";
+  let stage = "تحميل خدمة الحسابات";
   try {
-    // Load the SDK only when the visitor actually submits the form.
+    // Load the official SDK only when the visitor submits the form.
     const { account, ID } = await import("./appwrite.js");
     if (submittedMode === "signup") {
+      stage = "إنشاء الحساب";
       await account.create(ID.unique(), email, password, name);
     }
+    stage = "تسجيل الدخول";
     await account.createEmailPasswordSession(email, password);
     if (submittedMode === "signup") {
-      await account.updatePrefs({ age, gender });
+      stage = "حفظ العمر والنوع";
+      try {
+        await account.updatePrefs({ age, gender });
+      } catch (prefsError) {
+        // Account creation and session are valid; profile data can be saved later.
+        console.error("NOX profile preferences save failed:", prefsError);
+        sessionStorage.setItem("nox.profile.pending", JSON.stringify({ age, gender }));
+      }
     }
+    stage = "تحميل بيانات الحساب";
     const user = await account.get();
     sessionStorage.setItem("nox.auth.notice", "مرحبًا " + (user.name || "بك") + "، تم تسجيل الدخول بنجاح.");
-    window.location.replace("./index.html");
+    window.location.replace("./profile.html");
   } catch (error) {
-    const text = error?.code === 409
+    console.error("NOX authentication failed at stage:", stage, error);
+    const code = Number(error?.code);
+    const serverMessage = typeof error?.message === "string" ? error.message : "";
+    const text = code === 409
       ? "هذا البريد الإلكتروني مسجل بالفعل. جرّب تسجيل الدخول."
-      : error?.code === 401
-        ? "البريد الإلكتروني أو كلمة المرور غير صحيحة."
-        : error?.code === 429
-          ? "محاولات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول."
-          : error instanceof TypeError
-            ? "تعذر الاتصال بخدمة الحسابات. تحقق من الإنترنت وحاول مرة أخرى."
-            : "تعذر إكمال العملية. راجع إعدادات Appwrite وحاول مرة أخرى.";
+      : code === 401
+        ? "بيانات الدخول غير صحيحة أو لم يتم تفعيل الحساب."
+        : code === 400
+          ? "Appwrite رفض البيانات. راجع صيغة البريد وكلمة المرور وإعدادات المصادقة."
+          : code === 429
+            ? "محاولات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول."
+            : error instanceof TypeError
+              ? "تعذر الاتصال بخدمة Appwrite. تأكد من إضافة نطاق الموقع في إعدادات Platforms."
+              : "فشل " + stage + (serverMessage ? ": " + serverMessage : ". راجع إعدادات Appwrite.");
     setMessage(text);
   } finally {
     submitButton.disabled = false;
