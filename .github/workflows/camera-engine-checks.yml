@@ -73,7 +73,7 @@ jobs:
             'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
             'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
             'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode',
-            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames']) {
+            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames', 'subjectLockReacquireAttempts', 'distinctMatchMargin', 'ambiguousReacquire']) {
             if (!js.includes(token)) {
               console.error('Living Metal implementation token missing:', token);
               process.exit(1);
@@ -110,5 +110,9 @@ jobs:
             if (!js.includes(token)) throw new Error('Subject Lock confidence/loss guard missing: ' + token);
           }
           console.log('Subject Lock bounded template matching and loss guards verified');
+          for (const token of ['subjectLockLostFrames >= 2', 'lowPower ? 9 : 14', 'distinctMatchMargin < 1.5', 'meanSad > 25', 'subjectLockWasReacquired']) {
+            if (!js.includes(token)) throw new Error('Subject Lock safe re-acquisition guard missing: ' + token);
+          }
+          console.log('Subject Lock conservative re-acquisition guards verified');
           console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'families');
           NODE
