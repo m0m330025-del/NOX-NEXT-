@@ -70,47 +70,55 @@ form.addEventListener("submit", async event => {
   submitButton.textContent = submittedMode === "signup" ? "جارٍ إنشاء الحساب..." : "جارٍ تسجيل الدخول...";
   let stage = "تحميل خدمة الحسابات";
   try {
-    // Load the official SDK only when the visitor submits the form.
     const { account, ID } = await import("./appwrite.js");
     if (submittedMode === "signup") {
       stage = "إنشاء الحساب";
-      await account.create(ID.unique(), email, password, name);
+      await account.create({
+        userId: ID.unique(),
+        email,
+        password,
+        name
+      });
     }
-    stage = "تسجيل الدخول";
-    await account.createEmailPasswordSession(email, password);
+
+    stage = "إنشاء جلسة الدخول";
+    await account.createEmailPasswordSession({ email, password });
+
     if (submittedMode === "signup") {
       stage = "حفظ العمر والنوع";
       try {
-        await account.updatePrefs({ age, gender });
+        await account.updatePrefs({ prefs: { age, gender } });
       } catch (prefsError) {
-        // Account creation and session are valid; profile data can be saved later.
         console.error("NOX profile preferences save failed:", prefsError);
         sessionStorage.setItem("nox.profile.pending", JSON.stringify({ age, gender }));
       }
     }
+
     stage = "تحميل بيانات الحساب";
     const user = await account.get();
     const notice = submittedMode === "signup"
       ? "مرحبًا " + (user.name || "بك") + "، تم إنشاء حسابك بنجاح."
       : "مرحبًا بعودتك " + (user.name || "إلى NOX NEXT") + "، تم تسجيل الدخول بنجاح.";
     sessionStorage.setItem("nox.auth.notice", notice);
-    // New accounts go to profile setup; returning members go straight to the home feed.
     window.location.replace(submittedMode === "signup" ? "./profile.html" : "./index.html");
   } catch (error) {
     console.error("NOX authentication failed at stage:", stage, error);
     const code = Number(error?.code);
+    const errorType = typeof error?.type === "string" ? error.type : "";
     const serverMessage = typeof error?.message === "string" ? error.message : "";
+    const detail = [errorType, code ? "HTTP " + code : "", serverMessage]
+      .filter(Boolean).join(" — ");
     const text = code === 409
       ? "هذا البريد الإلكتروني مسجل بالفعل. جرّب تسجيل الدخول."
       : code === 401
-        ? "Appwrite رفض تسجيل الدخول (401)." + (serverMessage ? " التفاصيل: " + serverMessage : " راجع البريد وكلمة المرور وحالة الحساب.")
+        ? "رفض Appwrite العملية أثناء " + stage + (detail ? ": " + detail : ". راجع بيانات الدخول وحالة الحساب.")
         : code === 400
-          ? "Appwrite رفض البيانات. راجع صيغة البريد وكلمة المرور وإعدادات المصادقة."
+          ? "Appwrite رفض البيانات أثناء " + stage + (detail ? ": " + detail : ". راجع البيانات المطلوبة.")
           : code === 429
             ? "محاولات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول."
             : error instanceof TypeError
               ? "تعذر الاتصال بخدمة Appwrite. تأكد من إضافة نطاق الموقع في إعدادات Platforms."
-              : "فشل " + stage + (serverMessage ? ": " + serverMessage : ". راجع إعدادات Appwrite.");
+              : "فشل " + stage + (detail ? ": " + detail : ". راجع إعدادات Appwrite.");
     setMessage(text);
   } finally {
     submitButton.disabled = false;
