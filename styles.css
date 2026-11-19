@@ -397,6 +397,7 @@ body[data-nox-screen="camera"] .nox-camera-output{color:#fff}
  body[data-nox-screen="camera"] #camera .nox-lens b{font-size:9px;color:#eee4ff}
  body[data-nox-screen="camera"] #camera .nox-lens.active{
   z-index:3!important;border:1px solid #f4d47c!important;background:linear-gradient(155deg,#50317e,#26134e)!important;
+  transform:translate(-50%,-50%) rotate(var(--wheel-angle,0deg)) translateY(-112px) rotate(calc(0deg - var(--wheel-angle,0deg))) scale(1.12)!important;
   box-shadow:0 0 0 2px rgba(244,212,124,.2),0 0 24px rgba(225,181,77,.35)!important;filter:brightness(1.13)
  }
  body[data-nox-screen="camera"] #camera .nox-lens.active>span{background:linear-gradient(135deg,#f5d77e,#b7832d)!important;color:#27164e!important}
