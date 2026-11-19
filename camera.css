@@ -82,3 +82,6 @@
 .nox-region-mask-panel button[aria-pressed=true]{background:linear-gradient(120deg,#bdeaff,#8d9fcf)}
 .nox-region-mask-panel small{font-size:11px;line-height:1.7;color:#e7dcef}
 .nox-camera-v2-stage.is-live canvas#nox-camera-render{touch-action:none;cursor:crosshair}
+
+.nox-region-mask-overlay{position:absolute;z-index:5;pointer-events:none;border:2px dashed rgba(255,225,145,.98);border-radius:5px;background:rgba(255,225,145,.08);box-shadow:0 0 0 9999px rgba(10,5,25,.12);box-sizing:border-box}
+.nox-region-mask-overlay[hidden]{display:none!important}
