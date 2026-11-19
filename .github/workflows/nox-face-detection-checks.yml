@@ -1,0 +1,51 @@
+name: NOX Face Detection Engine Checks
+
+on:
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-face-detection-engine.js"
+      - ".github/workflows/nox-face-detection-checks.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-face-detection-engine.js"
+      - ".github/workflows/nox-face-detection-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  face-detection-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check module syntax
+        run: |
+          cp core/nox-face-detection-engine.js /tmp/nox-face-detection-engine.mjs
+          node --check /tmp/nox-face-detection-engine.mjs
+      - name: Check conservative detection contract
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const source = fs.readFileSync('core/nox-face-detection-engine.js', 'utf8');
+          const required = [
+            'NOXFaceDetectionEngine',
+            'platform-face-detector',
+            'normalizeRect',
+            'normalizeLandmarks',
+            'landmarkDataProvided',
+            'unsupported',
+            'invalid-source',
+            'detection-error'
+          ];
+          const missing = required.filter((token) => !source.includes(token));
+          if (missing.length) throw new Error('Face engine contract missing: ' + missing.join(', '));
+          if (/predictLandmarks|syntheticLandmarks|generateLandmarks/i.test(source)) {
+            throw new Error('Face engine must not fabricate facial landmarks');
+          }
+          console.log('NOX Face Detection Engine contract verified');
+          NODE
