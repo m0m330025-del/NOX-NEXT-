@@ -26,6 +26,7 @@ uniform sampler2D u_image;
 uniform float u_mode;
 uniform float u_time;
 uniform float u_mirror;
+uniform float u_variant;
 void main() {
   vec2 uv = v_texCoord;
   if (u_mirror > 0.5) uv.x = 1.0 - uv.x;
@@ -119,12 +120,14 @@ export function initCamera() {
   const result = $("#nox-camera-result");
   const photo = $("#nox-camera-photo");
   const videoResult = $("#nox-camera-video-result");
-  const save = $("#nox-camera-save");\n  const filterSelect = $("#nox-filter-select");
+  const save = $("#nox-camera-save");
+  const filterSelect = $("#nox-filter-select");
   if (!video || !stage || !renderCanvas || !startButton) return;
 
   let stream = null;
   let facing = "user";
-  let selectedLens = 0;\n  let selectedFilter = null;
+  let selectedLens = 0;
+  let selectedFilter = null;
   let recorder = null;
   let recordingStream = null;
   let chunks = [];
@@ -233,7 +236,9 @@ export function initCamera() {
     return {
       gl, canvas: glCanvas, program, texture,
       mode: gl.getUniformLocation(program, "u_mode"),
-      mirror: gl.getUniformLocation(program, "u_mirror")
+      mirror: gl.getUniformLocation(program, "u_mirror"),
+      variant: gl.getUniformLocation(program, "u_variant"),
+      time: gl.getUniformLocation(program, "u_time")
     };
   }
 
@@ -295,7 +300,9 @@ export function initCamera() {
       try {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
         gl.uniform1i(gl.getUniformLocation(renderer.program, "u_image"), 0);
-        gl.uniform1f(renderer.mode, LENSES[selectedLens].mode);
+        gl.uniform1f(renderer.mode, selectedFilter ? 10 + selectedFilter.family : LENSES[selectedLens].mode);
+        gl.uniform1f(renderer.variant, selectedFilter ? selectedFilter.variant / 19 : 0);
+        gl.uniform1f(renderer.time, performance.now() / 1000);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -353,7 +360,11 @@ export function initCamera() {
       ["تسجيل Canvas", supported.canvasCapture ? "متاح" : "غير مدعوم"],
       ["WebGL", supported.webgl ? "متاح" : "غير مدعوم"],
       ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
-      ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],\n      ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],\n      ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],\n      ["مؤثرات الزمن", "تدرجات shader لحظية؛ لا يوجد مخزن إطارات زمني بعد"],\n      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
+      ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],
+      ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
+      ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
+      ["مؤثرات الزمن", "تدرجات shader لحظية؛ لا يوجد مخزن إطارات زمني بعد"],
+      ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
       ["الدقة الحالية", stream && video.videoWidth ? video.videoWidth + " × " + video.videoHeight : "لا يوجد بث"]
@@ -596,7 +607,34 @@ export function initCamera() {
     updateDiagnostics();
   }
 
-  function buildFilterLibrary() {\n    if (!filterSelect) return;\n    filterSelect.replaceChildren();\n    const placeholder = document.createElement("option");\n    placeholder.value = "";\n    placeholder.textContent = "اختر فلترًا من مكتبة NOX (200)";\n    filterSelect.append(placeholder);\n    NOX_FILTER_GROUPS.forEach((group, family) => {\n      const optgroup = document.createElement("optgroup");\n      optgroup.label = group[0];\n      NOX_FILTERS.filter((filter) => filter.family === family).forEach((filter) => {\n        const option = document.createElement("option");\n        option.value = String(filter.id);\n        option.textContent = filter.name;\n        optgroup.append(option);\n      });\n      filterSelect.append(optgroup);\n    });\n    filterSelect.addEventListener("change", () => {\n      const id = Number(filterSelect.value);\n      selectedFilter = filterSelect.value === "" ? null : (NOX_FILTERS[id] || null);\n      if (stream) renderFrame(false);\n      announce(selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));\n      updateDiagnostics();\n    });\n  }\n\n  function buildLensWheel() {
+  function buildFilterLibrary() {
+    if (!filterSelect) return;
+    filterSelect.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "اختر فلترًا من مكتبة NOX (200)";
+    filterSelect.append(placeholder);
+    NOX_FILTER_GROUPS.forEach((group, family) => {
+      const optgroup = document.createElement("optgroup");
+      optgroup.label = group[0];
+      NOX_FILTERS.filter((filter) => filter.family === family).forEach((filter) => {
+        const option = document.createElement("option");
+        option.value = String(filter.id);
+        option.textContent = filter.name;
+        optgroup.append(option);
+      });
+      filterSelect.append(optgroup);
+    });
+    filterSelect.addEventListener("change", () => {
+      const id = Number(filterSelect.value);
+      selectedFilter = filterSelect.value === "" ? null : (NOX_FILTERS[id] || null);
+      if (stream) renderFrame(false);
+      announce(selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));
+      updateDiagnostics();
+    });
+  }
+
+  function buildLensWheel() {
     if (!orbit || !track) return;
     track.replaceChildren();
     LENSES.forEach((lens, index) => {
