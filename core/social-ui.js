@@ -251,7 +251,7 @@ export function initSocialUI() {
     if(recordFrame)cancelAnimationFrame(recordFrame);recordFrame=0;
     if(recordStream)recordStream.getTracks().forEach(track=>track.stop());recordStream=null;
     if(recordingClock){clearInterval(recordingClock);recordingClock=null;}
-    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";recordingFinalizing=false;
+    if(recordingIndicator)recordingIndicator.hidden=true;if(record)record.textContent="●";
     notice("حدث خطأ أثناء تسجيل الفيديو. جرّب مدة أقصر أو متصفحًا أحدث.");
    };
    recorder.onstop=()=>{
