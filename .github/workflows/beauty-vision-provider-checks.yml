@@ -1,0 +1,35 @@
+name: NOX Beauty Vision Provider Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-beauty-vision-provider.js"
+      - "tests/nox-beauty-vision-provider.test.mjs"
+      - ".github/workflows/beauty-vision-provider-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-beauty-vision-provider.js"
+      - "tests/nox-beauty-vision-provider.test.mjs"
+      - ".github/workflows/beauty-vision-provider-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  beauty-vision-provider-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check adapter syntax
+        run: |
+          cp core/nox-beauty-vision-provider.js /tmp/nox-beauty-vision-provider.mjs
+          node --check /tmp/nox-beauty-vision-provider.mjs
+      - name: Run provider contract tests
+        run: |
+          cp core/nox-beauty-vision-provider.js core/nox-beauty-vision-provider.mjs
+          node tests/nox-beauty-vision-provider.test.mjs
