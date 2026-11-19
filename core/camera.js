@@ -29,6 +29,7 @@ uniform float u_mirror;
 uniform float u_variant;
 uniform float u_lowLight;
 uniform float u_detail;
+uniform float u_waveMatter;
 uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
@@ -96,6 +97,32 @@ void main() {
       c = mix(c, vec3(wave, 0.25 + 0.65 * (1.0-wave), 0.72), 0.12 + v * 0.22);
       c = clamp(c * (1.04 + v * 0.14), 0.0, 1.0);
     }
+  }
+  if (u_waveMatter > 0.5 && u_waveMatter < 1.5) {
+    // Thin-film interference approximation: phase depends on optical path length and wavelength.
+    float lumWave = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    float filmThickness = 260.0 + 390.0 * (0.5 + 0.5 * sin(uv.x * 8.0 + uv.y * 5.0 + u_time * 0.22));
+    float viewFactor = 0.62 + 0.38 * (1.0 - abs(uv.y - 0.5) * 1.4);
+    float phaseR = 12.56637 * 1.34 * filmThickness * viewFactor / 650.0;
+    float phaseG = 12.56637 * 1.34 * filmThickness * viewFactor / 510.0;
+    float phaseB = 12.56637 * 1.34 * filmThickness * viewFactor / 475.0;
+    vec3 interference = 0.5 + 0.5 * cos(vec3(phaseR, phaseG, phaseB) + vec3(0.0, 0.8, 1.7));
+    float materialGate = smoothstep(0.12, 0.88, lumWave);
+    c = mix(c, c * (0.62 + interference * 0.72), 0.16 + materialGate * 0.22);
+  } else if (u_waveMatter > 1.5 && u_waveMatter < 2.5) {
+    // Dispersion-inspired edge separation; deliberately subtle to avoid false detail claims.
+    vec2 offset = u_texel * (1.0 + 2.0 * abs(uv.y - 0.5));
+    vec3 redSample = texture2D(u_image, uv + vec2(offset.x, 0.0)).rgb;
+    vec3 blueSample = texture2D(u_image, uv - vec2(offset.x, 0.0)).rgb;
+    float edgeGate = smoothstep(0.025, 0.20, length(redSample - blueSample));
+    vec3 dispersed = vec3(redSample.r, c.g, blueSample.b);
+    c = mix(c, dispersed, edgeGate * 0.34);
+  } else if (u_waveMatter > 2.5) {
+    // Rayleigh-like sky scattering grade: wavelength-biased blue lift toward upper image regions.
+    float skyFactor = smoothstep(0.92, 0.18, uv.y);
+    float horizonHaze = smoothstep(0.72, 0.18, uv.y) * 0.10;
+    vec3 skyTint = vec3(0.42, 0.62, 1.0) * (0.10 + skyFactor * 0.20);
+    c = mix(c, c * (vec3(1.0) + skyTint) + vec3(horizonHaze * 0.7, horizonHaze * 0.8, horizonHaze), skyFactor * 0.22);
   }
   if (u_lowLight > 0.5) {
     float lum = dot(c, vec3(0.299, 0.587, 0.114));
@@ -234,6 +261,7 @@ export function initCamera() {
   let stabilizationConfidence = 0;
   let lowLightMode = "off";
   let detailRecoveryMode = "off";
+  let waveMatterMode = "off";
   let motionFreezeEnabled = false;
   let motionFreezeCapturePending = false;
   let motionFreezeCaptureTimer = 0;
@@ -857,6 +885,22 @@ export function initCamera() {
     updateDiagnostics();
   }
 
+  function setWaveMatterMode(mode) {
+    waveMatterMode = ["thin-film", "dispersion", "atmosphere"].includes(mode) ? mode : "off";
+    const control = $("#nox-wave-matter-mode");
+    if (control) control.value = waveMatterMode;
+    const hint = $("#nox-wave-matter-hint");
+    if (hint) hint.textContent = waveMatterMode === "thin-film"
+      ? "تداخل طبقات رقيقة مستوحى من ألوان فقاعات الصابون والزيوت — محاكاة لونية وليست قياسًا للمادة"
+      : waveMatterMode === "dispersion"
+        ? "تشتت لوني محدود عند الحواف مستوحى من الانكسار — قد يظهر انحرافًا لونيًا مصطنعًا"
+        : waveMatterMode === "atmosphere"
+          ? "تدرج جوي مستوحى من تشتت رايلي — لا يستخرج حالة الطقس أو تركيب الهواء"
+          : "متوقف — لا توجد محاكاة موجية";
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  }
+
   function updateMotionFreezeState() {
     const usable = opticalFlowVectors.filter((vector) => vector.confidence >= 0.12);
     if (opticalFlowMode === "off" || usable.length < 4 || !opticalFlowLastAt || performance.now() - opticalFlowLastAt > 700) {
@@ -1017,6 +1061,7 @@ export function initCamera() {
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
         gl.uniform1f(renderer.detail, detailRecoveryMode === "strong" ? 2 : detailRecoveryMode === "natural" ? 1 : 0);
+        gl.uniform1f(gl.getUniformLocation(renderer.program, "u_waveMatter"), waveMatterMode === "thin-film" ? 1 : waveMatterMode === "dispersion" ? 2 : waveMatterMode === "atmosphere" ? 3 : 0);
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -1124,6 +1169,7 @@ export function initCamera() {
       ["NOX Low-Light Rescue", lowLightMode === "off" ? "متوقف" : lowLightMode === "gentle" ? "إنقاذ متوازن" : "إنقاذ قوي"],
       ["NOX True Detail Recovery", detailRecoveryMode === "off" ? "متوقف" : detailRecoveryMode === "natural" ? "حدة طبيعية — WebGL" : "حدة قوية — WebGL"],
       ["NOX Motion Freeze", motionFreezeEnabled ? "مساعد توقيت الالتقاط — حركة " + motionFreezeState + (motionFreezeLastSpeed === null ? "" : " / " + motionFreezeLastSpeed.toFixed(2) + " px/sample") : "متوقف"],
+      ["NOX Wave Matter", waveMatterMode === "off" ? "متوقف" : waveMatterMode === "thin-film" ? "تداخل طبقات رقيقة — محاكاة" : waveMatterMode === "dispersion" ? "تشتت لوني — محاكاة" : "تشتت جوي — محاكاة"],
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
@@ -1416,6 +1462,8 @@ export function initCamera() {
     announce("NOX MOTION FREEZE: ننتظر لحظة حركة أهدأ لمدة قصيرة…");
     waitForMotionFreezeCapture();
   });
+
+  $("#nox-wave-matter-mode")?.addEventListener("change", (event) => setWaveMatterMode(event.target.value));
 
   $("#nox-motion-freeze-toggle")?.addEventListener("click", () => {
     motionFreezeEnabled = !motionFreezeEnabled;
