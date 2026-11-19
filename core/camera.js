@@ -139,6 +139,19 @@ export function initCamera() {
   let pointerStart = null;
   let lastFrameAt = 0;
   let lowPower = false;
+  let qualityTier = 0;
+  let slowFrameStreak = 0;
+  let stableFrameStreak = 0;
+  let averageFrameCost = 0;
+  let measuredFps = 0;
+  let fpsWindowStart = 0;
+  let fpsWindowFrames = 0;
+  let lastRenderedAt = 0;
+  const QUALITY_TIERS = [
+    { name: "جودة عالية", maxDimension: 1280, targetFps: 30 },
+    { name: "متوازن", maxDimension: 960, targetFps: 24 },
+    { name: "إنقاذ الأداء", maxDimension: 640, targetFps: 18 }
+  ];
   let disposed = false;
   let livingMetalEnabled = false;
   let livingMetalRegion = null;
@@ -278,10 +291,18 @@ export function initCamera() {
 
   function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
+    const frameNow = performance.now();
+    const tier = QUALITY_TIERS[qualityTier];
+    const frameInterval = 1000 / tier.targetFps;
+    if (scheduleNext && lastRenderedAt && frameNow - lastRenderedAt < frameInterval * 0.92) {
+      animationFrame = requestAnimationFrame(() => renderFrame(true));
+      return;
+    }
+    const renderStartedAt = frameNow;
     const width = video.videoWidth;
     const height = video.videoHeight;
     if (!width || !height) return;
-    const maxDimension = lowPower ? 960 : 1280;
+    const maxDimension = Math.min(tier.maxDimension, lowPower ? 960 : 1280);
     const scale = Math.min(1, maxDimension / Math.max(width, height));
     const outWidth = Math.max(2, Math.round(width * scale));
     const outHeight = Math.max(2, Math.round(height * scale));
@@ -332,6 +353,35 @@ export function initCamera() {
     }
     const outputContext = renderCanvas.getContext("2d");
     if (outputContext) drawLivingMetal(outputContext, outWidth, outHeight);
+    const renderCost = performance.now() - renderStartedAt;
+    averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
+    lastRenderedAt = performance.now();
+    fpsWindowFrames += 1;
+    if (!fpsWindowStart) fpsWindowStart = lastRenderedAt;
+    if (lastRenderedAt - fpsWindowStart >= 1000) {
+      measuredFps = fpsWindowFrames * 1000 / (lastRenderedAt - fpsWindowStart);
+      fpsWindowFrames = 0;
+      fpsWindowStart = lastRenderedAt;
+    }
+    if (renderCost > frameInterval * 1.25 || averageFrameCost > frameInterval * 0.92) {
+      slowFrameStreak += 1;
+      stableFrameStreak = 0;
+    } else {
+      stableFrameStreak += 1;
+      slowFrameStreak = Math.max(0, slowFrameStreak - 1);
+    }
+    if (slowFrameStreak >= 8 && qualityTier < QUALITY_TIERS.length - 1) {
+      qualityTier += 1;
+      slowFrameStreak = 0;
+      stableFrameStreak = 0;
+      announce("NOX Adaptive Rescue: خفض الحمل إلى " + QUALITY_TIERS[qualityTier].name, true);
+      updateDiagnostics();
+    } else if (stableFrameStreak >= 150 && qualityTier > (lowPower ? 1 : 0)) {
+      qualityTier -= 1;
+      stableFrameStreak = 0;
+      announce("NOX Adaptive Rescue: استعادة تدريجية — " + QUALITY_TIERS[qualityTier].name, true);
+      updateDiagnostics();
+    }
     if (scheduleNext && stream && !disposed) animationFrame = requestAnimationFrame(() => renderFrame(true));
   }
 
@@ -367,6 +417,8 @@ export function initCamera() {
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط — تحديد يدوي" : "نشط — المس الصورة لتحديد المنطقة") : "متوقف"],
       ["تجميل البشرة", "غير مفعّل في هذه النسخة — لا توجد معالجة وجه وهمية"],
       ["المؤثر النشط", renderMode],
+      ["Adaptive Rescue", QUALITY_TIERS[qualityTier].name + " — " + QUALITY_TIERS[qualityTier].targetFps + " FPS مستهدف"],
+      ["أداء المعالجة", averageFrameCost.toFixed(1) + " ms متوسط / " + measuredFps.toFixed(1) + " FPS مقاس"],
       ["الدقة الحالية", stream && video.videoWidth ? video.videoWidth + " × " + video.videoHeight : "لا يوجد بث"]
     ];
     const dl = panel.querySelector("dl");
@@ -391,6 +443,14 @@ export function initCamera() {
     if (recordButton) recordButton.textContent = "فيديو";
     if (animationFrame) cancelAnimationFrame(animationFrame);
     animationFrame = 0;
+    lastRenderedAt = 0;
+    slowFrameStreak = 0;
+    stableFrameStreak = 0;
+    averageFrameCost = 0;
+    measuredFps = 0;
+    fpsWindowStart = 0;
+    fpsWindowFrames = 0;
+    qualityTier = lowPower ? 1 : 0;
     stopTracks(stream);
     stream = null;
     video.pause();
@@ -413,6 +473,14 @@ export function initCamera() {
       if (stream) await stopCamera();
       const memory = Number(navigator.deviceMemory || 4);
       lowPower = memory <= 3 || (navigator.hardwareConcurrency || 4) <= 4;
+      qualityTier = lowPower ? 1 : 0;
+      lastRenderedAt = 0;
+      slowFrameStreak = 0;
+      stableFrameStreak = 0;
+      averageFrameCost = 0;
+      measuredFps = 0;
+      fpsWindowStart = 0;
+      fpsWindowFrames = 0;
       const base = lowPower
         ? { width: { ideal: 640, max: 960 }, height: { ideal: 480, max: 720 }, frameRate: { ideal: 24, max: 30 } }
         : { width: { ideal: 1280, max: 1920 }, height: { ideal: 720, max: 1080 }, frameRate: { ideal: 30, max: 30 } };
