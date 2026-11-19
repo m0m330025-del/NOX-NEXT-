@@ -59,3 +59,11 @@
 .nox-camera-diagnostics dt{color:#cbbce2}
 .nox-camera-diagnostics dd{margin:0;text-align:left;color:#fff;font-weight:700}
 @media(max-width:760px){.nox-camera-diagnostics{font-size:11px}.nox-camera-diagnostics dl{grid-template-columns:1fr auto}}
+
+
+.nox-living-metal-panel{display:grid;gap:8px;padding:12px;border:1px solid #b9d7e8;border-radius:15px;background:linear-gradient(135deg,#17243a,#2c1b4b);color:#fff}
+.nox-living-metal-panel>b{font-size:12px;letter-spacing:.08em;color:#bdeaff}
+.nox-living-metal-panel button{min-height:44px;padding:9px 14px;border:1px solid #d8f4ff;border-radius:12px;background:linear-gradient(120deg,#d8f5ff,#7b9fc7 55%,#c6a7ec);color:#17213a;font:800 12px Cairo,sans-serif;cursor:pointer}
+.nox-living-metal-panel button[aria-pressed=true]{background:linear-gradient(120deg,#a9f0e2,#7aa8c9 55%,#a78de0)}
+.nox-living-metal-panel small{font-size:11px;line-height:1.7;color:#d5e7f6}
+.nox-camera-v2-stage.is-live canvas#nox-camera-render{touch-action:manipulation;cursor:crosshair}
