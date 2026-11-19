@@ -200,3 +200,15 @@ Build a reusable effect graph with four cooperating layers:
 
 **Specification only — not implemented and not device-tested.** This is an approved direction for research and staged engineering, not proof of worldwide novelty. Before implementation is described as an invention or patent candidate, search relevant patent claims and research on neural stylization, video object tracking, temporal effects, material rendering, and interactive AR filters.
 
+
+ 
+## P4 — NOX 200-Preset Filter Engine (first integrated wave)
+
+- Added a local catalog of 200 named presets in ten visual families: material, motion-inspired, energy, world, speed, portrait-inspired, weather, cinema, interactive-inspired, and experimental.
+- The first integrated renderer maps those presets to ten shared shader families, with a Canvas CSS-filter fallback. The same preview canvas is used for photo capture and video recording.
+- The catalog is selectable in the camera UI and does not request another camera stream or upload camera frames.
+- Important limitation: presets are parameter variations over shared families, not 200 individually hand-authored algorithms. Motion/portrait/interactive names currently indicate visual styling only; they do not imply semantic object tracking, face landmarks, voice/gesture recognition, temporal frame reconstruction, real weather simulation, or physical material simulation.
+- The current shader has animated time-dependent styling for selected families, but no temporal frame-history buffer. Living Metal remains a manually placed circular overlay, not object segmentation.
+- Device verification is still required. Automated checks can verify syntax, catalog size, and UI hooks only; they cannot establish visual quality, frame rate, battery use, or compatibility on Galaxy M12/iPhone.
+
+**Status:** first 200-preset selector and shared GPU/Canvas rendering families integrated on the feature branch; advanced tracking, temporal memory, segmentation, and device testing remain incomplete.
