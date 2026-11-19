@@ -192,7 +192,7 @@ export function initCamera() {
     };
   }
 
-  function renderFrame() {
+  function renderFrame(scheduleNext = true) {
     if (!stream || video.readyState < 2 || disposed) return;
     const width = video.videoWidth;
     const height = video.videoHeight;
@@ -244,7 +244,7 @@ export function initCamera() {
     } else {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
-    if (stream && !disposed) animationFrame = requestAnimationFrame(renderFrame);
+    if (scheduleNext && stream && !disposed) animationFrame = requestAnimationFrame(() => renderFrame(true));
   }
 
   async function waitForVideo() {
@@ -366,7 +366,7 @@ export function initCamera() {
     try {
       await videoTrack.applyConstraints({ facingMode: { exact: nextFacing } });
       facing = nextFacing;
-      renderFrame();
+      renderFrame(false);
       announce(facing === "user" ? "الكاميرا الأمامية تعمل" : "الكاميرا الخلفية تعمل");
       updateDiagnostics();
     } catch {
@@ -417,7 +417,7 @@ export function initCamera() {
 
   capture.addEventListener("click", () => {
     if (!stream || !video.videoWidth) return announce("انتظر حتى يظهر بث الكاميرا.");
-    renderFrame();
+    renderFrame(false);
     const output = createOutputCanvas();
     output.toBlob((blob) => {
       if (!blob) return announce("تعذر إنشاء الصورة.");
@@ -481,7 +481,7 @@ export function initCamera() {
     if (track) {
       track.style.transform = "rotate(" + (-selectedLens * 360 / LENSES.length) + "deg)";
     }
-    if (stream) renderFrame();
+    if (stream) renderFrame(false);
     announce("تم اختيار عدسة " + LENSES[selectedLens].name, Boolean(stream));
     updateDiagnostics();
   }
