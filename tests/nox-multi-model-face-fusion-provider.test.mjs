@@ -32,6 +32,9 @@ assert.equal((await fusion.initialize()).fusionMode,"dual-model");
 const result=await fusion.segment(frame);
 assert.equal(result.fusion.state,"fused");
 assert.equal(result.fusion.landmarkStatus,"aligned");
+assert.equal(result.landmarks.frameId, frameId);
+assert.equal(result.landmarks.timestamp, timestamp);
+assert.equal(result.landmarks.coordinateSpace, "source-unmirrored-normalized");
 assert.equal(result.landmarks.state,"partial");
 assert.equal(result.regions.lips.confidence,0.95);
 
