@@ -3541,6 +3541,8 @@ export function initCamera() {
     video.pause();
     video.srcObject = null;
     setReady(false);
+    startButton.disabled = false;
+    startButton.textContent = "تشغيل الكاميرا";
 
     // Finish asynchronous model cleanup only after the camera is no longer live.
     await Promise.all([
@@ -3560,9 +3562,10 @@ export function initCamera() {
     startButton.disabled = true;
     startButton.textContent = "جارٍ طلب الإذن…";
     announce("اسمح للمتصفح باستخدام الكاميرا عند ظهور نافذة الإذن.", false);
+    let generation = 0;
     try {
       if (stream) await stopCamera();
-      const generation = ++cameraStartGeneration;
+      generation = ++cameraStartGeneration;
       const abortController = new AbortController();
       cameraStartAbortController = abortController;
       const isCurrentStart = () => generation === cameraStartGeneration && !abortController.signal.aborted && !disposed;
@@ -3628,12 +3631,12 @@ export function initCamera() {
       announce(messages[error?.name] || ("تعذر تشغيل الكاميرا: " + (error?.message || "خطأ غير معروف")), false);
       updateDiagnostics();
     } finally {
-      if (cameraStartAbortController?.signal.aborted || disposed) {
-        if (cameraStartAbortController?.signal.aborted) cameraStartAbortController = null;
-      } else {
+      if (generation === cameraStartGeneration) {
         cameraStartAbortController = null;
-        startButton.disabled = false;
-        startButton.textContent = "تشغيل الكاميرا";
+        if (!disposed) {
+          startButton.disabled = false;
+          startButton.textContent = "تشغيل الكاميرا";
+        }
       }
     }
   }
