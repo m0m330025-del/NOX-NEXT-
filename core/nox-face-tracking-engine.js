@@ -60,6 +60,24 @@ function landmarkFaceBounds(result) {
   return { x: left, y: top, width, height };
 }
 
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = values.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function landmarkMotionBaseline(previousLandmarks, nextLandmarks) {
+  const dx = [];
+  const dy = [];
+  const count = Math.min(previousLandmarks?.length || 0, nextLandmarks?.length || 0);
+  for (let i = 0; i < count; i += 1) {
+    dx.push(nextLandmarks[i].x - previousLandmarks[i].x);
+    dy.push(nextLandmarks[i].y - previousLandmarks[i].y);
+  }
+  return { x: median(dx), y: median(dy) };
+}
+
 function associationScore(previous, next) {
   const a = center(previous);
   const b = center(next);
@@ -70,10 +88,10 @@ function associationScore(previous, next) {
 }
 
 export class NOXFaceTrackingEngine {
-  constructor({ maxMissedFrames = 3, smoothing = 0.62, minAssociation = 0.18 } = {}) {
+  constructor({ maxMissedFrames = 3, smoothing = 0.62, minAssociation = 0.18, expressionResponse = 1.5 } = {}) {
     this.maxMissedFrames = Math.max(1, Math.floor(maxMissedFrames));
     this.smoothing = clamp(Number(smoothing) || 0.62, 0, 1);
-    this.minAssociation = clamp(Number(minAssociation) || 0.18, 0, 1);
+    this.minAssociation = clamp(Number(minAssociation) || 0.18, 0, 1);\n    this.expressionResponse = clamp(Number(expressionResponse) || 1.5, 0, 4);
     this.track = null;
     this.sequence = 0;
     this.landmarkTrack = null;
@@ -173,13 +191,28 @@ export class NOXFaceTrackingEngine {
     if (previous?.pendingJump) previous.pendingJump = null;
     const reacquired = !previous || previous.missed > 0;
     const alpha = reacquired ? 1 : this.smoothing;
+    const oldLandmarks = previous?.result?.landmarks || [];
+    const motionBaseline = reacquired ? { x: 0, y: 0 }
+      : landmarkMotionBaseline(oldLandmarks, result.landmarks);
+    const faceScale = Math.max(0.08, Math.hypot(nextBox.width, nextBox.height));
     const landmarks = result.landmarks.map((point, index) => {
-      const oldPoint = previous?.result?.landmarks?.[index];
+      const oldPoint = oldLandmarks[index];
       if (!oldPoint || alpha >= 1) return { x: point.x, y: point.y, z: point.z ?? 0 };
+      // Remove the robust median face translation first. Local residual motion
+      // then receives less smoothing, so expressions are not dragged behind
+      // the head's overall movement. This is geometry-only, not expression classification.
+      const residualX = (point.x - oldPoint.x) - motionBaseline.x;
+      const residualY = (point.y - oldPoint.y) - motionBaseline.y;
+      const localMotion = Math.hypot(residualX, residualY) / faceScale;
+      const pointAlpha = clamp(
+        alpha + Math.max(0, localMotion - 0.015) * this.expressionResponse,
+        alpha,
+        0.92
+      );
       return {
-        x: oldPoint.x * (1 - alpha) + point.x * alpha,
-        y: oldPoint.y * (1 - alpha) + point.y * alpha,
-        z: oldPoint.z * (1 - alpha) + (point.z ?? 0) * alpha
+        x: oldPoint.x * (1 - pointAlpha) + point.x * pointAlpha,
+        y: oldPoint.y * (1 - pointAlpha) + point.y * pointAlpha,
+        z: oldPoint.z * (1 - pointAlpha) + (point.z ?? 0) * pointAlpha
       };
     });
     const box = !previous || reacquired ? nextBox : {
