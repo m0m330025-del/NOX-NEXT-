@@ -1,0 +1,121 @@
+name: Build standalone NOX Camera Engine package
+
+on:
+  push:
+    branches: ["feature/nox-camera-engine-standalone-package"]
+    paths:
+      - ".github/workflows/package-camera-engine.yml"
+      - "core/**"
+      - "camera-engine-lab.html"
+      - "camera.css"
+      - "camera-pro.css"
+      - "styles.css"
+      - "docs/**"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout camera engine source
+        uses: actions/checkout@v4
+        with:
+          ref: feature/nox-camera-engine-standalone-package
+
+      - name: Assemble standalone engine and its local dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/NOX-CAMERA-ENGINE/core
+          cat > /tmp/collect.mjs <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          const root = process.cwd();
+          const out = path.join(root, 'dist/NOX-CAMERA-ENGINE');
+          const seen = new Set();
+          const copy = (rel) => {
+            const abs = path.resolve(root, rel);
+            if (!abs.startsWith(root + path.sep) || !fs.existsSync(abs) || !fs.statSync(abs).isFile()) return;
+            const normalized = path.relative(root, abs);
+            if (seen.has(normalized)) return;
+            seen.add(normalized);
+            const target = path.join(out, normalized);
+            fs.mkdirSync(path.dirname(target), {recursive:true});
+            fs.copyFileSync(abs, target);
+            const source = fs.readFileSync(abs, 'utf8');
+            const specs = [];
+            for (const m of source.matchAll(/(?:import|export)\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/g)) specs.push(m[1]);
+            for (const m of source.matchAll(/(?:src|href)=["']([^"']+)["']/gi)) specs.push(m[1]);
+            for (const m of source.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)) specs.push(m[1]);
+            for (const spec of specs) {
+              if (!spec.startsWith('.') || spec.startsWith('data:')) continue;
+              const candidate = path.normalize(path.join(path.dirname(normalized), spec.split(/[?#]/)[0]));
+              if (candidate && fs.existsSync(path.join(root, candidate)) && fs.statSync(path.join(root,candidate)).isFile()) copy(candidate);
+            }
+          };
+          copy('camera-engine-lab.html');
+          copy('core/camera.js');
+          copy('camera.css');
+          copy('camera-pro.css');
+          copy('styles.css');
+          for (const dir of ['docs','tests']) {
+            if (fs.existsSync(path.join(root,dir))) {
+              fs.cpSync(path.join(root,dir), path.join(out,dir), {recursive:true});
+            }
+          }
+          console.log('Collected files:', seen.size);
+          NODE
+          node /tmp/collect.mjs
+
+          cat > dist/NOX-CAMERA-ENGINE/package.json <<'JSON'
+          {
+            "name": "nox-camera-engine",
+            "private": true,
+            "version": "0.1.0",
+            "type": "module",
+            "description": "Standalone browser-based NOX Camera Engine and its test lab",
+            "scripts": {
+              "check": "find core -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check"
+            }
+          }
+          JSON
+
+          cat > dist/NOX-CAMERA-ENGINE/README.md <<'MD'
+          # NOX Camera Engine — Standalone Package
+
+          This package extracts the browser camera engine, its transitive local JavaScript dependencies, the standalone camera lab page, its local CSS dependencies, and the repository's camera documentation/tests where present.
+
+          ## Run locally
+          Serve this directory over localhost/HTTPS (camera access is not available from an arbitrary insecure origin), then open camera-engine-lab.html in a modern browser and grant camera permission.
+
+          Example command: python3 -m http.server 8080
+          Open: http://localhost:8080/camera-engine-lab.html
+
+          ## Checks
+          Run npm run check to syntax-check the extracted JavaScript modules.
+
+          ## Scope and limitations
+          - This is a browser-based camera engine, not a native Android camera application.
+          - Actual camera access, device compatibility, performance, and each processing pipeline must be verified on a physical device.
+          - A module being included or registered does not by itself prove that it executes on every frame.
+          - Effects documented in source as approximations/proxies remain approximations; they are not represented as physical sensor measurements or recovered sensor data.
+          - External model downloads or remote browser libraries, if referenced by the source, still require network access at runtime.
+          MD
+
+          find dist/NOX-CAMERA-ENGINE -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+          cd dist
+          zip -qr NOX-CAMERA-ENGINE-standalone.zip NOX-CAMERA-ENGINE
+          unzip -t NOX-CAMERA-ENGINE-standalone.zip
+          sha256sum NOX-CAMERA-ENGINE-standalone.zip
+
+      - name: Upload standalone ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOX-CAMERA-ENGINE-standalone
+          path: dist/NOX-CAMERA-ENGINE-standalone.zip
+          if-no-files-found: error
+          retention-days: 30
