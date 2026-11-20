@@ -381,6 +381,9 @@ jobs:
           for (const token of ['NOXNeuralCameraOrchestrator', 'noxNeuralCameraOrchestrator.observeFrame', 'noxNeuralCameraOrchestrator.evaluate', 'ذاكرة التكيف قصيرة المدى']) {
             if (!js.includes(token)) throw new Error('NOX Neural Camera Orchestrator is not integrated with measured camera frames: ' + token);
           }
+          for (const token of ['getAdaptiveRecommendation', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'NOX Neural Decision']) {
+            if (!js.includes(token)) throw new Error('Measured neural decision policy is not controlling bounded camera quality tiers: ' + token);
+          }
           console.log('NOX Neural Camera Orchestrator session-only adaptive memory and camera integration verified');
 
           const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
