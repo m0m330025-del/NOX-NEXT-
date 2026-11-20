@@ -106,6 +106,7 @@ export class NOXCortex {
     }
 
     const rejected = [];
+    const invalidDependencies = new Set();
     const addDependencies = (id, visiting = new Set()) => {
       const engine = this.engines.get(id);
       if (!engine || !engine.enabled) {
@@ -113,18 +114,22 @@ export class NOXCortex {
         return false;
       }
       if (visiting.has(id)) {
+        for (const member of visiting) invalidDependencies.add(member);
+        invalidDependencies.add(id);
         rejected.push({ id, reason: "dependency-cycle" });
         return false;
       }
       visiting.add(id);
       for (const dependency of engine.requires) {
         if (!this.engines.has(dependency) || !this.engines.get(dependency).enabled) {
+          invalidDependencies.add(id);
           rejected.push({ id, reason: "dependency-unavailable", dependency });
           visiting.delete(id);
           return false;
         }
         if (!candidates.has(dependency)) candidates.add(dependency);
         if (!addDependencies(dependency, visiting)) {
+          invalidDependencies.add(id);
           visiting.delete(id);
           return false;
         }
@@ -134,6 +139,7 @@ export class NOXCortex {
     };
 
     for (const id of [...candidates]) addDependencies(id);
+    for (const id of invalidDependencies) candidates.delete(id);
 
     const ordered = [];
     const visited = new Set();
