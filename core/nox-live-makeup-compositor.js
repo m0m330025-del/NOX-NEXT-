@@ -2,7 +2,8 @@ import { calculateNOXFaceRollDelta } from "./nox-face-roll-delta.js";
 /**
  * NOX Live Makeup Compositor.
  * Builds a transparent semantic-color layer and composites it over each fresh
- * camera render. It never reuses the previous rendered camera frame.
+ * camera render. It never reuses the previous rendered camera frame. Roll
+ * compensation is applied only when both captured and current estimates are fresh.
  */
 const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
@@ -106,12 +107,15 @@ export class NOXLiveMakeupCompositor {
     this.faceBox = { ...vision.faceBox };
     this.capturedRoll = capturedRoll?.state === "estimated" &&
       capturedRoll.frame?.id === vision.frame.id &&
+      capturedRoll.frame?.timestamp === vision.frame.timestamp &&
       capturedRoll.frame?.capturedAtMonotonicMs === vision.frame.capturedAtMonotonicMs &&
-      capturedRoll.frame?.width === width && capturedRoll.frame?.height === height
+      capturedRoll.frame?.width === width && capturedRoll.frame?.height === height &&
+      capturedRoll.frame?.coordinateSpace === vision.frame.coordinateSpace
       ? capturedRoll : null;
     this.frame = {
       id: vision.frame.id,
       timestamp: vision.frame.timestamp,
+      capturedAtMonotonicMs: vision.frame.capturedAtMonotonicMs ?? null,
       width,
       height,
       coordinateSpace: vision.frame.coordinateSpace
