@@ -677,7 +677,7 @@ export function initCamera() {
           case "capture-decision": return temporalMemoryEngine.getCaptureDecision(input.now);
           case "commit-capture": return temporalMemoryEngine.commitCapture(input.now);
           case "composite-plan": return temporalMemoryEngine.getCompositePlan(input.mode, input.width, input.capturedCurrent);
-          case "reset": return dynamicEngineHost.runSync("temporal-memory", { operation: "reset" });
+          case "reset": return temporalMemoryEngine.reset();
           default: throw new Error("unknown-temporal-memory-operation");
         }
       }
@@ -693,7 +693,7 @@ export function initCamera() {
           case "ingest": return temporalAlignmentEngine.ingest(input.vectors, input.options);
           case "capture": return temporalAlignmentEngine.onCapture(input.index);
           case "transform": return temporalAlignmentEngine.getTransform(input.index);
-          case "reset": return dynamicEngineHost.runSync("temporal-alignment", { operation: "reset" });
+          case "reset": return temporalAlignmentEngine.reset();
           default: throw new Error("unknown-temporal-alignment-operation");
         }
       }
@@ -724,7 +724,7 @@ export function initCamera() {
       capabilities: ["short-horizon-motion-estimation"],
       when: context => context.motionPrediction === true,
       processSync: input => {
-        if (input.operation === "reset") return dynamicEngineHost.runSync("predictive-camera-intelligence", { operation: "reset" });
+        if (input.operation === "reset") return noxPredictiveCameraIntelligence.reset();
         if (input.operation === "observe") return noxPredictiveCameraIntelligence.observe(input.sample);
         return noxPredictiveCameraIntelligence.evaluate(input.evidence);
       }
@@ -1446,8 +1446,8 @@ export function initCamera() {
       buffer.canvas.height = 1;
     });
     temporalBuffers = [];
-    temporalMemoryEngine.reset();
-    temporalAlignmentEngine.reset();
+    dynamicEngineHost.runSync("temporal-memory", { operation: "reset" });
+    dynamicEngineHost.runSync("temporal-alignment", { operation: "reset" });
     dynamicEngineHost.runSync("smart-motion-separation", { operation: "reset" });
     dynamicEngineHost.runSync("adaptive-temporal-fusion", { operation: "reset" });
     motionSeparationResult = motionSeparationEngine.getStatus();
@@ -2233,9 +2233,9 @@ export function initCamera() {
     opticalFlowProcessing = false;
     opticalFlowEngine.reset();
     temporalAlignmentEngine.reset();
-    motionSeparationEngine.reset();
-    adaptiveTemporalFusionEngine.reset();
-    noxPredictiveCameraIntelligence.reset();
+    dynamicEngineHost.runSync("smart-motion-separation", { operation: "reset" });
+    dynamicEngineHost.runSync("adaptive-temporal-fusion", { operation: "reset" });
+    dynamicEngineHost.runSync("predictive-camera-intelligence", { operation: "reset" });
     dynamicEngineHost.runSync("scene-intelligence", { operation: "reset" });
     sceneLuminanceMetrics = null;
     motionSeparationResult = motionSeparationEngine.getStatus();
