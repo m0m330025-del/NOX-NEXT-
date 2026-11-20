@@ -1302,6 +1302,7 @@ export function initCamera() {
       beautyStatus.textContent = "حلّل إطارًا أولًا قبل تجربة التأثير.";
       return;
     }
+    liveMakeupCompositor.clear();
     activeBeautyLook = look;
     beautyLipsButton.disabled = true;
     beautyBrowsButton.disabled = true;
