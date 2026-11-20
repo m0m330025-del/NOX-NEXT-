@@ -24,6 +24,8 @@ const vision = { frame: { width: 2, height: 2 }, regionMasks: {
   lips: { width: 2, height: 2, data, confidence: 0.95, source: "test" }
 } };
 assert.equal(compositor.accept({ sequence: 1, capturedAt: 100, vision, look: { lips: { color: [200, 20, 60], opacity: 0.5 } } }), true);
+assert.equal(compositor.width, 2);
+assert.equal(compositor.height, 2);
 assert.deepEqual(Array.from(compositor.canvas.image.data), [
   0,0,0,0, 200,20,60,128, 200,20,60,64, 0,0,0,0
 ]);
