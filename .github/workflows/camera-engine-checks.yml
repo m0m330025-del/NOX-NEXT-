@@ -233,7 +233,8 @@ jobs:
             'maxInputDimension: 256', 'beautySkinEngine.validateMask',
             'NOXMediaPipeFaceLandmarkerProvider', 'NOXFaceLandmarksEngine',
             'NOXFaceLandmarkTemporalTracker', 'processLiveFaceLandmarks',
-            'faceLandmarkTemporalTracker.update', 'faceLandmarksLiveEnabled',
+            'id: "face-landmark-temporal-tracker"', 'dynamicEngineHost.getHandlers()',
+            'liveFaceTracking: true', 'faceLandmarkTemporalTracker.update', 'faceLandmarksLiveEnabled',
             'runFaceLandmarksPreview', 'await releaseFaceLandmarker()',
             'nox-face-landmarks-preview'
           ]) {
