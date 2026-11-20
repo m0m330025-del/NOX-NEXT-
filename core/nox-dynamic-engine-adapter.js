@@ -113,8 +113,16 @@ export class NOXDynamicEngineAdapter {
 
     const runId = ++this.runSequence;
     const started = this.clock();
-    this.state = "running";
-    this.lastError = null;
+    const onAbort = () => {
+      if (runId !== this.runSequence) return;
+      this.runSequence += 1;
+      this.state = "cancelled";
+      this.lastError = "engine-aborted";
+    };
+    context.signal?.addEventListener("abort", onAbort, { once: true });
+    if (context.signal?.aborted) onAbort();
+    this.state = context.signal?.aborted ? "cancelled" : "running";
+    this.lastError = context.signal?.aborted ? "engine-aborted" : null;
     try {
       if (this.validateInput && this.validateInput(input) === false) throw new TypeError("engine-input-rejected");
       const output = await this.process(input, {
@@ -154,6 +162,8 @@ export class NOXDynamicEngineAdapter {
         if (Number.isFinite(started) && Number.isFinite(ended)) this.lastDurationMs = Math.max(0, ended - started);
       }
       throw error;
+    } finally {
+      context.signal?.removeEventListener("abort", onAbort);
     }
   }
 
