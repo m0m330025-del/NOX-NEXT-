@@ -12,7 +12,7 @@ const MODES = Object.freeze({
 const DEFAULT_ENGINES = [
   { id: "face-detection", group: "face", cost: 1, priority: 100, tags: ["face"], when: c => c.faceRequested === true },
   { id: "face-tracking", group: "face", cost: 1, priority: 90, requires: ["face-detection"], tags: ["face", "motion"], when: c => c.faceRequested === true && c.motion === true },
-  { id: "face-landmarks", group: "face", cost: 2, priority: 95, requires: ["face-detection"], tags: ["face", "geometry"], when: c => c.faceRequested === true && c.landmarksRequested === true },
+  { id: "face-landmarks", group: "face", cost: 2, priority: 95, tags: ["face", "geometry"], when: c => c.faceRequested === true && c.landmarksRequested === true },
   { id: "facial-mask-builder", group: "face", cost: 2, priority: 80, requires: ["face-landmarks"], tags: ["face", "mask"], when: c => c.maskRequested === true },
   { id: "skin-segmentation", group: "beauty", cost: 3, priority: 65, requires: ["face-detection"], tags: ["face", "skin"], when: c => c.skinRequested === true },
   { id: "makeup-rendering", group: "beauty", cost: 2, priority: 70, requires: ["facial-mask-builder"], tags: ["face", "makeup"], when: c => c.makeupRequested === true },
