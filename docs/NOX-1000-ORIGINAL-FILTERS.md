@@ -39,9 +39,11 @@ applyNOXFilter(imageData, chosen.id, performance.now() / 1000);
 
 `applyNOXFilter` mutates and returns the supplied Canvas `ImageData`. For animation, pass an increasing time value. Call it on a working frame, not on the camera's original source buffer.
 
-## Integration boundary
+## Camera integration status
 
-This is a real procedural pixel-processing library, but it is **not yet wired into the live NOX camera UI, WebGL shader pipeline, recording, or photo-export path**. It does not claim face landmarks, face-aware makeup, hair segmentation, depth estimation, or background replacement. Those require dedicated providers and runtime integration.
+The 1,000-entry catalog is now exposed in the existing NOX camera filter selector under **NOX ORIGINAL — 1000 procedural filters**. The live WebGL path maps each selection to one of ten GPU families and its 0–99 variant value, so the camera preview and the existing canvas-recording path render the selected family/variant together. The Canvas 2D fallback uses a family-level approximation; it cannot reproduce the full GPU look.
+
+The exported `applyNOXFilter` CPU pixel processor is a separate renderer-agnostic utility and is not invoked on every live frame, avoiding a costly full-frame CPU readback. The GPU integration currently uses the family/variant coordinates rather than every metadata parameter in the catalog. It does not claim face landmarks, face-aware makeup, hair segmentation, depth estimation, or background replacement. Those require dedicated providers and verified runtime integration.
 
 ## Acceptance tests required before production
 
