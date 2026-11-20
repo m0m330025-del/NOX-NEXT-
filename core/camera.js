@@ -1206,8 +1206,8 @@ export function initCamera() {
 
       beautyState = "نشط — تم اكتشاف بشرة الوجه";
       beautyStatus.textContent =
-        "نجح التقسيم الحقيقي: " + skin.pixelCount + " بكسل وجه / ثقة " +
-        Math.round(skin.confidence * 100) + "% متوسط احتمال فئة البشرة، وليس نسبة دقة مضمونة. الشفاه والحواجب متاحتان كأقنعة دلالية؛ الجفون والخدود غير متاحتين في هذا النموذج.";
+        "نجح تحليل الإطار: " + skin.pixelCount + " بكسل وجه / ثقة " +
+        Math.round(skin.confidence * 100) + "% متوسط احتمال فئة البشرة، وليس نسبة دقة مضمونة. هذه طبقة تشخيصية ثابتة للمعاينة فقط ولا تدخل في الصور أو الفيديو. الشفاه والحواجب متاحتان كأقنعة دلالية؛ الجفون والخدود غير متاحتين في هذا النموذج.";
       beautyButton.textContent = "إعادة تحليل إطار";
     } catch (error) {
       beautyState = "غير متاح";
@@ -1249,7 +1249,7 @@ export function initCamera() {
         throw new Error(result?.reason || "تعذر تنفيذ محرك المكياج عبر NOX CORTEX");
       }
       beautyClearLookButton.disabled = false;
-      beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي فقط.";
+      beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي في معاينة الإطار المحلل فقط؛ التأثير ليس حيًا ولا يدخل في الصورة أو الفيديو المحفوظين حاليًا.";
     } catch (error) {
       beautyStatus.textContent = "لم يُطبّق التأثير: " + String(error?.message || error).slice(0, 140);
     } finally {
@@ -2882,7 +2882,7 @@ export function initCamera() {
     output.toBlob((blob) => {
       if (!blob) return announce("تعذر إنشاء الصورة.");
       showBlob(blob, "image", "nox-next-photo.jpg");
-      announce("تم التقاط الصورة. اضغط حفظ على الجهاز.");
+      announce("تم التقاط الصورة. اضغط حفظ على الجهاز. تنبيه: طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الملف المحفوظ.");
     }, "image/jpeg", 0.92);
   }
 
@@ -3639,7 +3639,7 @@ export function initCamera() {
       };
       recorder.start(300);
       recordButton.textContent = "إيقاف";
-      announce("جارٍ تسجيل الفيديو…");
+      announce("جارٍ تسجيل الفيديو… تنبيه: طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الفيديو المحفوظ.");
     } catch {
       recording = false;
       stopTracks(recordingStream);
