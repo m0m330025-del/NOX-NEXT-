@@ -12,6 +12,7 @@ import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagn
 import { createNOXCortex } from "./nox-cortex.js";
 import { NOXSparseOpticalFlowEngine } from "./nox-optical-flow-engine.js";
 import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
+import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -336,6 +337,7 @@ export function initCamera() {
   let temporalMode = "off";
   let temporalBuffers = [];
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
+  const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
   let opticalFlowSession = 0;
@@ -1041,6 +1043,7 @@ export function initCamera() {
     });
     temporalBuffers = [];
     temporalMemoryEngine.reset();
+    temporalAlignmentEngine.reset();
   }
 
 
@@ -1762,6 +1765,7 @@ export function initCamera() {
 
   function ensureTemporalMemory(width, height) {
     const profile = temporalMemoryEngine.configure(width, height, { lowPower });
+    temporalAlignmentEngine.configure(profile.bufferCount);
     if (temporalBuffers.length === profile.bufferCount &&
         temporalBuffers[0]?.canvas.width === profile.sampleWidth &&
         temporalBuffers[0]?.canvas.height === profile.sampleHeight) return;
@@ -1792,6 +1796,7 @@ export function initCamera() {
       }
       buffer.context.drawImage(renderCanvas, 0, 0, buffer.canvas.width, buffer.canvas.height);
       temporalMemoryEngine.commitCapture(now);
+      temporalAlignmentEngine.onCapture(capture.index);
       capturedCurrent = true;
     }
     const plan = temporalMemoryEngine.getCompositePlan(temporalMode, width, capturedCurrent);
@@ -1800,9 +1805,10 @@ export function initCamera() {
     ctx.globalCompositeOperation = temporalMode === "motion-trace" ? "screen" : "source-over";
     for (const layer of plan) {
       const buffer = temporalBuffers[layer.index];
-      if (!buffer) continue;
-      ctx.globalAlpha = layer.alpha;
-      ctx.drawImage(buffer.canvas, layer.offset, 0, width, height);
+      const alignment = temporalAlignmentEngine.getTransform(layer.index);
+      if (!buffer || !alignment.valid) continue;
+      ctx.globalAlpha = layer.alpha * Math.max(0.2, alignment.confidence);
+      ctx.drawImage(buffer.canvas, layer.offset + alignment.dx * width, alignment.dy * height, width, height);
     }
     ctx.restore();
   }
@@ -1811,6 +1817,7 @@ export function initCamera() {
     opticalFlowSession += 1;
     opticalFlowProcessing = false;
     opticalFlowEngine.reset();
+    temporalAlignmentEngine.reset();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
     opticalFlowVectors = [];
@@ -1895,6 +1902,9 @@ export function initCamera() {
       updateCameraStabilization();
       opticalFlowPrevious = gray;
       opticalFlowSequence += 1;
+      temporalAlignmentEngine.ingest(opticalFlowVectors, {
+        sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight
+      });
       updateSubjectLock(gray, sampleWidth, sampleHeight);
       updateTrackedRegionFromFlow();
     } catch {
