@@ -153,9 +153,13 @@ export class NOXLiveMakeupCompositor {
     }
     let alignment = null;
     if (this.faceBox) {
-      const validCurrent = currentFaceBox &&
-        [currentFaceBox.x, currentFaceBox.y, currentFaceBox.width, currentFaceBox.height].every(Number.isFinite) &&
-        currentFaceBox.width > 0 && currentFaceBox.height > 0;
+      // FaceDetector is an optional experimental browser API. If it is unavailable,
+      // the validated semantic faceBox from the exact makeup source frame remains
+      // a safe short-lived anchor; the overlay's existing maxAgeMs gate still applies.
+      const alignmentFaceBox = currentFaceBox === null ? this.faceBox : currentFaceBox;
+      const validCurrent = alignmentFaceBox &&
+        [alignmentFaceBox.x, alignmentFaceBox.y, alignmentFaceBox.width, alignmentFaceBox.height].every(Number.isFinite) &&
+        alignmentFaceBox.width > 0 && alignmentFaceBox.height > 0;
       const validPrevious = [this.faceBox.x, this.faceBox.y, this.faceBox.width, this.faceBox.height].every(Number.isFinite) &&
         this.faceBox.width > 0 && this.faceBox.height > 0;
       if (!validCurrent || !validPrevious) {
@@ -164,12 +168,12 @@ export class NOXLiveMakeupCompositor {
       }
       const previousCenterX = this.faceBox.x + this.faceBox.width / 2;
       const previousCenterY = this.faceBox.y + this.faceBox.height / 2;
-      const currentCenterX = currentFaceBox.x + currentFaceBox.width / 2;
-      const currentCenterY = currentFaceBox.y + currentFaceBox.height / 2;
+      const currentCenterX = alignmentFaceBox.x + alignmentFaceBox.width / 2;
+      const currentCenterY = alignmentFaceBox.y + alignmentFaceBox.height / 2;
       const centerDrift = Math.hypot(currentCenterX - previousCenterX, currentCenterY - previousCenterY);
-      const scaleX = currentFaceBox.width / this.faceBox.width;
-      const scaleY = currentFaceBox.height / this.faceBox.height;
-      const aspectRatio = (currentFaceBox.width / currentFaceBox.height) /
+      const scaleX = alignmentFaceBox.width / this.faceBox.width;
+      const scaleY = alignmentFaceBox.height / this.faceBox.height;
+      const aspectRatio = (alignmentFaceBox.width / alignmentFaceBox.height) /
         (this.faceBox.width / this.faceBox.height);
       if (centerDrift > this.maxCenterDrift ||
           scaleX < this.minScaleRatio || scaleX > this.maxScaleRatio ||
