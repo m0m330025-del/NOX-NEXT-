@@ -14,6 +14,8 @@ on:
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
       - "tests/nox-temporal-alignment-integration.test.mjs"
+      - "core/nox-smart-motion-separation-engine.js"
+      - "tests/nox-smart-motion-separation-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -30,6 +32,8 @@ on:
       - "tests/nox-optical-flow-engine.test.mjs"
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "core/nox-smart-motion-separation-engine.js"
+      - "tests/nox-smart-motion-separation-engine.test.mjs"
       - "core/nox-temporal-memory-engine.js"
       - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-temporal-memory-engine.js"
@@ -69,6 +73,7 @@ jobs:
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
           cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
           cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
+          cp core/nox-smart-motion-separation-engine.js /tmp/smart-motion-separation-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -80,10 +85,12 @@ jobs:
           node --check /tmp/optical-flow-engine.mjs
           node --check /tmp/temporal-memory-engine.mjs
           node --check /tmp/temporal-alignment-engine.mjs
+          node --check /tmp/smart-motion-separation-engine.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
           node tests/nox-temporal-alignment-engine.test.mjs
           node tests/nox-temporal-alignment-integration.test.mjs
+          node tests/nox-smart-motion-separation-engine.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -215,6 +222,14 @@ jobs:
             if (!js.includes(token)) throw new Error('Temporal alignment is not connected to the camera pipeline: ' + token);
           }
           console.log('Temporal alignment confidence gates, drift bounds, and camera adapter hooks verified');
+          const motionSeparationSource = fs.readFileSync('core/nox-smart-motion-separation-engine.js', 'utf8');
+          for (const token of ['NOXSmartMotionSeparationEngine', 'minBackgroundRatio = 0.55', 'maxMotionResidual = 0.028', 'localizedMotionCandidates', 'dominant-global-motion-found']) {
+            if (!motionSeparationSource.includes(token)) throw new Error('Smart Motion Separation consensus contract missing: ' + token);
+          }
+          for (const token of ['NOXSmartMotionSeparationEngine', 'motionSeparationEngine.process', 'motionSeparationResult.globalVectors', 'NOX Smart Motion Separation']) {
+            if (!js.includes(token)) throw new Error('Smart Motion Separation is not connected to the camera pipeline: ' + token);
+          }
+          console.log('NOX Smart Motion Separation global consensus and camera integration verified');
           const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
           for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
             if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
