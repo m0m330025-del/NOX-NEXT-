@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { NOXBiSeNetFaceParsingProvider } from "../core/nox-bisenet-face-parsing-provider.mjs";
+import { NOXBeautyVisionProvider } from "../core/nox-beauty-vision-provider.mjs";
+import { NOXMakeupRenderingEngine } from "../core/nox-makeup-rendering-engine.mjs";
 
 const size = 4;
 const pixels = size * size;
@@ -31,7 +33,44 @@ assert.ok(result.regions.brows.data instanceof Float32Array);
 assert.ok(result.regions.lips.data instanceof Float32Array);
 assert.deepEqual(result.unavailableRegions, ["eyelids", "cheeks"]);
 assert.ok(result.regions.lips.confidence > 0.9);
-await provider.dispose();
+
+// Verify the real parsing output passes through the shared vision adapter and
+// produces a makeup render only on semantic lip pixels.
+const adapter = new NOXBeautyVisionProvider({
+  provider,
+  minSkinConfidence: 0.8,
+  minRegionConfidence: 0.8,
+  now: () => 100
+});
+assert.equal((await adapter.initialize()).available, true);
+const vision = await adapter.processFrame({
+  source: {},
+  width: size,
+  height: size,
+  frameId: "frame-adapter",
+  timestamp: 100
+});
+assert.equal(vision.state, "partial");
+assert.ok(vision.regionMasks.lips);
+assert.ok(vision.regionMasks.brows);
+const sourcePixels = new Uint8ClampedArray(pixels * 4);
+for (let i = 0; i < pixels; i += 1) {
+  sourcePixels[i * 4] = 120;
+  sourcePixels[i * 4 + 1] = 130;
+  sourcePixels[i * 4 + 2] = 140;
+  sourcePixels[i * 4 + 3] = 255;
+}
+const makeupEngine = new NOXMakeupRenderingEngine({ minConfidence: 0.8 });
+const rendered = makeupEngine.render(
+  { width: size, height: size, data: sourcePixels },
+  vision.regionMasks,
+  { lips: { color: [198, 48, 88], opacity: 0.34 } }
+);
+assert.equal(rendered.state, "rendered");
+assert.equal(rendered.changedPixels, 2);
+assert.deepEqual(Array.from(sourcePixels.slice(6 * 4, 6 * 4 + 3)), [120, 130, 140]);
+
+await adapter.reset();
 assert.equal(provider.state, "idle");
 const missing = new NOXBiSeNetFaceParsingProvider({ modelUrl: "", modelInputSize: size });
 assert.equal((await missing.initialize()).reason, "model-url-not-configured");
