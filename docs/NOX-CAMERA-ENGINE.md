@@ -40,3 +40,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 - These 140 are currently mapped to existing shared WebGL color-grade families so they can be previewed immediately in the live camera picker. They are **not** dedicated semantic effects: no face-landmark makeup placement, hair segmentation/color isolation, eye/brow tracking, background removal, depth estimation, or particle-follow engine is claimed as implemented.
 - The picker grouping and 340-entry catalog are source-level changes. Camera permission, live rendering, and recording still require physical-device testing.
 - Galaxy M12 performance should be checked with the adaptive quality tiers; the new presets do not create 140 separate shader programs.
+
+## Sparse Optical Flow and CORTEX integration
+
+- The block-matching calculation is isolated in `core/nox-optical-flow-engine.js` and accepts bounded grayscale byte planes (maximum dimension 128 by default).
+- The camera samples at 48×36 in low-power mode and 64×48 otherwise; it keeps the existing 160 ms / 240 ms sampling interval and uses a small search radius (2 / 3 pixels).
+- NOX CORTEX plans and executes the `optical-flow` handler. Camera session tokens discard stale results after stop/restart or camera changes; only one flow request is allowed in flight.
+- The reported confidence is a local match-uniqueness/texture heuristic, not a calibrated probability or a measure of semantic correctness. Low-texture and identical frames may produce no vectors.
+- The new deterministic test covers translated texture, vector direction/ranges, still frames, input bounds, and reset behavior. GitHub Actions is configured to run it for relevant PR and branch pushes.
+- This is a source-level integration only. It has not been benchmarked or tested on Galaxy M12 or iOS hardware; do not assume real-device frame-rate or thermal performance.
