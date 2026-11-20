@@ -60,4 +60,24 @@ const excessiveDegree = builder.build({
 });
 assert.equal(excessiveDegree.state, "unavailable");
 assert.equal(excessiveDegree.reason, "closed-lip-loops-or-tessellation-missing");
+
+// Reject edge lists above the configured mesh input budget.
+const manyLandmarks = Array.from({ length: 478 }, () => point(0.98, 0.98));
+manyLandmarks.splice(0, 8,
+  point(0.1,0.1), point(0.9,0.1), point(0.9,0.9), point(0.1,0.9),
+  point(0.35,0.35), point(0.65,0.35), point(0.65,0.65), point(0.35,0.65)
+);
+const excessiveEdges = Array.from({ length: 20_001 }, (_, index) => ({
+  start: 0, end: (index % 477) + 1
+}));
+const tooManyEdges = builder.build({
+  ...input,
+  landmarks: manyLandmarks,
+  connections: {
+    lips: input.connections.lips,
+    tessellation: excessiveEdges
+  }
+});
+assert.equal(tooManyEdges.state, "unavailable");
+assert.equal(tooManyEdges.reason, "closed-lip-loops-or-tessellation-missing");
 console.log("NOX Facial Mask Builder tests passed");
