@@ -47,6 +47,7 @@ uniform float u_lowLight;
 uniform float u_detail;
 uniform float u_waveMatter;
 uniform float u_science;
+uniform float u_signature;
 uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
@@ -252,7 +253,8 @@ void main() {
     c = mix(c,c*0.78+backdropTint*0.28,0.12+u_variant*0.12);
     c += bokeh*0.10;
   } else if (u_filterGroup > 14.5 && u_filterGroup < 15.5) {
-    float depthProxy = smoothstep(0.08,0.92,lum);
+    float depthLum = dot(c, vec3(0.299,0.587,0.114));
+    float depthProxy = smoothstep(0.08,0.92,depthLum);
     float edge = smoothstep(0.25,0.72,length(uv-vec2(0.5)));
     float focus = 1.0-abs(depthProxy-(0.35+u_variant*0.30));
     float blurMix = clamp(edge*(1.0-focus)*(0.10+u_variant*0.18),0.0,0.28);
@@ -268,6 +270,39 @@ void main() {
     float sparkle = (1.0-smoothstep(0.025+u_variant*0.018,0.11+u_variant*0.025,length(local-vec2(drift,0.0))))*step(0.88,seed);
     vec3 particleTint = 0.5+0.5*cos(vec3(0.0,2.094,4.188)+u_variant*6.28318);
     c += particleTint*sparkle*(0.18+u_variant*0.18);
+  }
+  // NOX Signature FX: original procedural live GPU effects.
+  if (u_signature > 0.5 && u_signature < 1.5) {
+    float aurora = sin(uv.x * 10.0 + sin(uv.y * 8.0 + u_time * 0.7) * 2.0 + u_time);
+    float veil = exp(-pow((uv.y - (0.30 + aurora * 0.055)) * 13.0, 2.0));
+    vec3 tint = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + aurora * 1.8 + u_time * 0.25);
+    c = mix(c, c * 0.62 + tint * 0.58, veil * 0.46);
+  } else if (u_signature > 1.5 && u_signature < 2.5) {
+    vec2 p = uv - vec2(0.5);
+    float angle = atan(p.y, p.x);
+    float rings = sin(length(p) * 72.0 - u_time * 2.4 + sin(angle * 5.0) * 2.0);
+    float gate = smoothstep(0.28, 0.92, abs(rings));
+    vec3 spectrum = 0.5 + 0.5 * cos(vec3(0.0, 2.094, 4.188) + angle * 2.0 + u_time * 0.35);
+    c = mix(c, c * 0.58 + spectrum * 0.62, gate * 0.24);
+  } else if (u_signature > 2.5 && u_signature < 3.5) {
+    vec2 grid = uv * vec2(31.0, 53.0);
+    vec2 cell = floor(grid);
+    vec2 local = fract(grid) - 0.5;
+    float seed = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+    float twinkle = 0.5 + 0.5 * sin(u_time * (1.2 + seed * 3.0) + seed * 40.0);
+    float star = (1.0 - smoothstep(0.015, 0.075, length(local))) * step(0.965, seed) * twinkle;
+    c += vec3(0.48, 0.72, 1.0) * star * 0.82;
+  } else if (u_signature > 3.5 && u_signature < 4.5) {
+    vec2 p = uv - vec2(0.5);
+    float phase = length(p) * 42.0 - u_time * 2.0 + sin(atan(p.y, p.x) * 4.0) * 1.8;
+    float ring = exp(-pow((fract(phase / 6.28318) - 0.5) * 12.0, 2.0));
+    vec3 tint = 0.5 + 0.5 * cos(vec3(0.0, 2.0, 4.0) + phase * 0.22);
+    c = mix(c, c * 0.64 + tint * 0.56, 0.08 + ring * 0.24);
+  } else if (u_signature > 4.5) {
+    float scan = 0.5 + 0.5 * sin(uv.y * 720.0 + u_time * 5.0);
+    float sweep = exp(-pow((uv.y - fract(u_time * 0.12)) * 90.0, 2.0));
+    c = mix(c, c * vec3(0.62, 1.08, 1.22) + vec3(0.02, 0.12, 0.18), 0.10 + scan * 0.035);
+    c += vec3(0.08, 0.62, 0.95) * sweep * 0.22;
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -373,6 +408,7 @@ export function initCamera() {
   let detailRecoveryMode = "off";
   let waveMatterMode = "off";
   let scienceMode = "off";
+  let signatureMode = "off";
   let motionFreezeEnabled = false;
   let motionFreezeCapturePending = false;
   let motionFreezeCaptureTimer = 0;
@@ -476,7 +512,31 @@ export function initCamera() {
   faceLandmarksOverlay.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:4;pointer-events:none;";
   stage.append(faceLandmarksOverlay);
   const faceLandmarksContext = faceLandmarksOverlay.getContext("2d");
+
   page.querySelector(".nox-camera-v2-tools")?.prepend(beautyPanel);
+
+  const signaturePanel = document.createElement("section");
+  signaturePanel.className = "nox-signature-fx-panel";
+  const signatureTitle = document.createElement("b");
+  signatureTitle.textContent = "NOX SIGNATURE FX — مؤثرات حصرية";
+  const signatureHint = document.createElement("small");
+  signatureHint.textContent = "مؤثرات إجرائية متحركة تعمل محليًا أثناء المعاينة والتصوير.";
+  const signatureSelect = document.createElement("select");
+  signatureSelect.id = "nox-signature-fx";
+  [["off","بدون مؤثر إضافي"],["aurora","AURORA VEIL — ستائر الشفق"],["prism","PRISM RIFT — شقوق المنشور"],["quantum","QUANTUM DUST — غبار كمي"],["liquid","LIQUID ORBIT — مدارات سائلة"],["holo","HOLO SCAN — مسح هولوجرافي"]].forEach(([value,label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    signatureSelect.append(option);
+  });
+  signaturePanel.append(signatureTitle, signatureHint, signatureSelect);
+  page.querySelector(".nox-camera-v2-tools")?.append(signaturePanel);
+  signatureSelect.addEventListener("change", () => {
+    signatureMode = signatureSelect.value;
+    signatureHint.textContent = signatureMode === "off" ? "المؤثرات الحصرية متوقفة." : "نشط: " + signatureSelect.selectedOptions[0].textContent + " — معالجة محلية مباشرة.";
+    if (stream) renderFrame(false);
+    updateDiagnostics();
+  });
 
   const supported = {
     secure: window.isSecureContext,
@@ -991,6 +1051,7 @@ export function initCamera() {
       detail: gl.getUniformLocation(program, "u_detail"),
       waveMatter: gl.getUniformLocation(program, "u_waveMatter"),
       science: gl.getUniformLocation(program, "u_science"),
+      signature: gl.getUniformLocation(program, "u_signature"),
       texel: gl.getUniformLocation(program, "u_texel")
     };
   }
@@ -2427,6 +2488,8 @@ export function initCamera() {
         gl.uniform1f(renderer.waveMatter, waveMatterMode === "thin-film" ? 1 : waveMatterMode === "dispersion" ? 2 : waveMatterMode === "atmosphere" ? 3 : 0);
         const scienceModes = ["diffraction","fluorescence","polarization","light-field","flare","spectral","atmosphere","material"];
         gl.uniform1f(renderer.science, Math.max(0, scienceModes.indexOf(scienceMode) + 1));
+        const signatureModes = ["aurora", "prism", "quantum", "liquid", "holo"];
+        gl.uniform1f(renderer.signature, Math.max(0, signatureModes.indexOf(signatureMode) + 1));
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         const outputContext = renderCanvas.getContext("2d");
@@ -2566,6 +2629,7 @@ export function initCamera() {
       ["NOX Face Landmarks", faceLandmarksState],
       ["NOX Beauty Vision", beautyState],
       ["تجميل البشرة", "معاينة قناع وجه حقيقي؛ لا يوجد مكياج دقيق بعد"],
+      ["NOX Signature FX", signatureMode === "off" ? "متوقف" : signatureMode + " — مؤثر إجرائي"],
       ["المؤثر النشط", renderMode],
       ["Adaptive Rescue", QUALITY_TIERS[qualityTier].name + " — " + QUALITY_TIERS[qualityTier].targetFps + " FPS مستهدف"],
       ["أداء المعالجة", averageFrameCost.toFixed(1) + " ms متوسط / " + measuredFps.toFixed(1) + " FPS مقاس"],
