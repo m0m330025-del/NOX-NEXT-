@@ -448,7 +448,10 @@ jobs:
           for (const token of ['stableVectors.length < 4', 'maxOffset = 0.025', 'stabilizationTarget.x - motionX * 0.72', 'stabilizationOffset.x * 0.76', 'const zoom = cameraStabilizationEnabled ? 1.06 : 1']) {
             if (!js.includes(token)) throw new Error('Smart Stabilizer confidence, crop, or smoothing guard missing: ' + token);
           }
-          console.log('NOX Smart Stabilizer robust motion estimate and bounded crop verified');
+          for (const token of ['noxPredictiveCameraIntelligence.evaluate', 'prediction.action === "report-short-horizon-estimate"', 'prediction.confidence >= 0.2', 'prediction.horizonMs <= 250', 'prediction.prediction.dx * 0.18', 'prediction.prediction.dy * 0.18']) {
+            if (!js.includes(token)) throw new Error('Predictive stabilization assist must be confidence-, freshness-, and horizon-gated: ' + token);
+          }
+          console.log('NOX Smart Stabilizer robust motion estimate, bounded crop, and predictive assist guards verified');
           for (const token of ['darkMask = 1.0 - smoothstep', 'u_lowLight > 1.5', 'smoothstep(0.025, 0.16, edge1)', 'lowLightMode === "strong"', 'u_texel']) {
             if (!js.includes(token)) throw new Error('Low-light adaptive shadow/noise treatment missing: ' + token);
           }
