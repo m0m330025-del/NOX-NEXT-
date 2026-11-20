@@ -207,7 +207,7 @@ jobs:
           console.log('Living Metal prototype hooks present: 3');
           console.log('Manual region mask hooks present: 3');
           const temporalAlignmentSource = fs.readFileSync('core/nox-temporal-alignment-engine.js', 'utf8');
-          for (const token of ['minConfidence = 0.16', 'minVectorCount = 4', 'maxAccumulated = 0.12', 'inconsistent-motion-vectors', 'onCapture(index)', 'getTransform(index)', 'reset()']) {
+          for (const token of ['minConfidence = 0.16', 'minVectorCount = 4', 'maxAccumulated = 0.12', 'minSpatialSpan = 0.25', 'localized-motion-vectors', 'inconsistent-motion-vectors', 'onCapture(index)', 'getTransform(index)', 'reset()']) {
             if (!temporalAlignmentSource.includes(token)) throw new Error('Temporal alignment confidence and drift policy missing: ' + token);
           }
           for (const token of ['NOXTemporalAlignmentEngine', 'temporalAlignmentEngine.ingest', 'temporalAlignmentEngine.onCapture', 'temporalAlignmentEngine.getTransform', 'alignment.dx * width']) {
