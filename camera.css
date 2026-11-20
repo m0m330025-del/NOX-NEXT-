@@ -193,3 +193,8 @@
 .nox-hybrid-weight{width:100%;accent-color:#7ce9ff}
 .nox-hybrid-mixer-footer{font-size:10px;color:#bcd0e6}
 .nox-hybrid-reset{border:1px solid #8eb5d6;border-radius:8px;padding:6px 10px;background:#172f4b;color:#fff;font:700 10px Cairo,sans-serif}
+
+
+.nox-evolve-button{width:100%;border:1px solid rgba(185,151,255,.55);border-radius:12px;padding:11px 14px;background:linear-gradient(115deg,#37206f,#7044a8 55%,#273f83);color:#fff;font:800 13px Cairo,sans-serif;cursor:pointer;box-shadow:0 7px 22px rgba(70,42,130,.22)}
+.nox-evolve-button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.nox-evolve-status{display:block;line-height:1.7;color:#d8c8f4;font-size:11px;min-height:22px}
