@@ -63,7 +63,8 @@ export function applyNOXFilter(imageData, id, timeSeconds = 0) {
   const recipe = getNOXFilter(id);
   if (!recipe) throw new Error("Unknown NOX filter: " + id);
   if (!imageData || !imageData.data || !Number.isInteger(imageData.width) ||
-      !Number.isInteger(imageData.height)) {
+      !Number.isInteger(imageData.height) || imageData.width <= 0 || imageData.height <= 0 ||
+      imageData.data.length < imageData.width * imageData.height * 4) {
     throw new TypeError("Expected a Canvas ImageData object");
   }
   const { data, width, height } = imageData;
