@@ -34,7 +34,7 @@
 .nox-camera-caption-label{margin-top:3px;color:#e8d09d}
 #nox-camera-caption{min-height:46px;border:1px solid #ffffff24;border-radius:13px;background:#111019;color:#fff}
 .nox-camera-advanced{border:1px solid #ffffff20;border-radius:16px;background:#15131e;overflow:hidden}
-.nox-camera-advanced>summary{display:flex;flex-direction:column;gap:3px;min-height:58px;padding:11px 14px;cursor:pointer;list-style:none;color:#f0d59b;font-weight:800;touch-action:manipulation}
+.nox-camera-advanced>summary{position:relative;display:flex;flex-direction:column;gap:3px;min-height:58px;padding:11px 14px;cursor:pointer;list-style:none;color:#f0d59b;font-weight:800;touch-action:manipulation}
 .nox-camera-advanced>summary::-webkit-details-marker{display:none}
 .nox-camera-advanced>summary:after{content:"＋";position:absolute;inset-inline-end:16px;margin-top:5px;color:#d5b779;font-size:18px}
 .nox-camera-advanced[open]>summary:after{content:"−"}
