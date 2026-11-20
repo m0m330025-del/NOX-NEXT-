@@ -2993,7 +2993,7 @@ export function initCamera() {
     output.toBlob((blob) => {
       if (!blob) return announce("تعذر إنشاء الصورة.");
       showBlob(blob, "image", "nox-next-photo.jpg");
-      announce("تم التقاط الصورة. اضغط حفظ على الجهاز. تنبيه: طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الملف المحفوظ.");
+      announce("تم التقاط الصورة. اضغط حفظ على الجهاز. مؤثرات خرج الكاميرا النشطة مضمّنة في الملف المحفوظ.");
     }, "image/jpeg", 0.92);
   }
 
@@ -3751,7 +3751,7 @@ export function initCamera() {
       };
       recorder.start(300);
       recordButton.textContent = "إيقاف";
-      announce("جارٍ تسجيل الفيديو… تنبيه: طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الفيديو المحفوظ.");
+      announce("جارٍ تسجيل الفيديو… مؤثرات خرج الكاميرا النشطة مضمّنة في الفيديو.");
     } catch {
       recording = false;
       stopTracks(recordingStream);
