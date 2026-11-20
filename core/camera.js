@@ -523,7 +523,7 @@ export function initCamera() {
   }
 
   // Unlock audio synchronously from the camera navigation gesture where possible.
-  page.querySelectorAll('[data-nav="camera"], .add-story').forEach((control) => {
+  document.querySelectorAll('[data-nav="camera"], .add-story').forEach((control) => {
     control.addEventListener("click", () => { getNOXAudioContext(); }, { passive: true });
   });
 
