@@ -28,6 +28,8 @@ on:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
       - "core/nox-face-landmarks-engine.js"
+      - "core/nox-face-landmark-temporal-tracker.js"
+      - "tests/nox-face-landmark-temporal-tracker.test.mjs"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-facial-mask-builder.js"
       - "core/nox-face-topology-intelligence.js"
