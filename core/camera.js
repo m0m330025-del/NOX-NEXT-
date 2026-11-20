@@ -4002,9 +4002,8 @@ export function initCamera() {
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     });
-    if (track) {
-      track.style.transform = "rotate(" + (-selectedLens * 360 / LENSES.length) + "deg)";
-    }
+    // The swipe-first selector is a static rail; do not apply legacy orbit transforms.
+    if (track) track.style.transform = "none";
     if (stream) renderFrame(false);
     announce("تم اختيار عدسة " + LENSES[selectedLens].name, Boolean(stream));
     updateDiagnostics();
