@@ -22,6 +22,7 @@ import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelli
 import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 import { NOXEngineRegistry } from "./nox-engine-registry.js";
 import { NOXEngineOrchestrationPlanner } from "./nox-engine-orchestration-planner.js";
+import { NOXDynamicEngineAdapter, NOXDynamicEngineAdapterHost } from "./nox-dynamic-engine-adapter.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -570,6 +571,96 @@ export function initCamera() {
   noxEngineRegistry.register({ id: "face-landmarks", name: "Face Landmarks", category: "vision", instance: faceLandmarksEngine, capabilities: ["landmark-analysis"] });
   noxEngineRegistry.register({ id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision", instance: facialMaskBuilder, capabilities: ["geometric-face-masks"] });
   noxEngineRegistry.register({ id: "skin-segmentation", name: "Skin Segmentation", category: "vision", instance: beautySkinEngine, capabilities: ["skin-region-segmentation"] });
+  const dynamicEngineHost = new NOXDynamicEngineAdapterHost({ cortex, registry: noxEngineRegistry });
+  const cameraEngineAdapters = [
+    new NOXDynamicEngineAdapter({
+      id: "optical-flow", name: "Sparse Optical Flow", category: "motion",
+      instance: opticalFlowEngine, cost: 2, priority: 75,
+      capabilities: ["sparse-motion-vectors"],
+      when: context => context.motion === true,
+      process: (input, { context }) => opticalFlowEngine.process(
+        input.current, input.previous, input.width, input.height,
+        { cellStep: 8, patchRadius: 1, searchRadius: context.lowPower ? 2 : 3 }
+      )
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "face-detection", name: "Face Detection", category: "vision",
+      instance: faceDetectionEngine, cost: 1, priority: 100,
+      capabilities: ["platform-face-detection"],
+      when: context => context.faceRequested === true,
+      process: source => faceDetectionEngine.detect(source)
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "face-tracking", name: "Face Tracking", category: "vision",
+      instance: faceTrackingEngine, cost: 1, priority: 90,
+      requires: ["face-detection"], requiresCapabilities: ["platform-face-detection"],
+      capabilities: ["face-track-continuity"],
+      when: context => context.faceRequested === true && context.motion === true,
+      process: detection => detection?.state === "ok"
+        ? { detection, tracking: faceTrackingEngine.update(detection.faces) }
+        : { detection, tracking: null }
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "face-landmarks", name: "Face Landmarks", category: "vision",
+      instance: faceLandmarksEngine, cost: 2, priority: 95,
+      capabilities: ["landmark-analysis"],
+      when: context => context.faceRequested === true && context.landmarksRequested === true,
+      process: async source => {
+        if (!faceLandmarkerProvider) faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+        if (faceLandmarkerProvider.state !== "ready") {
+          const initialized = await faceLandmarkerProvider.initialize();
+          if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
+        }
+        const scale = Math.min(1, 256 / Math.max(source.videoWidth, source.videoHeight));
+        const width = Math.max(2, Math.round(source.videoWidth * scale));
+        const height = Math.max(2, Math.round(source.videoHeight * scale));
+        beautyInputCanvas.width = width;
+        beautyInputCanvas.height = height;
+        beautyInputContext.drawImage(source, 0, 0, width, height);
+        const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
+        if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
+        return { detected, analysis: faceLandmarksEngine.analyze(detected) };
+      }
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision",
+      instance: facialMaskBuilder, cost: 1, priority: 80,
+      requires: ["face-landmarks"], requiresCapabilities: ["landmark-analysis"],
+      capabilities: ["geometric-face-masks"],
+      when: context => context.maskRequested === true,
+      process: input => ({
+        ...input,
+        maskPreview: facialMaskBuilder.build(input.detected, {
+          width: input.detected.width, height: input.detected.height
+        })
+      })
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "skin-segmentation", name: "Skin Segmentation", category: "vision",
+      instance: beautySkinEngine, cost: 3, priority: 65,
+      capabilities: ["skin-region-segmentation"],
+      when: context => context.skinRequested === true,
+      process: async currentFrame => {
+        if (!beautyVisionAdapter) throw new Error("beauty-vision-provider-not-initialized");
+        const vision = await beautyVisionAdapter.processFrame(currentFrame);
+        if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
+          throw new Error(vision?.reason || "لم يتم اكتشاف منطقة بشرة موثوقة");
+        }
+        const skin = beautySkinEngine.validateMask({
+          data: vision.skinMask.data,
+          width: vision.skinMask.width,
+          height: vision.skinMask.height,
+          confidence: vision.skinMask.confidence,
+          source: vision.skinMask.source,
+          faceBox: vision.faceBox
+        });
+        if (skin.state !== "accepted") throw new Error("رفض قناع البشرة: " + skin.reason);
+        return { vision, skin };
+      }
+    })
+  ];
+  cameraEngineAdapters.forEach(adapter => dynamicEngineHost.register(adapter));
+
   let beautyFrameCounter = 0;
   let beautyLastTimestamp = 0;
   let beautyProcessing = false;
