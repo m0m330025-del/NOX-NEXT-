@@ -1047,6 +1047,8 @@ export function initCamera() {
     temporalBuffers = [];
     temporalMemoryEngine.reset();
     temporalAlignmentEngine.reset();
+    motionSeparationEngine.reset();
+    motionSeparationResult = motionSeparationEngine.getStatus();
   }
 
 
