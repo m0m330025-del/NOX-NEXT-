@@ -10,9 +10,13 @@ const clamp01 = (value) => Math.min(1, Math.max(0, value));
 const REGIONS = new Set(["lips", "eyelids", "cheeks", "brows"]);
 
 export class NOXMakeupRenderingEngine {
-  constructor({ minConfidence = 0.8, maxOpacity = 0.7 } = {}) {
+  constructor({ minConfidence = 0.8, maxOpacity = 0.7, edgeSoftness = 0.35 } = {}) {
+    if (!Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8) {
+      throw new TypeError("invalid-makeup-edge-softness");
+    }
     this.minConfidence = clamp01(Number(minConfidence));
     this.maxOpacity = clamp01(Number(maxOpacity));
+    this.edgeSoftness = edgeSoftness;
     this.lastResult = null;
   }
 
@@ -65,17 +69,45 @@ export class NOXMakeupRenderingEngine {
     }
 
     const output = new Uint8ClampedArray(pixels);
+    const overlay = new Uint8ClampedArray(width * height * 4);
     let changedPixels = 0;
     const changed = new Uint8Array(width * height);
 
     for (const { mask, color, opacity } of accepted) {
       for (let i = 0; i < mask.data.length; i += 1) {
-        const alpha = clamp01(Number(mask.data[i])) * opacity;
+        const probability = clamp01(Number(mask.data[i]));
+        if (!probability) continue;
+        const x = i % width, y = Math.floor(i / width);
+        let neighbors = 0, neighborSlots = 0;
+        for (let oy = -1; oy <= 1; oy += 1) {
+          for (let ox = -1; ox <= 1; ox += 1) {
+            if (!ox && !oy) continue;
+            const nx = x + ox, ny = y + oy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            neighborSlots += 1;
+            if (Number(mask.data[ny * width + nx]) > 0) neighbors += 1;
+          }
+        }
+        const neighborRatio = neighborSlots ? neighbors / neighborSlots : 1;
+        const boundaryFactor = 1 - this.edgeSoftness * (1 - neighborRatio);
+        const alpha = probability * opacity * boundaryFactor;
         if (alpha <= 0) continue;
         const p = i * 4;
         output[p] = output[p] * (1 - alpha) + color[0] * alpha;
         output[p + 1] = output[p + 1] * (1 - alpha) + color[1] * alpha;
         output[p + 2] = output[p + 2] * (1 - alpha) + color[2] * alpha;
+
+        // Build one transparent source-over layer from the same rendered makeup.
+        // This lets the camera compositor place the engine's actual result without
+        // recalculating colors or mask opacity in a second rendering path.
+        const previousAlpha = overlay[p + 3] / 255;
+        const combinedAlpha = alpha + previousAlpha * (1 - alpha);
+        if (combinedAlpha > 0) {
+          overlay[p] = (color[0] * alpha + overlay[p] * previousAlpha * (1 - alpha)) / combinedAlpha;
+          overlay[p + 1] = (color[1] * alpha + overlay[p + 1] * previousAlpha * (1 - alpha)) / combinedAlpha;
+          overlay[p + 2] = (color[2] * alpha + overlay[p + 2] * previousAlpha * (1 - alpha)) / combinedAlpha;
+          overlay[p + 3] = combinedAlpha * 255;
+        }
         changed[i] = 1;
       }
     }
@@ -84,6 +116,8 @@ export class NOXMakeupRenderingEngine {
     const result = {
       state: "rendered",
       image: { width, height, data: output },
+      overlay: { width, height, data: overlay },
+      frame: image.frame && typeof image.frame === "object" ? { ...image.frame } : null,
       regions: accepted.map(({ region, confidence }) => ({ region, confidence })),
       changedPixels,
       source: "provider-semantic-masks"
