@@ -36,7 +36,7 @@ const missingProvider = planner.evaluate({
   registeredEngines: inventory.filter(item => item.id !== "flow"),
   capabilityEvidence: evidence
 });
-assert.equal(missingProvider.selectedEngineCount, 0);
+assert.deepEqual(missingProvider.steps.map(item => item.engine), ["new-engine"]);
 assert.equal(missingProvider.decisions.find(item => item.engine === "motion").reason, "capability-evidence-unavailable");
 
 const conflict = planner.evaluate({
