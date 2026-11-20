@@ -9,7 +9,6 @@ export function initCameraPresentation() {
   if (!page || !tools || tools.dataset.presentationReady === "true") return;
 
   const title = tools.querySelector(".nox-camera-v2-section-title");
-  const orbit = tools.querySelector(".nox-lens-orbit");
   const filterLibrary = tools.querySelector(".nox-filter-library");
   const result = tools.querySelector(".nox-camera-v2-result");
   const captionLabel = tools.querySelector(".nox-camera-caption-label");
