@@ -2958,8 +2958,12 @@ export function initCamera() {
     }
     if (renderer) {
       const { gl, canvas: glCanvas, texture } = renderer;
-      glCanvas.width = outWidth;
-      glCanvas.height = outHeight;
+      // Assigning canvas dimensions clears its drawing buffer. Only resize when
+      // the source dimensions actually change; keep the viewport current per frame.
+      if (glCanvas.width !== outWidth || glCanvas.height !== outHeight) {
+        glCanvas.width = outWidth;
+        glCanvas.height = outHeight;
+      }
       gl.viewport(0, 0, outWidth, outHeight);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
