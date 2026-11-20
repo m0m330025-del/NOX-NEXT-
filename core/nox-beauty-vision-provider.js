@@ -47,10 +47,12 @@ export class NOXBeautyVisionProvider {
     this.now = now;
     this.state = "idle";
     this.sequence = 0;
+    this.lifecycleGeneration = 0;
     this.lastResult = null;
   }
 
   setProvider(provider) {
+    this.lifecycleGeneration += 1;
     this.sequence += 1;
     this.provider = provider;
     this.state = "idle";
@@ -58,21 +60,32 @@ export class NOXBeautyVisionProvider {
   }
 
   async initialize() {
-    if (!this.provider || typeof this.provider.segment !== "function") {
+    const generation = this.lifecycleGeneration;
+    const provider = this.provider;
+    if (!provider || typeof provider.segment !== "function") {
       this.state = "unavailable";
       return { state: this.state, available: false, reason: "provider-not-configured" };
     }
     try {
-      if (typeof this.provider.initialize === "function") {
-        const result = await this.provider.initialize();
+      if (typeof provider.initialize === "function") {
+        const result = await provider.initialize();
+        if (generation !== this.lifecycleGeneration || provider !== this.provider) {
+          return { state: "idle", available: false, reason: "initialization-superseded" };
+        }
         if (result?.available === false) {
           this.state = "unavailable";
           return { state: this.state, available: false, reason: "provider-unavailable" };
         }
       }
+      if (generation !== this.lifecycleGeneration || provider !== this.provider) {
+        return { state: "idle", available: false, reason: "initialization-superseded" };
+      }
       this.state = "ready";
       return { state: this.state, available: true };
     } catch {
+      if (generation !== this.lifecycleGeneration || provider !== this.provider) {
+        return { state: "idle", available: false, reason: "initialization-superseded" };
+      }
       this.state = "error";
       return { state: this.state, available: false, reason: "provider-initialize-failed" };
     }
@@ -199,6 +212,7 @@ export class NOXBeautyVisionProvider {
   }
 
   async reset() {
+    this.lifecycleGeneration += 1;
     this.sequence += 1;
     const provider = this.provider;
     this.state = "idle";
