@@ -174,6 +174,8 @@ export class NOXLiveMakeupCompositor {
     const context = targetCanvas.getContext("2d");
     if (!context) return false;
     context.save();
+    // Canvas composes M * A * R: rotate in unmirrored source coordinates
+    // around the captured face center, align to the current face, then mirror once.
     if (mirrored) {
       context.translate(targetCanvas.width, 0);
       context.scale(-1, 1);
