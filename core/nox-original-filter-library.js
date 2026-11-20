@@ -20,11 +20,6 @@ const PALETTES = [
 const clamp = (v, lo = 0, hi = 255) => Math.max(lo, Math.min(hi, v));
 const fract = (v) => v - Math.floor(v);
 const hash = (n) => fract(Math.sin(n * 127.1 + 311.7) * 43758.5453123);
-const smooth = (a, b, x) => {
-  const t = clamp((x - a) / (b - a), 0, 1) / 255;
-  const q = t * 255;
-  return q * q * (3 - 2 * q);
-};
 const luminance = (r, g, b) => (r * 0.2126 + g * 0.7152 + b * 0.0722);
 
 function makeRecipe(index) {
@@ -110,8 +105,10 @@ export function applyNOXFilter(imageData, id, timeSeconds = 0) {
         b += veil * 115 * p[2] * intensity;
       } else if (familyIndex === 3) { // Chromatic channel geometry
         const shift = Math.sin((ny + nx) * recipe.scale * 7 + phase) * recipe.warp * 3;
-        r = src[clamp((y * width + clamp(x + shift, 0, width - 1)) * 4, 0, src.length - 4)];
-        b = src[clamp((y * width + clamp(x - shift, 0, width - 1)) * 4 + 2, 0, src.length - 2)];
+        const redX = Math.round(clamp(x + shift, 0, width - 1));
+        const blueX = Math.round(clamp(x - shift, 0, width - 1));
+        r = src[(y * width + redX) * 4];
+        b = src[(y * width + blueX) * 4 + 2];
       } else if (familyIndex === 4) { // Dream haze + soft bloom
         const haze = (1 - lum / 255) * 28 * intensity + recipe.glow * 70;
         r = r0 * 0.78 + 255 * p[0] * 0.22 + haze;
