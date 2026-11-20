@@ -31,7 +31,7 @@ function intersectionOverUnion(a, b) {
 
 export class NOXMultiModelFaceFusionProvider {
   constructor({ segmentationProvider, landmarkProvider, landmarksEngine = new NOXFaceLandmarksEngine(),
-    minFaceBoxIoU = 0.2, requireLandmarks = false } = {}) {
+    minFaceBoxIoU = 0.2, requireLandmarks = false, ownsLandmarkProvider = true } = {}) {
     if (!segmentationProvider || typeof segmentationProvider.segment !== "function") {
       throw new TypeError("fusion-segmentation-provider-required");
     }
@@ -46,6 +46,7 @@ export class NOXMultiModelFaceFusionProvider {
     this.landmarksEngine = landmarksEngine;
     this.minFaceBoxIoU = minFaceBoxIoU;
     this.requireLandmarks = Boolean(requireLandmarks);
+    this.ownsLandmarkProvider = Boolean(ownsLandmarkProvider);
     this.state = "idle";
     this.sequence = 0;
   }
@@ -129,9 +130,8 @@ export class NOXMultiModelFaceFusionProvider {
   async dispose() {
     this.sequence += 1;
     this.state = "idle";
-    await Promise.allSettled([
-      this.segmentationProvider.dispose?.(),
-      this.landmarkProvider.dispose?.()
-    ]);
+    const cleanup = [this.segmentationProvider.dispose?.()];
+    if (this.ownsLandmarkProvider) cleanup.push(this.landmarkProvider.dispose?.());
+    await Promise.allSettled(cleanup);
   }
 }
