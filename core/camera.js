@@ -3181,7 +3181,7 @@ export function initCamera() {
       drawOpticalFlow(outputContext, outWidth, outHeight);
       outputContext.restore();
       drawFaceTrackingOverlay(outputContext, outWidth, outHeight);
-      liveMakeupCompositor.draw(renderCanvas, { now: performance.now(), mirrored: facing === "user" });
+      liveMakeupCompositor.draw(renderCanvas, { now: performance.now(), mirrored: facing === "user", currentFaceBox: ["acquired", "tracking"].includes(faceDetectionState) ? trackedFace?.box || null : null });
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
