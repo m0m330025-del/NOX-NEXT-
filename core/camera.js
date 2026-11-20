@@ -1025,10 +1025,13 @@ export function initCamera() {
         : "تتبع حي — " + analysis.landmarkCount + " نقطة";
       faceDigitalTwinButton.disabled = false;
       faceDigitalTwinStatus.textContent = "النقاط الحية متاحة للتقرير البحثي؛ لا تُستخدم كأقنعة مكياج.";
+      const rollFresh = latestFaceRollEstimate?.state === "estimated" &&
+        performance.now() - latestFaceRollEstimate.frame.capturedAtMonotonicMs <= 220;
       faceLandmarksStatus.textContent =
         (tracking.state === "coasting" ? "فقد مؤقت — الاحتفاظ بآخر نقاط موثوقة. " : "تتبع حي نشط. ") +
         "الحالة: " + tracking.state + " — المناطق: " + Object.keys(analysis.regions).join("، ") +
         (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
+        (rollFresh ? " — قياس ميل حديث متاح." : " — قياس الميل غير صالح للتعويض حاليًا.") +
         ". التحديث كل " + interval + " مللي ثانية تقريبًا عبر NOX CORTEX.";
     } catch (error) {
       if (session !== faceLandmarksSession || !faceLandmarksLiveEnabled) return;
