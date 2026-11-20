@@ -14,6 +14,7 @@ import { NOXSparseOpticalFlowEngine } from "./nox-optical-flow-engine.js";
 import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
 import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
 import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-engine.js";
+import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -375,6 +376,7 @@ export function initCamera() {
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
+  const adaptiveTemporalFusionEngine = new NOXAdaptiveTemporalFusionEngine();
   let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
@@ -1151,6 +1153,7 @@ export function initCamera() {
     temporalMemoryEngine.reset();
     temporalAlignmentEngine.reset();
     motionSeparationEngine.reset();
+    adaptiveTemporalFusionEngine.reset();
     motionSeparationResult = motionSeparationEngine.getStatus();
   }
 
@@ -1909,13 +1912,24 @@ export function initCamera() {
     }
     const plan = temporalMemoryEngine.getCompositePlan(temporalMode, width, capturedCurrent);
     if (!plan.length) return;
+    const alignments = plan.map(layer => ({
+      index: layer.index,
+      ...temporalAlignmentEngine.getTransform(layer.index)
+    }));
+    const fusion = adaptiveTemporalFusionEngine.plan({
+      layers: plan,
+      alignments,
+      motion: motionSeparationResult,
+      mode: temporalMode
+    });
+    if (!fusion.layers.length) return;
     ctx.save();
     ctx.globalCompositeOperation = temporalMode === "motion-trace" ? "screen" : "source-over";
-    for (const layer of plan) {
+    for (const layer of fusion.layers) {
       const buffer = temporalBuffers[layer.index];
-      const alignment = temporalAlignmentEngine.getTransform(layer.index);
-      if (!buffer || !alignment.valid) continue;
-      ctx.globalAlpha = layer.alpha * Math.max(0.2, alignment.confidence);
+      const alignment = alignments.find(item => item.index === layer.index);
+      if (!buffer || !alignment?.valid) continue;
+      ctx.globalAlpha = layer.alpha;
       ctx.drawImage(buffer.canvas, layer.offset + alignment.dx * width, alignment.dy * height, width, height);
     }
     ctx.restore();
@@ -2658,6 +2672,9 @@ export function initCamera() {
       ["NOX Smart Motion Separation", motionSeparationResult.accepted
         ? "حركة عامة " + motionSeparationResult.backgroundCount + " / شذوذ محلي " + motionSeparationResult.outlierCount + " / مجموعات محلية " + motionSeparationResult.localizedMotionCandidates.length
         : "غير موثوق — " + motionSeparationResult.reason],
+      ["NOX Adaptive Temporal Fusion", adaptiveTemporalFusionEngine.getStatus().accepted
+        ? "دمج " + adaptiveTemporalFusionEngine.getStatus().selectedCount + " إطار / استبعاد " + adaptiveTemporalFusionEngine.getStatus().rejectedCount
+        : "حماية — " + adaptiveTemporalFusionEngine.getStatus().reason],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
       ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
