@@ -416,3 +416,20 @@
 @media(prefers-reduced-motion:reduce){
   .nox-camera-family-tab{transition:none}
 }
+
+/* Final responsive reset: keep camera controls in their natural layout flow. */
+@media(max-width:760px){
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tabs{
+    position:static;left:auto;bottom:auto;transform:none;width:100%;margin:0;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-section-title{
+    position:static;left:auto;bottom:auto;transform:none;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls{
+    position:absolute;left:12px;right:12px;bottom:18px;transform:none;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-selector{
+    position:relative;left:auto;bottom:auto;transform:none;
+  }
+}
+.nox-lens-selector{touch-action:none}
