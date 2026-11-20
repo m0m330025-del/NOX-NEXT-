@@ -77,3 +77,5 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Per-sample translation is no longer silently clamped: over-bound movement is rejected. The default accepted step bound is 0.065 normalized units per axis; accumulated drift remains bounded to 0.12.
 - A deterministic integration test connects synthetic translated pixel frames through sparse optical flow and temporal alignment. This validates vector sign, normalization, and the resulting transform together.
 - These are conservative source-level safeguards, not proof of visual quality on real scenes or device performance.
+
+- A spatial-span gate now rejects vector sets confined to a small image region, reducing the chance that a locally moving subject is mistaken for global camera motion. It requires confident samples to span at least 25% of both normalized image axes; this is conservative and can reject valid camera motion in low-texture scenes.
