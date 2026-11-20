@@ -149,6 +149,7 @@ jobs:
           node --check /tmp/camera.mjs
           node tests/nox-camera-webgl-fallback.test.mjs
           node tests/nox-camera-lifecycle-cleanup.test.mjs
+          node tests/nox-camera-sound-ui.test.mjs
           node tests/nox-camera-swipe-navigation.test.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
