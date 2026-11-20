@@ -10,8 +10,11 @@ function isBytePlane(value, length) {
 
 export class NOXSparseOpticalFlowEngine {
   constructor({ maxDimension = 128, minConfidence = 0.06 } = {}) {
-    this.maxDimension = Math.max(16, Math.floor(maxDimension));
-    this.minConfidence = Math.max(0, Math.min(1, Number(minConfidence)));
+    const requestedDimension = Number.isFinite(maxDimension) ? Math.floor(maxDimension) : 128;
+    const requestedConfidence = Number.isFinite(minConfidence) ? Number(minConfidence) : 0.06;
+    // Keep the worst-case search bounded even when callers provide bad configuration.
+    this.maxDimension = Math.max(16, Math.min(256, requestedDimension));
+    this.minConfidence = Math.max(0, Math.min(1, requestedConfidence));
     this.lastResult = null;
   }
 
@@ -21,9 +24,13 @@ export class NOXSparseOpticalFlowEngine {
         !isBytePlane(current, width * height) || !isBytePlane(previous, width * height)) {
       throw new TypeError("invalid-optical-flow-frame");
     }
-    const step = Math.max(1, Math.min(32, Math.floor(cellStep)));
-    const patch = Math.max(1, Math.min(3, Math.floor(patchRadius)));
-    const search = Math.max(1, Math.min(6, Math.floor(searchRadius)));
+    const boundedInteger = (value, fallback, min, max) => {
+      const integer = Number.isFinite(value) ? Math.floor(value) : fallback;
+      return Math.max(min, Math.min(max, integer));
+    };
+    const step = boundedInteger(cellStep, 8, 1, 32);
+    const patch = boundedInteger(patchRadius, 1, 1, 3);
+    const search = boundedInteger(searchRadius, 3, 1, 6);
     const vectors = [];
     let confidenceTotal = 0;
     const border = search + patch;
