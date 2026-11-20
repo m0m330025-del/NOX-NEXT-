@@ -3223,6 +3223,48 @@ export function initCamera() {
       hybridGroup.append(option);
     });
     filterSelect.append(hybridGroup);
+    const hybridMixerPanel = document.createElement("div");
+    hybridMixerPanel.className = "nox-hybrid-mixer";
+    hybridMixerPanel.hidden = true;
+    const mixerTitle = document.createElement("b"); mixerTitle.textContent = "HYBRID MIXER";
+    const mixerHint = document.createElement("small"); mixerHint.textContent = "فعّل أكثر من محرك واضبط قوة كل طبقة";
+    const hybridLayers = document.createElement("div"); hybridLayers.className = "nox-hybrid-mixer-layers";
+    const hybridCount = document.createElement("span"); hybridCount.className = "nox-hybrid-count";
+    const hybridReset = document.createElement("button"); hybridReset.type = "button"; hybridReset.className = "nox-hybrid-reset"; hybridReset.textContent = "إعادة الضبط";
+    const mixerHead = document.createElement("div"); mixerHead.className = "nox-hybrid-mixer-head"; mixerHead.append(mixerTitle, mixerHint);
+    const mixerFoot = document.createElement("div"); mixerFoot.className = "nox-hybrid-mixer-footer"; mixerFoot.append(hybridCount, hybridReset);
+    hybridMixerPanel.append(mixerHead, hybridLayers, mixerFoot);
+    filterSelect.insertAdjacentElement("afterend", hybridMixerPanel);
+    const hybridLayerControls = NOX_HYBRID_FILTERS.map((filter, index) => {
+      const row = document.createElement("label"); row.className = "nox-hybrid-layer";
+      const top = document.createElement("span"); top.className = "nox-hybrid-layer-top";
+      const check = document.createElement("input"); check.type = "checkbox"; check.dataset.hybridIndex = String(index);
+      const name = document.createElement("b"); name.textContent = filter.name;
+      const output = document.createElement("output"); output.textContent = Math.round(filter.mix * 100) + "%";
+      const slider = document.createElement("input"); slider.type = "range"; slider.min = "0"; slider.max = "85"; slider.step = "1"; slider.value = String(Math.round(filter.mix * 100)); slider.dataset.hybridWeight = String(index); slider.className = "nox-hybrid-weight";
+      const detail = document.createElement("small"); detail.textContent = filter.engines.join(" · ");
+      top.append(check, name, output); row.append(top, slider, detail); hybridLayers.append(row);
+      return { row, check, slider, output };
+    });
+    function syncHybridMixer() {
+      const ids = []; const weights = [];
+      hybridLayerControls.forEach((control, index) => {
+        const weight = Number(control.slider.value) / 100; weights[index] = weight;
+        control.output.textContent = Math.round(weight * 100) + "%";
+        control.row.classList.toggle("is-active", control.check.checked);
+        if (control.check.checked) ids.push(NOX_HYBRID_FILTERS[index].id);
+      });
+      const selection = buildNOXHybridSelection(ids, weights);
+      selectedHybridMask = selection.mask; selectedHybridWeights = selection.weights;
+      selectedHybridFilter = ids.length ? getNOXHybridFilter(ids[0]) : null;
+      hybridCount.textContent = selection.count + " محركات مفعّلة";
+      if (stream) renderFrame(false); updateDiagnostics();
+    }
+    hybridLayerControls.forEach((control) => { control.check.addEventListener("change", syncHybridMixer); control.slider.addEventListener("input", syncHybridMixer); });
+    hybridReset.addEventListener("click", () => {
+      hybridLayerControls.forEach((control, index) => { control.check.checked = false; control.slider.value = String(Math.round(NOX_HYBRID_FILTERS[index].mix * 100)); });
+      syncHybridMixer(); filterSelect.value = "";
+    });
     const originalGroup = document.createElement("optgroup");
     originalGroup.label = "NOX ORIGINAL — 1000 فلتر إجرائي";
     listNOXFilters().forEach((filter, index) => {
@@ -3235,11 +3277,20 @@ export function initCamera() {
     filterSelect.addEventListener("change", () => {
       const value = filterSelect.value;
       if (value.startsWith("hybrid:")) {
-        selectedHybridFilter = getNOXHybridFilter(value.slice("hybrid:".length));
+        const chosenHybrid = getNOXHybridFilter(value.slice("hybrid:".length));
+        selectedHybridFilter = chosenHybrid;
         selectedOriginalFilter = null;
         selectedFilter = null;
+        hybridMixerPanel.hidden = false;
+        hybridLayerControls.forEach((control, index) => {
+          control.check.checked = NOX_HYBRID_FILTERS[index].id === chosenHybrid?.id;
+          control.slider.value = String(Math.round(NOX_HYBRID_FILTERS[index].mix * 100));
+        });
+        syncHybridMixer();
       } else if (value.startsWith("original:")) {
         selectedHybridFilter = null;
+        selectedHybridMask = 0;
+        hybridMixerPanel.hidden = true;
         const index = Number(value.slice("original:nox-".length)) - 1;
         selectedOriginalFilter = Number.isInteger(index) && index >= 0 && index < 1000
           ? { familyIndex: Math.floor(index / 100), variantIndex: index % 100, id: value.slice(9) }
@@ -3248,6 +3299,8 @@ export function initCamera() {
       } else {
         selectedOriginalFilter = null;
         selectedHybridFilter = null;
+        selectedHybridMask = 0;
+        hybridMixerPanel.hidden = true;
         const id = Number(value);
         selectedFilter = value === "" ? null : (NOX_FILTERS[id] || null);
       }
