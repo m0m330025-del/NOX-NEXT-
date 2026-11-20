@@ -20,11 +20,13 @@ function makeCanvas() {
 const created = [];
 const compositor = new NOXLiveMakeupCompositor({ canvasFactory: () => { const canvas = makeCanvas(); created.push(canvas); return canvas; }, maxAgeMs: 220 });
 const data = new Float32Array([0, 1, 0.5, 0]);
-const vision = { frame: { width: 2, height: 2 }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 }, regionMasks: {
+const vision = { frame: { width: 2, height: 2, id: "test-frame", timestamp: 100, coordinateSpace: "source-unmirrored-normalized" }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 }, regionMasks: {
   lips: { width: 2, height: 2, data, confidence: 0.95, source: "test" }
 } };
 assert.equal(compositor.accept({ sequence: 1, capturedAt: 100, vision, look: { lips: { color: [200, 20, 60], opacity: 0.5 } } }), true);
 assert.equal(compositor.width, 2);
+assert.equal(compositor.frame.id, "test-frame");
+assert.equal(compositor.frame.coordinateSpace, "source-unmirrored-normalized");
 assert.equal(compositor.edgeSoftness, 0.35);
 assert.equal(compositor.height, 2);
 assert.deepEqual(Array.from(compositor.canvas.image.data), [
@@ -49,7 +51,7 @@ assert.equal(compositor.draw(target, { now: 410, currentFaceBox: { x: 0.58, y: 0
 assert.equal(compositor.canvas, null);
 compositor.clear();
 const aligned = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, maxAgeMs: 220 });
-const alignmentVision = { frame: { width: 2, height: 2 }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 },
+const alignmentVision = { frame: { width: 2, height: 2, id: "test-frame", timestamp: 100, coordinateSpace: "source-unmirrored-normalized" }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 },
   regionMasks: { lips: { width: 2, height: 2, data: new Float32Array([0,1,0.5,0]), confidence: 0.95 } } };
 assert.equal(aligned.accept({ sequence: 1, capturedAt: 600, vision: alignmentVision,
   look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
@@ -73,7 +75,7 @@ assert.equal(aligned.draw(shiftedTarget, { now: 810,
   "invalid face geometry must never be used for alignment");
 assert.equal(aligned.canvas, null);
 const crisp = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, edgeSoftness: 0.5 });
-const crispMask = { frame: { width: 3, height: 3 }, faceBox: { x: 0.3, y: 0.2, width: 0.4, height: 0.5 }, regionMasks: {
+const crispMask = { frame: { width: 3, height: 3, id: "crisp-frame", timestamp: 500, coordinateSpace: "source-unmirrored-normalized" }, faceBox: { x: 0.3, y: 0.2, width: 0.4, height: 0.5 }, regionMasks: {
   lips: { width: 3, height: 3, data: new Float32Array([0,0,0,0,1,0,0,0,0]), confidence: 0.99 }
 } };
 assert.equal(crisp.accept({ sequence: 1, capturedAt: 500, vision: crispMask,
@@ -84,7 +86,7 @@ assert.equal(crisp.canvas.image.data[3], 0, "feathering must never create alpha 
 
 const unanchored = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
 assert.equal(unanchored.accept({ sequence: 1, capturedAt: 900,
-  vision: { frame: { width: 2, height: 2 }, regionMasks: {
+  vision: { frame: { width: 2, height: 2, id: "test-frame", timestamp: 100, coordinateSpace: "source-unmirrored-normalized" }, regionMasks: {
     lips: { width: 2, height: 2, data: new Float32Array([0,1,0,0]), confidence: 0.95 }
   } }, look: { lips: { color: [200,20,60], opacity: 0.4 } } }), false,
   "semantic masks without a trusted faceBox must be rejected at acceptance");
