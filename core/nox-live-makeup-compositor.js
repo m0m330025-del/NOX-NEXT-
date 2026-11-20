@@ -8,12 +8,18 @@ const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 export class NOXLiveMakeupCompositor {
   constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
     if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
-        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8 ||\n        !Number.isFinite(maxCenterDrift) || maxCenterDrift <= 0 || maxCenterDrift > 0.25 ||\n        !Number.isFinite(minScaleRatio) || minScaleRatio <= 0 || minScaleRatio >= 1 ||\n        !Number.isFinite(maxScaleRatio) || maxScaleRatio <= 1 || maxScaleRatio > 2) {
+        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8 ||
+        !Number.isFinite(maxCenterDrift) || maxCenterDrift <= 0 || maxCenterDrift > 0.25 ||
+        !Number.isFinite(minScaleRatio) || minScaleRatio <= 0 || minScaleRatio >= 1 ||
+        !Number.isFinite(maxScaleRatio) || maxScaleRatio <= 1 || maxScaleRatio > 2) {
       throw new TypeError("invalid-live-makeup-compositor-options");
     }
     this.canvasFactory = canvasFactory;
     this.maxAgeMs = maxAgeMs;
-    this.edgeSoftness = edgeSoftness;\n    this.maxCenterDrift = maxCenterDrift;\n    this.minScaleRatio = minScaleRatio;\n    this.maxScaleRatio = maxScaleRatio;
+    this.edgeSoftness = edgeSoftness;
+    this.maxCenterDrift = maxCenterDrift;
+    this.minScaleRatio = minScaleRatio;
+    this.maxScaleRatio = maxScaleRatio;
     this.canvas = null;
     this.sequence = 0;
     this.capturedAt = 0;
