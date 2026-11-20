@@ -78,6 +78,21 @@ function landmarkMotionBaseline(previousLandmarks, nextLandmarks) {
   return { x: median(dx), y: median(dy) };
 }
 
+function expressionSensitiveLandmarkIndices(connections, landmarkCount) {
+  const regions = ["lips", "leftEye", "rightEye", "leftEyebrow", "rightEyebrow"];
+  const indices = new Set();
+  for (const region of regions) {
+    const edges = connections?.[region];
+    if (!Array.isArray(edges)) continue;
+    for (const edge of edges) {
+      for (const index of [edge?.start, edge?.end]) {
+        if (Number.isInteger(index) && index >= 0 && index < landmarkCount) indices.add(index);
+      }
+    }
+  }
+  return indices;
+}
+
 function associationScore(previous, next) {
   const a = center(previous);
   const b = center(next);
@@ -194,6 +209,9 @@ export class NOXFaceTrackingEngine {
     const oldLandmarks = previous?.result?.landmarks || [];
     const motionBaseline = reacquired ? { x: 0, y: 0 }
       : landmarkMotionBaseline(oldLandmarks, result.landmarks);
+    const expressionSensitive = expressionSensitiveLandmarkIndices(
+      result.connections, result.landmarks.length
+    );
     const faceScale = Math.max(0.08, Math.hypot(nextBox.width, nextBox.height));
     const landmarks = result.landmarks.map((point, index) => {
       const oldPoint = oldLandmarks[index];
@@ -204,8 +222,9 @@ export class NOXFaceTrackingEngine {
       const residualX = (point.x - oldPoint.x) - motionBaseline.x;
       const residualY = (point.y - oldPoint.y) - motionBaseline.y;
       const localMotion = Math.hypot(residualX, residualY) / faceScale;
+      const regionBoost = expressionSensitive.has(index) ? 1.8 : 1;
       const pointAlpha = clamp(
-        alpha + Math.max(0, localMotion - 0.015) * this.expressionResponse,
+        alpha + Math.max(0, localMotion - 0.015) * this.expressionResponse * regionBoost,
         alpha,
         0.92
       );
