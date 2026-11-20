@@ -27,6 +27,8 @@ export function estimateNOXFaceRoll(landmarksAnalysis) {
       !Number.isInteger(landmarksAnalysis.landmarkCount) || landmarksAnalysis.landmarkCount < 468 ||
       !(typeof landmarksAnalysis.frameId === "string" && landmarksAnalysis.frameId.length > 0) ||
       !Number.isFinite(landmarksAnalysis.timestamp) ||
+      !Number.isFinite(landmarksAnalysis.capturedAtMonotonicMs) ||
+      landmarksAnalysis.capturedAtMonotonicMs < 0 ||
       landmarksAnalysis.coordinateSpace !== "source-unmirrored-normalized") {
     return { state: "unavailable", angleRadians: null, reason: "invalid-landmark-frame" };
   }
@@ -47,6 +49,7 @@ export function estimateNOXFaceRoll(landmarksAnalysis) {
     frame: {
       id: landmarksAnalysis.frameId,
       timestamp: landmarksAnalysis.timestamp,
+      capturedAtMonotonicMs: landmarksAnalysis.capturedAtMonotonicMs,
       width: landmarksAnalysis.width,
       height: landmarksAnalysis.height,
       coordinateSpace: landmarksAnalysis.coordinateSpace
