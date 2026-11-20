@@ -136,3 +136,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The camera adapter records each completed optical-flow sample and displays the estimator's action, reason, confidence, and horizon in diagnostics. It does not alter pixels, camera settings, quality tiers, or engine scheduling.
 - This is deterministic kinematic extrapolation, not a trained neural network, semantic scene understanding, or prediction of unseen image detail. The estimate is diagnostic only and requires real-scene/device validation before any future control integration.
 - Deterministic tests cover steady motion, acceleration, direction changes, stale/invalid timing, low-confidence vectors, conflicting motion populations, and frame-budget protection.
+
+
+## NOX Scene Intelligence Engine
+
+- `core/nox-scene-intelligence-engine.js` classifies measured grayscale mean luminance and standard deviation (contrast), plus existing motion-consensus and measured render/frame-budget evidence.
+- Reports coarse lighting (very dim/dim/normal/bright), contrast, motion evidence (dynamic/ambiguous/unknown), and frame-budget status with an explainable recommendation.
+- Statistics are calculated from the existing low-resolution optical-flow grayscale sample; no additional video-frame readback is introduced.
+- Recommendations are diagnostic only. The engine does not change exposure, filters, camera settings, quality tiers, scheduling, or rendered pixels.
+- It does not recognize people, objects, skin, depth, or semantic scene categories. Global luminance/contrast are heuristic sample statistics, not calibrated sensor measurements; mixed lighting and low-texture scenes can mislead them.
+- Deterministic tests cover dim/bright scenes, contrast, motion ambiguity, overload protection, missing/invalid measurements, and reset. Real-scene calibration and Galaxy M12 testing remain outstanding.
