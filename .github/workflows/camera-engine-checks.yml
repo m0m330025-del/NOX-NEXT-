@@ -156,6 +156,9 @@ jobs:
           node --check /tmp/beauty-vision-provider.mjs
           node --check /tmp/skin-segmentation-engine.mjs
           node --check /tmp/mediapipe-face-landmarker-provider.mjs
+          node tests/nox-mediapipe-face-landmarker-provider.test.mjs
+          node tests/nox-multi-model-face-fusion-provider.test.mjs
+          node tests/nox-camera-mediapipe-sharing.test.mjs
           node --check /tmp/face-landmarks-engine.mjs
           node --check /tmp/face-roll-estimator.mjs
           node tests/nox-face-roll-estimator.test.mjs
