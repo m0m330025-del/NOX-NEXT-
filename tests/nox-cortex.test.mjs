@@ -70,6 +70,20 @@ assert.equal(failedExecution.results[0].status, "failed");
 assert.equal(failedExecution.results[1].status, "skipped");
 assert.equal(failedExecution.results[2].status, "skipped");
 
+const abortController = new AbortController();
+const cancellableRun = executable.execute(executionPlan, { value: 2 }, {
+  source: (_input, { signal }) => new Promise((resolve, reject) => {
+    const finish = () => reject(new Error("handler-aborted"));
+    signal.addEventListener("abort", finish, { once: true });
+  }),
+  transform: input => input,
+  finalize: input => input
+}, { signal: abortController.signal, timeoutMs: 1000 });
+setTimeout(() => abortController.abort(), 5);
+const cancelledExecution = await cancellableRun;
+assert.equal(cancelledExecution.state, "stopped");
+assert.equal(cancelledExecution.results[0].status, "cancelled");
+
 const missingHandler = await executable.execute(executionPlan, { value: 2 }, {});
 assert.equal(missingHandler.results[0].reason, "handler-not-registered");
 assert.equal(missingHandler.results[1].status, "skipped");
