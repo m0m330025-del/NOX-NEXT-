@@ -13,6 +13,9 @@ function providerOutput(overrides = {}) {
     width, height, frameId: "f-1", timestamp: now,
     source: "test-real-segmentation-provider",
     faceBox,
+    fusion: { state: "fused", landmarkStatus: "aligned", alignmentIoU: 0.82 },
+    landmarks: { state: "complete", source: "mediapipe-face-landmarker-478",
+      width, height, regions: { lips: { points: [], edges: [] } } },
     skin: { data: mask, confidence: 0.92 },
     regions: {
       lips: { data: mask, confidence: 0.96 },
@@ -33,6 +36,9 @@ const accepted = await adapter.processFrame(frame);
 assert.equal(accepted.state, "complete");
 assert.equal(accepted.skinMask.data.length, 16);
 assert.equal(accepted.regionMasks.lips.source, "test-real-segmentation-provider");
+assert.equal(accepted.fusion.state, "fused");
+assert.equal(accepted.fusion.alignmentIoU, 0.82);
+assert.equal(accepted.landmarks.source, "mediapipe-face-landmarker-478");
 assert.equal(accepted.unavailable.length, 0);
 
 // Partial output is explicit; missing semantic regions are never fabricated.
