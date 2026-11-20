@@ -1102,9 +1102,9 @@ export function initCamera() {
     beautyStatus.textContent = beautyState + " — قد يستغرق التحميل الأول وقتًا بسبب حجم النموذج.";
     try {
       if (!beautyVisionAdapter) {
-        beautyVisionProvider = new NOXMediaPipeSelfieProvider({
-          delegate: "CPU",
-          maxInputDimension: 256
+        beautyVisionProvider = new NOXBiSeNetFaceParsingProvider({
+          maxInputDimension: 256,
+          executionProviders: ["webgpu", "wasm"]
         });
         beautyVisionAdapter = new NOXBeautyVisionProvider({
           provider: beautyVisionProvider,
