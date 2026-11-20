@@ -33,5 +33,6 @@ jobs:
           node --check /tmp/nox-multi-model-face-fusion-provider.mjs
       - name: Run fusion contract tests
         run: |
+          cp core/nox-multi-model-face-fusion-provider.js core/nox-multi-model-face-fusion-provider.mjs
           cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
           node --experimental-default-type=module tests/nox-multi-model-face-fusion-provider.test.mjs
