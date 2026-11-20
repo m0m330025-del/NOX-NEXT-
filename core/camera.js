@@ -4,7 +4,7 @@ import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CH
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
-import { NOXMediaPipeSelfieProvider } from "./nox-mediapipe-selfie-provider.js";
+import { NOXBiSeNetFaceParsingProvider } from "./nox-bisenet-face-parsing-provider.js";
 import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
@@ -1117,7 +1117,7 @@ export function initCamera() {
       if (beautyVisionAdapter.state !== "ready") {
         const initialized = await beautyVisionAdapter.initialize();
         if (!initialized.available) {
-          throw new Error(initialized.reason || "تعذر تحميل نموذج MediaPipe");
+          throw new Error(initialized.reason || "تعذر تحميل نموذج BiSeNet");
         }
       }
 
@@ -1156,7 +1156,7 @@ export function initCamera() {
       beautyState = "نشط — تم اكتشاف بشرة الوجه";
       beautyStatus.textContent =
         "نجح التقسيم الحقيقي: " + skin.pixelCount + " بكسل وجه / ثقة " +
-        Math.round(skin.confidence * 100) + "% متوسط احتمال فئة الوجه، وليس نسبة دقة مضمونة. المناطق الدقيقة مثل الشفاه والجفون غير متاحة بهذا النموذج.";
+        Math.round(skin.confidence * 100) + "% متوسط احتمال فئة البشرة، وليس نسبة دقة مضمونة. الشفاه والحواجب متاحتان كأقنعة دلالية؛ الجفون والخدود غير متاحتين في هذا النموذج.";
       beautyButton.textContent = "إعادة تحليل إطار";
     } catch (error) {
       beautyState = "غير متاح";
