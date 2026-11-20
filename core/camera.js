@@ -2455,6 +2455,21 @@ export function initCamera() {
       const flowRuntime = runtimeSnapshot.find(engine => engine.id === "optical-flow");
       const warmupComplete = Boolean(flowRuntime && flowRuntime.samples >= 3 &&
         Number.isFinite(flowRuntime.measuredP95Ms));
+      const cameraPipelineBudgetPlan = {
+        state: "planned",
+        engines: [
+          { id: "optical-flow", requires: [], conflictsWith: [] },
+          { id: "predictive-camera-intelligence", requires: ["optical-flow"], conflictsWith: [] },
+          { id: "smart-motion-separation", requires: ["optical-flow"], conflictsWith: [] },
+          { id: "temporal-alignment", requires: ["smart-motion-separation"], conflictsWith: [] }
+        ]
+      };
+      const cameraPipelineIds = cameraPipelineBudgetPlan.engines.map(engine => engine.id);
+      const cameraPipelineWarmupComplete = cameraPipelineIds.every(id => {
+        const engine = runtimeSnapshot.find(item => item.id === id);
+        return Boolean(engine && engine.samples >= 3 && Number.isFinite(engine.measuredP95Ms));
+      });
+      let cameraPipelineSchedule = null;
       if (warmupComplete) {
         if (!Number.isFinite(averageFrameCost) || averageFrameCost <= 0) {
           opticalFlowRecoveryGate.evaluate(false);
@@ -2462,16 +2477,16 @@ export function initCamera() {
           opticalFlowPrevious = gray;
           return;
         }
-        const gate = noxAdaptiveRuntimeScheduler.evaluate({
-          cortexPlan: plan,
-          runtimeSnapshot: [flowRuntime],
+        cameraPipelineSchedule = noxAdaptiveRuntimeScheduler.evaluate({
+          cortexPlan: cameraPipelineBudgetPlan,
+          runtimeSnapshot,
           targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
           frameCostMs: averageFrameCost,
           lowPower
         });
-        if (!gate.eligibleEngineIds.includes("optical-flow")) {
+        if (!cameraPipelineSchedule.eligibleEngineIds.includes("optical-flow")) {
           opticalFlowRecoveryGate.evaluate(false);
-          opticalFlowRuntimeGate = gate.steps.find(step => step.id === "optical-flow")?.reason || "held-no-safe-schedule";
+          opticalFlowRuntimeGate = cameraPipelineSchedule.steps.find(step => step.id === "optical-flow")?.reason || "held-no-safe-schedule";
           opticalFlowPrevious = gray;
           return;
         }
@@ -2501,15 +2516,35 @@ export function initCamera() {
       updateCameraStabilization();
       opticalFlowPrevious = gray;
       opticalFlowSequence += 1;
-      dynamicEngineHost.runSync("predictive-camera-intelligence", { operation: "observe", sample: {
-        vectors: opticalFlowVectors, timestampMs: performance.now(), sequence: opticalFlowSequence
-      } });
-      motionSeparationResult = dynamicEngineHost.runSync("smart-motion-separation", { vectors: opticalFlowVectors });
-      dynamicEngineHost.runSync("temporal-alignment", {
-        operation: "ingest",
-        vectors: motionSeparationResult.accepted ? motionSeparationResult.globalVectors : [],
-        options: { sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight }
-      });
+      const runPipelineEngine = (id) => !cameraPipelineWarmupComplete ||
+        cameraPipelineSchedule?.eligibleEngineIds.includes(id) === true;
+      if (runPipelineEngine("predictive-camera-intelligence")) {
+        dynamicEngineHost.runSync("predictive-camera-intelligence", { operation: "observe", sample: {
+          vectors: opticalFlowVectors, timestampMs: performance.now(), sequence: opticalFlowSequence
+        } });
+      } else {
+        noxPredictiveCameraIntelligence.reset();
+      }
+      if (runPipelineEngine("smart-motion-separation")) {
+        motionSeparationResult = dynamicEngineHost.runSync("smart-motion-separation", { vectors: opticalFlowVectors });
+      } else {
+        motionSeparationEngine.reset();
+        motionSeparationResult = motionSeparationEngine.getStatus();
+        motionSeparationResult = {
+          ...motionSeparationResult, accepted: false, globalVectors: [],
+          confidence: 0, backgroundRatio: 0, backgroundCount: 0,
+          reason: "runtime-budget-held"
+        };
+      }
+      if (runPipelineEngine("temporal-alignment") && motionSeparationResult.accepted) {
+        dynamicEngineHost.runSync("temporal-alignment", {
+          operation: "ingest",
+          vectors: motionSeparationResult.globalVectors,
+          options: { sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight }
+        });
+      } else if (cameraPipelineWarmupComplete) {
+        temporalAlignmentEngine.reset();
+      }
       updateSubjectLock(gray, sampleWidth, sampleHeight);
       updateTrackedRegionFromFlow();
     } catch {
