@@ -71,7 +71,8 @@ export class NOXMediaPipeFaceLandmarkerProvider {
         rightEye: this.vision.FaceLandmarker.FACE_LANDMARKS_RIGHT_EYE,
         leftEyebrow: this.vision.FaceLandmarker.FACE_LANDMARKS_LEFT_EYEBROW,
         rightEyebrow: this.vision.FaceLandmarker.FACE_LANDMARKS_RIGHT_EYEBROW,
-        faceOval: this.vision.FaceLandmarker.FACE_LANDMARKS_FACE_OVAL
+        faceOval: this.vision.FaceLandmarker.FACE_LANDMARKS_FACE_OVAL,
+        tessellation: this.vision.FaceLandmarker.FACE_LANDMARKS_TESSELATION
       }
     };
   }
