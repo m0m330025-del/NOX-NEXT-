@@ -57,6 +57,7 @@ export function initCameraSwipeNavigation() {
     const touch = event.touches[0];
     startPoint = { x: touch.clientX, y: touch.clientY };
   }, { passive: true });
+
   orbit.addEventListener("touchend", (event) => {
     if (!startPoint || event.changedTouches.length !== 1) { startPoint = null; return; }
     const touch = event.changedTouches[0];
@@ -64,12 +65,15 @@ export function initCameraSwipeNavigation() {
     const dy = touch.clientY - startPoint.y;
     startPoint = null;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 34 || Math.abs(dx) === Math.abs(dy)) return;
-    
+
     event.preventDefault();
     suppressClickUntil = Date.now() + 360;
     if (Math.abs(dy) > Math.abs(dx)) stepLens(dy < 0 ? 1 : -1);
     else stepFamily(dx < 0 ? 1 : -1);
   }, { passive: false });
+
+  // A cancelled touch must never be reused as the start of a later gesture.
+  orbit.addEventListener("touchcancel", () => { startPoint = null; }, { passive: true });
 
   orbit.addEventListener("keydown", (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
