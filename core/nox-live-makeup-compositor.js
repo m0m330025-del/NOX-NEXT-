@@ -32,6 +32,9 @@ export class NOXLiveMakeupCompositor {
         !Number.isFinite(capturedAt) || !vision?.frame ||
         !Number.isInteger(vision.frame.width) || !Number.isInteger(vision.frame.height) ||
         vision.frame.width < 1 || vision.frame.height < 1 ||
+        !(typeof vision.frame.id === "string" && vision.frame.id.length > 0) ||
+        !Number.isFinite(vision.frame.timestamp) ||
+        vision.frame.coordinateSpace !== "source-unmirrored-normalized" ||
         !vision.faceBox ||
         ![vision.faceBox.x, vision.faceBox.y, vision.faceBox.width, vision.faceBox.height].every(Number.isFinite) ||
         vision.faceBox.x < 0 || vision.faceBox.y < 0 ||
@@ -95,8 +98,14 @@ export class NOXLiveMakeupCompositor {
     this.capturedAt = capturedAt;
     this.width = width;
     this.height = height;
-    this.faceBox = vision.faceBox && [vision.faceBox.x, vision.faceBox.y, vision.faceBox.width, vision.faceBox.height].every(Number.isFinite)
-      ? { ...vision.faceBox } : null;
+    this.faceBox = { ...vision.faceBox };
+    this.frame = {
+      id: vision.frame.id,
+      timestamp: vision.frame.timestamp,
+      width,
+      height,
+      coordinateSpace: vision.frame.coordinateSpace
+    };
     return true;
   }
 
@@ -162,5 +171,6 @@ export class NOXLiveMakeupCompositor {
     this.width = 0;
     this.height = 0;
     this.faceBox = null;
+    this.frame = null;
   }
 }
