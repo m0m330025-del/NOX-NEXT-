@@ -1301,8 +1301,16 @@ export function initCamera() {
             timestamp: frame.timestamp,
             capturedAtMonotonicMs: frame.capturedAtMonotonicMs,
             coordinateSpace: "source-unmirrored-normalized"
-          }
+          },
+          landmarks: rawVision.landmarks ? {
+            ...rawVision.landmarks,
+            frameId: frame.frameId,
+            timestamp: frame.timestamp,
+            capturedAtMonotonicMs: frame.capturedAtMonotonicMs,
+            coordinateSpace: "source-unmirrored-normalized"
+          } : null
         };
+        const capturedRoll = estimateNOXFaceRoll(vision.landmarks);
         const source = beautyInputContext.getImageData(0, 0, frame.width, frame.height);
         const plan = cortex.plan(
           { makeupRequested: true },
@@ -1326,7 +1334,8 @@ export function initCamera() {
       },
       onResult: ({ sequence, capturedAt, ageMs, result }) => {
         if (!liveMakeupCompositor.accept({
-          sequence, capturedAt, vision: result.vision, look: activeBeautyLook
+          sequence, capturedAt, vision: result.vision, look: activeBeautyLook,
+          capturedRoll: result.capturedRoll
         })) return;
         beautyClearLookButton.disabled = false;
         beautyStatus.textContent = "المكياج الحي يعمل — قناع دلالي حديث، عمر النتيجة عند الوصول " +
@@ -3244,7 +3253,14 @@ export function initCamera() {
       drawOpticalFlow(outputContext, outWidth, outHeight);
       outputContext.restore();
       drawFaceTrackingOverlay(outputContext, outWidth, outHeight);
-      liveMakeupCompositor.draw(renderCanvas, { now: performance.now(), mirrored: facing === "user", currentFaceBox: ["acquired", "tracking"].includes(faceDetectionState) ? trackedFace?.box || null : null });
+      const renderNow = performance.now();
+      liveMakeupCompositor.draw(renderCanvas, {
+        now: renderNow,
+        nowMonotonicMs: renderNow,
+        mirrored: facing === "user",
+        currentFaceBox: ["acquired", "tracking"].includes(faceDetectionState) ? trackedFace?.box || null : null,
+        currentRoll: latestFaceRollEstimate
+      });
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
