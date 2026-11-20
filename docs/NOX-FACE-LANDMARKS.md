@@ -68,3 +68,30 @@ These are development targets, not claims of implementation or proven scientific
 ## NOX Face Digital Twin — integration concept
 
 A research orchestration layer may combine geometry, region evidence, temporal observations, uncertainty, and rendering eligibility. It must not invent hidden anatomy or bypass the makeup compositor trusted-mask gate. Confidence calibration requires representative real-world validation, not synthetic tests alone.
+
+
+## NOX Face Research Suite — eight-engine development batch
+
+### Implemented modules on the development branch
+
+1. **NOX Face Topology Intelligence** — bounded mesh graph audit, duplicate-edge detection, connected components, degree limits, and triangle counts.
+2. **NOX Mask Uncertainty Engine** — evidence-gap classification with explicit unknown states; no fabricated probability or confidence.
+3. **NOX Temporal Mask Memory** — bounded per-track point history, frame-order checks, discontinuity resets, and observed coordinate deltas.
+4. **NOX Occlusion Intelligence** — consumes caller-supplied occluded indices or per-landmark visibility; absent evidence remains indeterminate.
+5. **NOX Adaptive Mesh Rasterizer** — triangle-local rasterization with pixel and operation budgets.
+6. **NOX Region Evidence Engine** — per-region source, point, edge, topology, occlusion, and temporal evidence ledger.
+7. **NOX Expression Deformation Engine** — compares supplied landmark positions and records supplied blendshape signals without interpreting them as anatomical truth.
+8. **NOX Mask Self-Repair Lab** — conservative inspection and duplicate/invalid-edge rejection only; applies zero speculative repairs.
+
+### NOX Face Digital Twin
+
+NOXFaceDigitalTwin coordinates evidence, temporal, occlusion, and uncertainty reports. It is a research report layer only and always returns compositorEligible: false.
+
+### Validation boundaries
+
+- These engines consume supplied landmarks/visibility/region data; they do not infer hidden anatomy or semantic occluders.
+- MediaPipe Face Landmarker output does not by itself establish pixel-accurate eyelid, brow-hair, or cheek segmentation.
+- No numeric confidence is calibrated by these modules.
+- Rasterized masks are previews only and are not trusted by the makeup compositor.
+- Synthetic tests cover contracts and bounded behavior, not anatomical accuracy or device performance.
+- Physical testing on Galaxy M12 and other devices remains outstanding.
