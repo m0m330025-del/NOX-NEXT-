@@ -433,3 +433,33 @@
   }
 }
 .nox-lens-selector{touch-action:none}
+
+/* Swipe selector: keep both family tabs and rectangular lens rail visible in live mobile mode. */
+@media(max-width:760px){
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs{
+    display:flex!important;position:fixed!important;z-index:1004!important;
+    left:50%!important;right:auto!important;bottom:calc(218px + env(safe-area-inset-bottom))!important;
+    transform:translateX(-50%)!important;width:min(92vw,360px)!important;
+    margin:0!important;box-sizing:border-box;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-lens-selector{
+    display:flex!important;position:fixed!important;z-index:1003!important;
+    left:50%!important;right:auto!important;bottom:calc(108px + env(safe-area-inset-bottom))!important;
+    transform:translateX(-50%)!important;width:min(94vw,390px)!important;
+    min-height:96px!important;margin:0!important;box-sizing:border-box;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-v2-section-title{
+    display:none!important;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls{
+    z-index:1005!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  }
+}
+@media(max-width:380px){
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-lens-selector{
+    width:96vw!important;min-height:88px!important;padding:7px 4px!important;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-selector .nox-lens-v2{
+    flex-basis:62px;width:62px;height:68px;min-height:68px;padding:5px 3px;
+  }
+}
