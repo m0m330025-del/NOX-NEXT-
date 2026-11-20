@@ -5,7 +5,7 @@ const queue = [];
 const schedule = (callback, delay) => { const item = { id: nextId++, callback, delay, cancelled: false }; queue.push(item); return item; };
 const cancel = item => { item.cancelled = true; };
 const flush = async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); };
-const runNext = async () => { const item = queue.shift(); assert.ok(item); if (!item.cancelled) item.callback(); await flush(); };
+const runNext = async () => { let item; while (queue.length && (!item || item.cancelled)) item = queue.shift(); assert.ok(item && !item.cancelled); item.callback(); await flush(); };
 const accepted = [], errors = [];
 const controller = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 250, clock: () => now, schedule, cancel });
 assert.equal(controller.start({
