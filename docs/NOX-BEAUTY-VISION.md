@@ -7,6 +7,7 @@
 - BiSeNet preprocessing preserves source aspect ratio with centered letterboxing instead of stretching a portrait/landscape face into a square. The semantic output is cropped to the valid letterbox region before masks and face bounds are restored to original frame dimensions.
 - Padding approximates the model's ImageNet RGB mean, minimizing artificial edge contrast after normalization.
 - BiSeNet decoding retains softmax probabilities for the supported semantic classes. Region probabilities are combined per semantic family and resized with bilinear interpolation, preserving soft edges instead of expanding hard argmax labels with nearest-neighbor sampling. A region is exposed only when it has at least the configured minimum number of pixels with probability ≥ 0.5; its confidence is averaged over those active pixels.
+- Restored masks suppress probabilities below 0.05 to prevent tiny softmax residue from tinting pixels outside the semantic region while retaining meaningful fractional edge coverage.
 - \`NOXBeautyVisionProvider\` validates frame metadata, mask dimensions, mask values, confidence, and frame freshness before exposing semantic masks.
 - The currently supported semantic makeup masks are lips and brows. The model does not provide dedicated cheek or eyelid classes; those looks are unavailable rather than guessed.
 - \`NOXMakeupRenderingEngine\` validates the selected look and applies color only inside the accepted semantic masks.
