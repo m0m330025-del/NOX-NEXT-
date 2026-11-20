@@ -9,6 +9,8 @@ function eyePoints(indices, x, y) {
 const base = {
   source: "mediapipe-face-landmarker-478",
   width: 640, height: 480, landmarkCount: 478,
+  frameId: "frame-17", timestamp: 1700,
+  coordinateSpace: "source-unmirrored-normalized",
   regions: {
     leftEye: eyePoints([1,2,3,4], 0.25, 0.4),
     rightEye: eyePoints([5,6,7,8], 0.65, 0.4)
@@ -28,6 +30,8 @@ assert.equal(roll.state, "estimated");
 assert.ok(roll.angleRadians > 0.15 && roll.angleRadians < 0.35,
   "eye baseline should report a positive in-plane roll");
 assert.equal(estimateNOXFaceRoll({ ...base, source: "unknown" }).state, "unavailable");
+assert.equal(estimateNOXFaceRoll({ ...base, frameId: null }).reason, "invalid-landmark-frame");
+assert.equal(estimateNOXFaceRoll({ ...base, coordinateSpace: "display-mirrored" }).state, "unavailable");
 assert.equal(estimateNOXFaceRoll({ ...base, regions: { leftEye: base.regions.leftEye } }).reason,
   "insufficient-eye-landmarks");
 const malformed = structuredClone(base);
