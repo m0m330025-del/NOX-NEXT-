@@ -560,6 +560,7 @@ export function initCamera() {
   let faceLandmarksLastAt = 0;
   let faceLandmarksSession = 0;
   let faceLandmarksProcessing = false;
+  let faceLandmarkAverageCost = 0;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
@@ -920,10 +921,11 @@ export function initCamera() {
     if (!faceLandmarksLiveEnabled || !stream || video.readyState < 2 ||
         !faceLandmarkerProvider || faceLandmarkerProvider.state !== "ready" ||
         faceLandmarksProcessing) return;
-    const interval = lowPower ? 380 : 240;
+    const interval = Math.round(Math.min(480, Math.max(lowPower ? 220 : 120, faceLandmarkAverageCost * 2.2)));
     if (!force && now - faceLandmarksLastAt < interval) return;
     faceLandmarksLastAt = now;
     faceLandmarksProcessing = true;
+    const processingStartedAt = performance.now();
     try {
       const plan = cortex.plan(
         { faceRequested: true, landmarksRequested: true, liveFaceTracking: true },
@@ -974,6 +976,10 @@ export function initCamera() {
       faceDigitalTwinButton.disabled = true;
       clearFaceLandmarksPreview();
     } finally {
+      const processingCost = Math.max(0, performance.now() - processingStartedAt);
+      faceLandmarkAverageCost = faceLandmarkAverageCost
+        ? faceLandmarkAverageCost * 0.72 + processingCost * 0.28
+        : processingCost;
       faceLandmarksProcessing = false;
     }
   }
@@ -1012,6 +1018,7 @@ export function initCamera() {
       if (session !== faceLandmarksSession || !stream) return;
       faceLandmarkTemporalTracker.reset();
       faceLandmarksLastAt = 0;
+      faceLandmarkAverageCost = 0;
       faceLandmarksLiveEnabled = true;
       faceLandmarksButton.textContent = "إيقاف تتبع الوجه الحي";
       faceLandmarksStatus.textContent = "تم تحميل النموذج. جارٍ بدء التتبع الحي…";
@@ -1064,6 +1071,7 @@ export function initCamera() {
     faceLandmarksLiveEnabled = false;
     faceLandmarksProcessing = false;
     faceLandmarksLastAt = 0;
+    faceLandmarkAverageCost = 0;
     faceLandmarkTemporalTracker.reset();
     clearFaceLandmarksPreview();
     if (faceLandmarkerProvider) {
