@@ -128,6 +128,38 @@ assert.equal(legacyCortex.engines.get("optical-flow").name, previousCortexDescri
 assert.equal(legacyRegistry.entries.get("optical-flow").instance, legacyInstance);
 assert.equal(legacyRegistry.snapshot()[0].name, "Legacy Optical Flow");
 
+
+let syncTick = 0;
+const syncCortex = new NOXCortex({ engines: [] });
+const syncRegistry = new NOXEngineRegistry();
+const syncHost = new NOXDynamicEngineAdapterHost({ cortex: syncCortex, registry: syncRegistry });
+const syncInstance = { total: 0 };
+const syncAdapter = new NOXDynamicEngineAdapter({
+  id: "sync-frame-policy",
+  instance: syncInstance,
+  processSync: input => {
+    syncInstance.total += input.delta;
+    return { total: syncInstance.total, sequence: input.sequence };
+  },
+  capabilities: ["sync-frame-policy"],
+  clock: () => syncTick += 2,
+  historyLimit: 2,
+  minSamplesForMeasuredCost: 2
+});
+syncHost.register(syncAdapter);
+assert.deepEqual(syncHost.runSync("sync-frame-policy", { delta: 3, sequence: 1 }), { total: 3, sequence: 1 });
+assert.deepEqual(syncHost.runSync("sync-frame-policy", { delta: 4, sequence: 2 }), { total: 7, sequence: 2 });
+assert.equal(syncAdapter.getStatus().samples, 2);
+assert.equal(syncAdapter.getStatus().measuredP95Ms, 2);
+assert.equal(syncRegistry.snapshot()[0].estimatedCostMs, 2);
+assert.throws(() => syncHost.runSync("sync-frame-policy", { delta: 1, sequence: 3 }, { signal: { aborted: true } }), /engine-aborted/);
+assert.throws(() => new NOXDynamicEngineAdapter({
+  id: "bad-sync-return", instance: {}, processSync: () => Promise.resolve("not-sync")
+}).handleSync({}), /sync-engine-returned-promise/);
+syncHost.setEnabled("sync-frame-policy", false);
+assert.throws(() => syncHost.runSync("sync-frame-policy", { delta: 1 }), /engine-disabled/);
+syncHost.clear();
+
 assert.throws(() => new NOXDynamicEngineAdapter({ id: "missing-process", instance: {} }), /process-required/);
 assert.throws(() => new NOXDynamicEngineAdapter({ id: "bad id", instance: {}, process: () => ({}) }), /invalid-engine-adapter-id/);
 console.log("NOX Dynamic Engine Adapter contract tests passed");
