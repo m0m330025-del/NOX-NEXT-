@@ -168,6 +168,22 @@ export class NOXBeautyVisionProvider {
       faceBox: { ...output.faceBox },
       skinMask,
       regionMasks,
+      fusion: output.fusion && typeof output.fusion === "object" ? {
+        state: output.fusion.state === "fused" ? "fused" : "partial",
+        landmarkStatus: typeof output.fusion.landmarkStatus === "string"
+          ? output.fusion.landmarkStatus : "unavailable",
+        alignmentIoU: isFiniteNumber(output.fusion.alignmentIoU) &&
+          output.fusion.alignmentIoU >= 0 && output.fusion.alignmentIoU <= 1
+          ? output.fusion.alignmentIoU : null
+      } : { state: "segmentation-only", landmarkStatus: "not-provided", alignmentIoU: null },
+      landmarks: output.landmarks && output.landmarks.source === "mediapipe-face-landmarker-478" &&
+        output.landmarks.width === width && output.landmarks.height === height &&
+        Array.isArray(output.landmarks.regions)
+        ? output.landmarks : (
+          output.landmarks && output.landmarks.source === "mediapipe-face-landmarker-478" &&
+          output.landmarks.width === width && output.landmarks.height === height
+            ? output.landmarks : null
+        ),
       unavailable: [
         ...(!skinMask ? ["skin"] : []),
         ...unavailable
