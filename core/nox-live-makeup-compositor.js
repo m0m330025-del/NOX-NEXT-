@@ -126,14 +126,14 @@ export class NOXLiveMakeupCompositor {
     const context = targetCanvas.getContext("2d");
     if (!context) return false;
     context.save();
+    if (mirrored) {
+      context.translate(targetCanvas.width, 0);
+      context.scale(-1, 1);
+    }
     if (alignment) {
       context.translate(alignment.currentCenterX * targetCanvas.width, alignment.currentCenterY * targetCanvas.height);
       context.scale(alignment.scaleX, alignment.scaleY);
       context.translate(-alignment.previousCenterX * targetCanvas.width, -alignment.previousCenterY * targetCanvas.height);
-    }
-    if (mirrored) {
-      context.translate(targetCanvas.width, 0);
-      context.scale(-1, 1);
     }
     context.drawImage(this.canvas, 0, 0, targetCanvas.width, targetCanvas.height);
     context.restore();
