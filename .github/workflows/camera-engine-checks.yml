@@ -92,7 +92,7 @@ jobs:
           cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
           cp core/nox-smart-motion-separation-engine.js /tmp/smart-motion-separation-engine.mjs
           cp core/nox-adaptive-temporal-fusion-engine.js /tmp/adaptive-temporal-fusion-engine.mjs
-          cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs
+          cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs\n          cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -107,7 +107,7 @@ jobs:
           node --check /tmp/temporal-alignment-engine.mjs
           node --check /tmp/smart-motion-separation-engine.mjs
           node --check /tmp/adaptive-temporal-fusion-engine.mjs
-          node --check /tmp/multi-engine-intelligence-brain.mjs
+          node --check /tmp/multi-engine-intelligence-brain.mjs\n          node --check /tmp/neural-camera-orchestrator.mjs
           node tests/nox-original-filter-library.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
@@ -115,7 +115,7 @@ jobs:
           node tests/nox-temporal-alignment-integration.test.mjs
           node tests/nox-smart-motion-separation-engine.test.mjs
           node tests/nox-adaptive-temporal-fusion-engine.test.mjs
-          node tests/nox-multi-engine-intelligence-brain.test.mjs
+          node tests/nox-multi-engine-intelligence-brain.test.mjs\n          node tests/nox-neural-camera-orchestrator.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -272,6 +272,15 @@ jobs:
             if (!js.includes(token)) throw new Error('Adaptive temporal fusion is not connected to the camera compositor: ' + token);
           }
           console.log('NOX Adaptive Temporal Fusion evidence gates and camera compositor integration verified');
+          const orchestratorSource = fs.readFileSync('core/nox-neural-camera-orchestrator.js', 'utf8');
+          for (const token of ['NOXNeuralCameraOrchestrator', 'historySize = 12', 'overloadRatio = 0.92', 'recoveryRatio = 0.68', 'session-only', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'reset()']) {
+            if (!orchestratorSource.includes(token)) throw new Error('NOX Neural Camera Orchestrator bounded adaptive-memory policy missing: ' + token);
+          }
+          for (const token of ['NOXNeuralCameraOrchestrator', 'noxNeuralCameraOrchestrator.observeFrame', 'noxNeuralCameraOrchestrator.evaluate', 'ذاكرة التكيف قصيرة المدى']) {
+            if (!js.includes(token)) throw new Error('NOX Neural Camera Orchestrator is not integrated with measured camera frames: ' + token);
+          }
+          console.log('NOX Neural Camera Orchestrator session-only adaptive memory and camera integration verified');
+
           const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
           for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
             if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
