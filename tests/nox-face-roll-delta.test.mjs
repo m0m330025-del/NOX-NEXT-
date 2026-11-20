@@ -15,6 +15,7 @@ const negative = calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll
 assert.ok(negative.state === "accepted" && Math.abs(negative.deltaRadians + 0.1) < 1e-9);
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("stale", 0.2, 700), nowMonotonicMs: 1000 }).reason, "stale-roll-measurement");
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("future", 0.2, 1100), nowMonotonicMs: 1000 }).reason, "stale-roll-measurement");
+assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("too-old-for-live-correction", 0.2, 900), nowMonotonicMs: 981 }).reason, "stale-roll-measurement", "live roll samples older than 80ms must not rotate makeup");
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("wrong-size", 0.2, 1050, 1280, 720), nowMonotonicMs: 1060 }).reason, "roll-frame-mismatch");
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("wrong-space", 0.2, 1050, 640, 480, "display-mirrored"), nowMonotonicMs: 1060 }).reason, "roll-frame-mismatch");
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: estimate("bad-a", 0.1, 1000, 640, 480, "display-mirrored"), currentRoll: estimate("bad-b", 0.2, 1050, 640, 480, "display-mirrored"), nowMonotonicMs: 1060 }).reason, "unsupported-coordinate-space");
