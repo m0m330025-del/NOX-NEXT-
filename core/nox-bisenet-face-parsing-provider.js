@@ -61,8 +61,8 @@ function preprocessCanvasFrame(source, width, height, size, canvasFactory) {
   return input;
 }
 function cropLetterboxed(source, sourceWidth, sourceHeight, rect) {
-  const x = Math.max(0, Math.min(sourceWidth - 1, Math.floor(rect.x * sourceWidth / sourceWidth)));
-  const y = Math.max(0, Math.min(sourceHeight - 1, Math.floor(rect.y * sourceHeight / sourceHeight)));
+  const x = Math.max(0, Math.min(sourceWidth - 1, Math.floor(rect.x)));
+  const y = Math.max(0, Math.min(sourceHeight - 1, Math.floor(rect.y)));
   const right = Math.max(x + 1, Math.min(sourceWidth, Math.ceil(rect.x + rect.width)));
   const bottom = Math.max(y + 1, Math.min(sourceHeight, Math.ceil(rect.y + rect.height)));
   const width = right - x, height = bottom - y;
