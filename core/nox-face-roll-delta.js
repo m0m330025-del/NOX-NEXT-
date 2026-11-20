@@ -8,7 +8,7 @@ function wrapAngle(value) {
 
 export function calculateNOXFaceRollDelta({
   capturedRoll, currentRoll, nowMonotonicMs,
-  maxAgeMs = 220, maxDeltaRadians = 0.35
+  maxAgeMs = 80, maxDeltaRadians = 0.35
 } = {}) {
   const valid = estimate => estimate?.state === "estimated" &&
     Number.isFinite(estimate.angleRadians) &&
