@@ -113,6 +113,7 @@ jobs:
           cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
           cp core/nox-hybrid-fx-engine.js /tmp/nox-hybrid-fx-engine.mjs
           cp core/nox-bisenet-face-parsing-provider.js /tmp/bisenet-face-parsing-provider.mjs
+          cp core/nox-bisenet-face-parsing-provider.js core/nox-bisenet-face-parsing-provider.mjs
           cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
           cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
