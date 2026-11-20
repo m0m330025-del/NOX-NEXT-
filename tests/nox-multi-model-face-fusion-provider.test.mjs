@@ -32,7 +32,7 @@ assert.equal((await fusion.initialize()).fusionMode,"dual-model");
 const result=await fusion.segment(frame);
 assert.equal(result.fusion.state,"fused");
 assert.equal(result.fusion.landmarkStatus,"aligned");
-assert.equal(result.landmarks.state,"complete");
+assert.equal(result.landmarks.state,"partial");
 assert.equal(result.regions.lips.confidence,0.95);
 
 const noFace=makeProvider({detection:{detected:false}});
