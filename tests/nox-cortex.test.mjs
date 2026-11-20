@@ -8,7 +8,7 @@ const beauty = cortex.plan({
   maskRequested: true,
   makeupRequested: true,
   filterSelected: true
-});
+}, { mode: "quality" });
 const ids = beauty.engines.map(engine => engine.id);
 assert.ok(ids.indexOf("face-detection") < ids.indexOf("face-landmarks"));
 assert.ok(ids.indexOf("face-landmarks") < ids.indexOf("facial-mask-builder"));
