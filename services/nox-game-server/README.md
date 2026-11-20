@@ -2,13 +2,23 @@
 
 ## Current architecture decision
 
-The current implementation direction is to use Appwrite services for the first NOX KISS backend phase, rather than provisioning Oracle Cloud or Railway.
+The first NOX KISS backend phase uses a dedicated Appwrite project for game data, while the existing NOX Appwrite project remains the identity/application project.
 
-- **Existing NOX Appwrite project/account:** remains the source of user identity and core application data.
-- **Dedicated NOX GAME Appwrite project/account (proposed):** isolates game-room data, game records, and game-related functions.
-- **NOX client:** uses the existing NOX identity flow and accesses game services through authenticated, server-validated requests.
+### Confirmed Appwrite projects
+
+- **Existing NOX application project:** `6af9ca51000735dfb692`
+- **Dedicated game project:** `6affebd1000a6e0f1c49` (`NOX GAME SERVER`)
+- **Endpoint:** `https://fra.cloud.appwrite.io/v1`
+- **Game database:** `NOX_GAME_DB`, database ID `nox_game_db`, type `TablesDB`
+- **Database status:** created and verified; currently contains zero tables.
 
 A second Appwrite account/project is an organizational separation, not extra compute capacity. It does not automatically increase free-tier quotas or create a continuously running game-server process.
+
+## GitHub integration status
+
+The repository contains `core/game-appwrite.js`, which initializes a browser-side Appwrite client for the dedicated game project using its public endpoint and project ID.
+
+This is application configuration in GitHub; it does **not** mean Appwrite has been connected to GitHub as a deployment integration, and it does not deploy the game backend. No API key or server secret belongs in this file or any browser bundle.
 
 ## Important runtime boundary
 
@@ -23,7 +33,7 @@ Therefore, the initial Appwrite-only design must:
 
 ## Identity and project-to-project trust
 
-If NOX GAME is created under a separate Appwrite account/project:
+Because NOX GAME is a separate Appwrite project/account:
 1. The NOX client authenticates through the existing NOX identity project.
 2. The game backend must establish and verify a trusted identity assertion through a server-side integration.
 3. The game backend must never trust a user ID, role, room owner, or moderator claim supplied only by the client.
@@ -38,17 +48,20 @@ If NOX GAME is created under a separate Appwrite account/project:
 - Room state and results survive client disconnects and service restarts because durable state is persisted.
 - Reconnecting players reload authoritative persisted state before receiving live updates.
 
-## Phased implementation
+## Next implementation phases
 
-1. Inspect the existing Appwrite project configuration without changing production settings.
-2. Confirm the current free-plan quotas and whether a second project/account is permitted and useful; do not create accounts or paid resources automatically.
+1. Verify the client configuration from the NOX app without exposing server credentials.
+2. Define the TablesDB tables, indexes, and permissions for players, rooms, seats, rounds, results, chat, music queue, and friendships.
 3. Design and test the cross-project identity verification flow.
-4. Define game collections, indexes, permissions, and server-side functions.
-5. Implement room actions with server-side validation and persistence.
-6. Add Realtime subscriptions for accepted state changes.
-7. Test one room, disconnect/reconnect, creator departure, moderator takeover, and concurrent players.
-8. Measure resource usage and connection limits before considering the 30-room / 450-player target.
+4. Implement room actions with server-side validation and persistence.
+5. Add Realtime subscriptions for accepted state changes.
+6. Test one room, disconnect/reconnect, creator departure, moderator takeover, and concurrent players.
+7. Measure resource usage and connection limits before considering the 30-room / 450-player target.
 
 ## Current status
 
-This file records the Appwrite-first architecture direction only. No second Appwrite account/project has been created, no Appwrite console settings or production data have been changed, and no game backend has been deployed. The Oracle architecture branch and the earlier draft PR are left untouched.
+- The dedicated Appwrite project and its empty TablesDB database have been created and verified.
+- The GitHub branch `feature/nox-appwrite-game-backend` contains the game-project client configuration.
+- No TablesDB tables, game functions, or server deployments have been created.
+- The main branch has not been changed or merged.
+- The Oracle architecture branch and earlier draft PR remain untouched.
