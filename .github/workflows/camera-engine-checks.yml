@@ -322,11 +322,13 @@ jobs:
             'NOXLiveMakeupCompositor',
             'startLiveMakeup()',
             'liveMakeupCompositor.draw(renderCanvas',
-            'أقدم من 220ms تُرفض تلقائيًا'
+            'أقدم من 220ms تُرفض تلقائيًا',
+            'renderCanvas.captureStream',
+            'function createOutputCanvas()'
           ]) {
             if (!cameraSource.includes(token)) throw new Error('Live makeup freshness/composition contract missing: ' + token);
           }
-          console.log('Live makeup is composited into the shared camera output with a strict freshness gate');
+          console.log('Live makeup is composited into the shared camera output used by photo and video capture');
           if (!cameraSource.includes('Boolean(selectedOriginalFilter) || Boolean(selectedHybridFilter)')) throw new Error('CORTEX diagnostics must recognize original and hybrid live filters');
 
           if (!cameraSource.includes('selectedFilter ? selectedFilter.groupIndex : -1') ||
