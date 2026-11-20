@@ -17,7 +17,7 @@ export function calculateNOXFaceRollDelta({
     Number.isFinite(estimate.frame.capturedAtMonotonicMs) &&
     Number.isInteger(estimate.frame.width) && estimate.frame.width > 0 &&
     Number.isInteger(estimate.frame.height) && estimate.frame.height > 0 &&
-    estimate.frame.coordinateSpace === "source-unmirrored-normalized";
+    typeof estimate.frame.coordinateSpace === "string" && estimate.frame.coordinateSpace.length > 0;
   if (!valid(capturedRoll) || !valid(currentRoll) ||
       !Number.isFinite(nowMonotonicMs) || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
       !Number.isFinite(maxDeltaRadians) || maxDeltaRadians <= 0 || maxDeltaRadians > Math.PI / 2) {
@@ -33,6 +33,9 @@ export function calculateNOXFaceRollDelta({
   if (a.coordinateSpace !== b.coordinateSpace ||
       a.width !== b.width || a.height !== b.height) {
     return { state: "rejected", deltaRadians: null, reason: "roll-frame-mismatch" };
+  }
+  if (a.coordinateSpace !== "source-unmirrored-normalized") {
+    return { state: "rejected", deltaRadians: null, reason: "unsupported-coordinate-space" };
   }
   const deltaRadians = wrapAngle(currentRoll.angleRadians - capturedRoll.angleRadians);
   if (!Number.isFinite(deltaRadians) || Math.abs(deltaRadians) > maxDeltaRadians) {
