@@ -400,6 +400,7 @@ export function initCamera() {
   let trackedFaceRegions = null;
   let faceDetectionState = "idle";
   let faceDetectionInFlight = false;
+  let faceDetectionAbortController = null;
   let faceDetectionLastAt = 0;
   let faceDetectionSession = 0;
   let trackedFace = null;
@@ -745,6 +746,8 @@ export function initCamera() {
 
   function resetFaceTracking() {
     faceDetectionSession += 1;
+    faceDetectionAbortController?.abort();
+    faceDetectionAbortController = null;
     faceDetectionInFlight = false;
     faceDetectionLastAt = 0;
     trackedFace = null;
@@ -754,35 +757,62 @@ export function initCamera() {
     faceDetectionState = "idle";
   }
 
-  function requestFaceDetection(now) {
+  async function requestFaceDetection(now) {
     if (!stream || disposed || !faceDetectionEngine.detector || faceDetectionInFlight) return;
     const interval = lowPower ? 650 : 360;
     if (now - faceDetectionLastAt < interval) return;
     faceDetectionLastAt = now;
     faceDetectionInFlight = true;
     const session = faceDetectionSession;
-    faceDetectionEngine.detect(video).then((result) => {
-      if (session !== faceDetectionSession || !stream || disposed) return;
-      if (result.state === "ok") {
-        const tracked = faceTrackingEngine.update(result.faces);
-        trackedFace = tracked.face;
-        trackedFaceRegions = tracked.face ? faceRegionEngine.analyze(tracked.face) : null;
-        faceDetectionState = tracked.state;
+    const controller = new AbortController();
+    faceDetectionAbortController = controller;
+    const plan = cortex.plan({}, { requested: ["face-detection", "face-tracking"], mode: lowPower ? "lite" : "balanced" });
+    const handlers = {
+      "face-detection": async (source, { signal }) => {
+        if (signal.aborted) throw new Error("detection-cancelled");
+        return faceDetectionEngine.detect(source);
+      },
+      "face-tracking": (detection) => {
+        if (detection?.state !== "ok") return { detection, tracking: null };
+        return { detection, tracking: faceTrackingEngine.update(detection.faces) };
+      }
+    };
+    cortex.execute(plan, video, handlers, {
+      signal: controller.signal,
+      timeoutMs: 2800,
+      stopOnError: true
+    }).then((execution) => {
+      if (session !== faceDetectionSession || !stream || disposed || controller.signal.aborted) return;
+      if (execution.state !== "completed" || !execution.output?.detection) {
+        trackedFace = null;
+        trackedFaceRegions = null;
+        faceDetectionState = "cortex-" + execution.state;
+        faceTrackingEngine.reset();
+        return;
+      }
+      const { detection, tracking } = execution.output;
+      if (detection.state === "ok" && tracking) {
+        trackedFace = tracking.face;
+        trackedFaceRegions = trackedFace ? faceRegionEngine.analyze(trackedFace) : null;
+        faceDetectionState = tracking.state;
       } else {
         trackedFace = null;
         trackedFaceRegions = null;
-        faceDetectionState = result.state;
+        faceDetectionState = detection.state || "detection-unavailable";
         faceTrackingEngine.reset();
       }
     }).catch(() => {
-      if (session === faceDetectionSession) {
+      if (session === faceDetectionSession && !controller.signal.aborted) {
         trackedFace = null;
         trackedFaceRegions = null;
-        faceDetectionState = "detection-error";
+        faceDetectionState = "cortex-execution-error";
         faceTrackingEngine.reset();
       }
     }).finally(() => {
-      if (session === faceDetectionSession) faceDetectionInFlight = false;
+      if (session === faceDetectionSession) {
+        faceDetectionInFlight = false;
+        if (faceDetectionAbortController === controller) faceDetectionAbortController = null;
+      }
     });
   }
 
