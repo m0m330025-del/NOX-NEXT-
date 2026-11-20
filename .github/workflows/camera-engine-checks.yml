@@ -10,6 +10,7 @@ on:
       - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-optical-flow-engine.js"
       - "tests/nox-optical-flow-engine.test.mjs"
+      - "docs/NOX-CAMERA-ENGINE.md"
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
       - "tests/nox-temporal-alignment-integration.test.mjs"
