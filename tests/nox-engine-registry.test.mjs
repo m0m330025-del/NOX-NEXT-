@@ -8,7 +8,11 @@ const unregister = registry.register({
   name: "Sparse Optical Flow",
   category: "motion",
   instance: flow,
-  capabilities: ["motion-vectors", "confidence"]
+  capabilities: ["motion-vectors", "confidence"],
+  requiresCapabilities: ["frame-source"],
+  conflictsWith: ["legacy-flow"],
+  estimatedCostMs: 2.5,
+  priority: 7
 });
 registry.register({
   id: "scene-intelligence",
@@ -21,6 +25,10 @@ assert.equal(snapshot.length, 3);
 assert.equal(snapshot[0].statusAvailable, true);
 assert.equal(snapshot[0].enabled, true);
 assert.equal(snapshot[0].status.vectorCount, 12);
+assert.deepEqual(snapshot[0].requiresCapabilities, ["frame-source"]);
+assert.deepEqual(snapshot[0].conflictsWith, ["legacy-flow"]);
+assert.equal(snapshot[0].estimatedCostMs, 2.5);
+assert.equal(snapshot[0].priority, 7);
 assert.equal("vectors" in snapshot[0].status, false);
 assert.equal(snapshot[1].registered, true);
 assert.equal(snapshot[1].statusAvailable, false);
