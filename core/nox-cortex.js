@@ -42,6 +42,7 @@ function normalizeEngine(engine) {
     priority: Number.isFinite(engine.priority) ? engine.priority : 0,
     requires: Array.isArray(engine.requires) ? [...new Set(engine.requires)] : [],
     tags: Array.isArray(engine.tags) ? [...new Set(engine.tags)] : [],
+    conflictsWith: Array.isArray(engine.conflictsWith) ? [...new Set(engine.conflictsWith)] : [],
     enabled: engine.enabled !== false
   };
 }
@@ -60,6 +61,14 @@ export class NOXCortex {
     if (this.engines.has(normalized.id)) throw new Error("duplicate-engine-id:" + normalized.id);
     this.engines.set(normalized.id, normalized);
     return normalized.id;
+  }
+
+  unregisterEngine(id) {
+    if (!this.engines.has(id)) return false;
+    this.engines.delete(id);
+    this.telemetry.delete(id);
+    this.lastPlan = null;
+    return true;
   }
 
   setEngineEnabled(id, enabled) {
@@ -184,6 +193,17 @@ export class NOXCortex {
         return false;
       }
       if (!chain.length && selected.has(engine.id)) return true;
+      const conflict = chain.find((item, index) => {
+        const alreadySelected = [...selected].map(id => this.engines.get(id)).filter(Boolean);
+        const priorInChain = chain.slice(0, index);
+        return [...alreadySelected, ...priorInChain].find(other =>
+          item.conflictsWith.includes(other.id) || other.conflictsWith.includes(item.id)
+        );
+      });
+      if (conflict) {
+        rejected.push({ id: engine.id, reason: "engine-conflict", conflict: conflict.id });
+        return false;
+      }
       const cost = chain.reduce((sum, item) => sum + item.cost, 0);
       if (result.length + chain.length > budget.maxEngines || totalCost + cost > budget.maxCost) {
         rejected.push({ id: engine.id, reason: "resource-budget-exceeded" });
@@ -202,7 +222,7 @@ export class NOXCortex {
     const plan = {
       state: "planned",
       mode,
-      engines: result.map(({ id, group, cost, requires, tags }) => ({ id, group, cost, requires: [...requires], tags: [...tags] })),
+      engines: result.map(({ id, group, cost, requires, tags, conflictsWith }) => ({ id, group, cost, requires: [...requires], tags: [...tags], conflictsWith: [...conflictsWith] })),
       totalCost,
       budget: { maxCost: budget.maxCost, maxEngines: budget.maxEngines },
       rejected,
