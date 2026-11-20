@@ -339,3 +339,19 @@
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls{gap:10px}
 }
 @media(prefers-reduced-motion:reduce){.nox-camera-family-tab{transition:none}}
+
+
+/* NOX camera boot splash — a short, phone-like brand startup sequence. */
+.nox-camera-boot{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 42%,#56318c 0%,#24113f 46%,#090613 100%);color:#fff;animation:nox-camera-boot-in .28s ease-out both;pointer-events:auto}
+.nox-camera-boot-mark{display:grid;place-items:center;width:82px;height:82px;border:1px solid #ffe3a0;border-radius:25px;background:linear-gradient(145deg,#ffe7a3,#bb8735);color:#27133e;font:900 48px/1 Cairo,sans-serif;box-shadow:0 0 0 7px #ffe3a01c,0 0 42px #e9c16b75}
+.nox-camera-boot>b{margin-top:7px;font:900 32px/1.1 Cairo,sans-serif;letter-spacing:.22em;text-shadow:0 0 24px #d6b4ff88}
+.nox-camera-boot>small{color:#e2d1fa;font:700 10px/1.2 Cairo,sans-serif;letter-spacing:.34em}
+.nox-camera-boot-line{width:118px;height:2px;margin-top:20px;overflow:hidden;border-radius:4px;background:#ffffff25}
+.nox-camera-boot-line:after{content:"";display:block;width:42%;height:100%;background:#ffdf91;box-shadow:0 0 12px #ffdf91;animation:nox-camera-boot-progress 1.35s ease-in-out both}
+.nox-camera-boot-sound{position:absolute;bottom:22px;min-height:38px;padding:7px 14px;border:1px solid #ffffff55;border-radius:20px;background:#160b35aa;color:#fff;font:700 11px Cairo,sans-serif;cursor:pointer}
+.nox-camera-boot-sound[aria-pressed="false"]{opacity:.72}
+.nox-camera-boot.is-leaving{animation:nox-camera-boot-out .4s ease-in both}
+@keyframes nox-camera-boot-in{from{opacity:0}to{opacity:1}}
+@keyframes nox-camera-boot-out{to{opacity:0;visibility:hidden}}
+@keyframes nox-camera-boot-progress{from{transform:translateX(-145%)}to{transform:translateX(245%)}}
+@media(prefers-reduced-motion:reduce){.nox-camera-boot,.nox-camera-boot.is-leaving,.nox-camera-boot-line:after{animation-duration:.01ms;animation-iteration-count:1}}
