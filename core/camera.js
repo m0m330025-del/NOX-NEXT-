@@ -10,6 +10,7 @@ import { NOXMakeupRenderingEngine } from "./nox-makeup-rendering-engine.js";
 import { NOXLiveMakeupController } from "./nox-live-makeup-controller.js";
 import { NOXLiveMakeupCompositor } from "./nox-live-makeup-compositor.js";
 import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
+import { NOXMultiModelFaceFusionProvider } from "./nox-multi-model-face-fusion-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
@@ -1151,13 +1152,21 @@ export function initCamera() {
     beautyLipsButton.disabled = true;
     beautyBrowsButton.disabled = true;
     beautyClearLookButton.disabled = true;
-    beautyState = "جارٍ تحميل النموذج أو تحليل إطار";
+    beautyState = "جارٍ تحميل نماذج BiSeNet وMediaPipe وتحليل إطار";
     beautyStatus.textContent = beautyState + " — قد يستغرق التحميل الأول وقتًا بسبب حجم النموذج.";
     try {
       if (!beautyVisionAdapter) {
-        beautyVisionProvider = new NOXBiSeNetFaceParsingProvider({
+        const segmentationProvider = new NOXBiSeNetFaceParsingProvider({
           maxInputDimension: 256,
           executionProviders: ["webgpu", "wasm"]
+        });
+        const fusionLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+        beautyVisionProvider = new NOXMultiModelFaceFusionProvider({
+          segmentationProvider,
+          landmarkProvider: fusionLandmarkerProvider,
+          landmarksEngine: faceLandmarksEngine,
+          minFaceBoxIoU: 0.2,
+          requireLandmarks: false
         });
         beautyVisionAdapter = new NOXBeautyVisionProvider({
           provider: beautyVisionProvider,
@@ -1170,7 +1179,7 @@ export function initCamera() {
       if (beautyVisionAdapter.state !== "ready") {
         const initialized = await beautyVisionAdapter.initialize();
         if (!initialized.available) {
-          throw new Error(initialized.reason || "تعذر تحميل نموذج BiSeNet");
+          throw new Error(initialized.reason || "تعذر تحميل نماذج BiSeNet وMediaPipe");
         }
       }
 
