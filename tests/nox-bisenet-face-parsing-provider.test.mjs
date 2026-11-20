@@ -34,6 +34,31 @@ assert.ok(result.regions.lips.data instanceof Float32Array);
 assert.deepEqual(result.unavailableRegions, ["eyelids", "cheeks"]);
 assert.ok(result.regions.lips.confidence > 0.9);
 
+assert.ok(result.regions.lips.confidence > 0.9);
+
+// The default preprocessing path must letterbox, not stretch, a landscape frame.
+let drawArguments = null;
+const letterboxProvider = new NOXBiSeNetFaceParsingProvider({
+  modelInputSize: size,
+  maxInputDimension: 64,
+  sessionFactory: async () => ({ session }),
+  canvasFactory: () => ({
+    width: 0,
+    height: 0,
+    getContext: () => ({
+      fillRect() {},
+      drawImage(...args) { drawArguments = args.slice(1); },
+      getImageData: () => ({ data: new Uint8ClampedArray(size * size * 4).fill(128) })
+    })
+  })
+});
+assert.equal((await letterboxProvider.initialize()).available, true);
+await letterboxProvider.segment({
+  source: {}, width: 8, height: 4, frameId: "landscape", timestamp: 100
+});
+assert.deepEqual(drawArguments, [0, 1, 4, 2], "landscape frame must be centered with preserved aspect ratio");
+await letterboxProvider.dispose();
+
 // Verify the real parsing output passes through the shared vision adapter and
 // produces a makeup render only on semantic lip pixels.
 const adapter = new NOXBeautyVisionProvider({
