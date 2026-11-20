@@ -15,3 +15,14 @@ for (const filter of NOX_HYBRID_FILTERS) {
 assert.equal(getNOXHybridFilter("chroma-tide").engines.length, 3);
 assert.equal(getNOXHybridFilter("not-real"), null);
 console.log("NOX hybrid FX engine tests passed");
+
+import { buildNOXHybridSelection } from "../core/nox-hybrid-fx-engine.js";
+const combined = buildNOXHybridSelection(["chroma-tide", "quantum-bloom", "aurora-relic"], [0.25, 0.5, 0.35, 0.4, 0.2, 0.7]);
+assert.equal(combined.mask, 37);
+assert.equal(combined.count, 3);
+assert.deepEqual(combined.weights, [0.25, 0.5, 0.35, 0.4, 0.2, 0.7]);
+const bounded = buildNOXHybridSelection(["prism-forge"], [NaN, 9, -1, 0, 0, 0]);
+assert.equal(bounded.mask, 2);
+assert.equal(bounded.weights[0], NOX_HYBRID_FILTERS[0].mix);
+assert.equal(bounded.weights[1], 0.85);
+assert.equal(bounded.weights[2], 0);
