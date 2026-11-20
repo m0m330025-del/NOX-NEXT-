@@ -30,8 +30,11 @@ export function calculateNOXFaceRollDelta({
       capturedAgeMs < 0 || capturedAgeMs > maxAgeMs) {
     return { state: "rejected", deltaRadians: null, reason: "stale-roll-measurement" };
   }
+  const aspectA = a.width / a.height;
+  const aspectB = b.width / b.height;
   if (a.coordinateSpace !== b.coordinateSpace ||
-      a.width !== b.width || a.height !== b.height) {
+      !Number.isFinite(aspectA) || !Number.isFinite(aspectB) ||
+      Math.abs(aspectA - aspectB) > 0.01) {
     return { state: "rejected", deltaRadians: null, reason: "roll-frame-mismatch" };
   }
   if (a.coordinateSpace !== "source-unmirrored-normalized") {
