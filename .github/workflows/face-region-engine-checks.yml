@@ -38,5 +38,5 @@ jobs:
       - name: Verify camera integration
         run: |
           grep -q 'NOXFaceRegionEngine' core/camera.js
-          grep -q 'faceRegionEngine.analyze(tracked.face)' core/camera.js
+          grep -q 'faceRegionEngine.analyze(trackedFace)' core/camera.js
           grep -q 'trackedFaceRegions?.regions' core/camera.js
