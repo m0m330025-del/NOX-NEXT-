@@ -10,6 +10,7 @@ on:
       - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-optical-flow-engine.js"
       - "tests/nox-optical-flow-engine.test.mjs"
+      - "docs/NOX-CAMERA-ENGINE.md"
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
@@ -24,7 +25,7 @@ on:
       - "camera.css"
       - ".github/workflows/camera-engine-checks.yml"
   push:
-    branches: ["feature/nox-camera-engine-rebuild"]
+    branches: ["feature/nox-camera-engine-rebuild", "feature/nox-camera-engine-hardening"]
     paths:
       - "core/nox-optical-flow-engine.js"
       - "tests/nox-optical-flow-engine.test.mjs"
