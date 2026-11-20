@@ -35,9 +35,13 @@ assert.ok(motion.engines.length <= 3);
 assert.ok(motion.totalCost <= 3);
 
 cortex.setEngineEnabled("face-detection", false);
-const blocked = cortex.plan({ faceRequested: true, landmarksRequested: true, maskRequested: true });
-assert.ok(!blocked.engines.some(engine => ["face-landmarks", "facial-mask-builder", "makeup-rendering"].includes(engine.id)));
-assert.ok(blocked.rejected.some(item => item.reason === "dependency-unavailable"));
+const blocked = cortex.plan({ faceRequested: true, landmarksRequested: true, maskRequested: true, motion: true });
+assert.ok(!blocked.engines.some(engine => engine.id === "face-tracking"),
+  "face tracking must be blocked when its browser detector dependency is disabled");
+assert.ok(blocked.engines.some(engine => engine.id === "face-landmarks"),
+  "MediaPipe Face Landmarker remains an independent provider");
+assert.ok(blocked.engines.some(engine => engine.id === "facial-mask-builder"));
+assert.ok(blocked.rejected.some(item => item.id === "face-tracking" && item.reason === "dependency-unavailable"));
 
 const custom = new NOXCortex({ engines: [
   { id: "a", cost: 1, when: context => context.useA },
