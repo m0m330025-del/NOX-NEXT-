@@ -72,3 +72,8 @@ The original catalog remains accurately described as 10 procedural families × 1
 These are full-frame procedural GPU effects, not face-aware AR. ECHO MATTER uses directional frame sampling and time modulation; it does not claim measured optical flow. The hybrid shader runs after the selected base lens/filter and is included in the WebGL-rendered canvas used by photo capture and video recording. The Canvas 2D fallback cannot reproduce the shader compositions; it uses six distinct CSS filter approximations so a selected hybrid still changes the preview when WebGL is unavailable.
 
 Tests verify recipe identity, distinct blend operators, engine composition metadata, and bounded shader controls. Browser/device rendering and frame-rate performance still require real-device verification.
+
+
+### Multi-engine interactive mixer
+
+The camera exposes a HYBRID MIXER when a hybrid preset is selected. Each of the six engines can be enabled independently, and each active layer has its own 0–85% weight control. The GPU shader uses a bit-mask to run enabled layers sequentially in one frame, with a separate weight per engine. Combinations can contain multiple simultaneous effects instead of selecting only one shader branch. The reset control clears active layers. This is a full-frame procedural compositor, not face-aware AR or a physically simulated optical pipeline.
