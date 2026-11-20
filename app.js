@@ -12,8 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
   initNavigation();
   initApp();
   initSocialUI();
-  initCameraPresentation();
+  // Camera initialization may append diagnostics and effect controls.
+  // Group the complete set only after those controls have been registered.
   initCamera();
+  initCameraPresentation();
   initSections();
   initProfileAvatar();
 });
