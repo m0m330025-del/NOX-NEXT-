@@ -9,6 +9,9 @@ on:
       - "core/nox-facial-mask-builder.js"
       - "core/nox-face-topology-intelligence.js"
       - "core/nox-face-research-suite.js"
+      - "core/nox-face-digital-twin-diagnostics.js"
+      - "core/camera.js"
+      - "tests/nox-face-digital-twin-diagnostics.test.mjs"
       - "tests/nox-face-landmarks-engine.test.mjs"
       - "tests/nox-mediapipe-face-landmarker-provider.test.mjs"
       - "tests/nox-facial-mask-builder.test.mjs"
@@ -26,7 +29,10 @@ on:
       - "tests/nox-facial-mask-builder.test.mjs"
       - "tests/nox-face-topology-intelligence.test.mjs"
       - "core/nox-face-research-suite.js"
+      - "core/nox-face-digital-twin-diagnostics.js"
+      - "core/camera.js"
       - "tests/nox-face-research-suite.test.mjs"
+      - "tests/nox-face-digital-twin-diagnostics.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
 
 permissions:
@@ -54,6 +60,8 @@ jobs:
           node --check core/nox-facial-mask-builder.mjs
           node --check core/nox-face-topology-intelligence.mjs
           node --check core/nox-face-research-suite.mjs
+          node --experimental-default-type=module --check core/nox-face-digital-twin-diagnostics.js
+          node --experimental-default-type=module --check core/camera.js
       - name: Run landmark region tests
         run: node tests/nox-face-landmarks-engine.test.mjs
       - name: Run MediaPipe provider contract tests
@@ -64,3 +72,5 @@ jobs:
         run: node tests/nox-face-topology-intelligence.test.mjs
       - name: Run face research suite tests
         run: node tests/nox-face-research-suite.test.mjs
+      - name: Run Face Digital Twin camera diagnostic contract tests
+        run: node --experimental-default-type=module tests/nox-face-digital-twin-diagnostics.test.mjs
