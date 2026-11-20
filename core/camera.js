@@ -3046,10 +3046,23 @@ export function initCamera() {
     };
     const motionX = median(stableVectors.map((vector) => vector.dx));
     const motionY = median(stableVectors.map((vector) => vector.dy));
+    const prediction = noxPredictiveCameraIntelligence.evaluate({
+      nowMs: performance.now(),
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
+    });
+    const predictionTrusted = prediction.action === "report-short-horizon-estimate" &&
+      prediction.prediction && prediction.confidence >= 0.2 &&
+      Number.isFinite(prediction.prediction.dx) && Number.isFinite(prediction.prediction.dy) &&
+      Number.isFinite(prediction.horizonMs) && prediction.horizonMs <= 250;
+    const predictiveMotionX = predictionTrusted ? prediction.prediction.dx * 0.18 : 0;
+    const predictiveMotionY = predictionTrusted ? prediction.prediction.dy * 0.18 : 0;
+    const correctionX = Math.max(-0.025, Math.min(0.025, motionX * 0.72 + predictiveMotionX));
+    const correctionY = Math.max(-0.025, Math.min(0.025, motionY * 0.72 + predictiveMotionY));
     const maxOffset = 0.025;
     stabilizationTarget = {
-      x: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.x - motionX * 0.72)),
-      y: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.y - motionY * 0.72))
+      x: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.x - correctionX)),
+      y: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.y - correctionY))
     };
     stabilizationOffset = {
       x: stabilizationOffset.x * 0.76 + stabilizationTarget.x * 0.24,
