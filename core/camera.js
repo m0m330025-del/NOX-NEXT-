@@ -1266,11 +1266,25 @@ export function initCamera() {
         };
       },
       processFrame: async (frame) => {
-        const vision = await beautyVisionAdapter.processFrame(frame);
-        if (!vision || !["complete", "partial"].includes(vision.state) ||
-            !vision.regionMasks || !Object.keys(vision.regionMasks).length) {
-          throw new Error(vision?.reason || "لم يتم اكتشاف قناع وجه موثوق.");
+        const rawVision = await beautyVisionAdapter.processFrame(frame);
+        if (!rawVision || !["complete", "partial"].includes(rawVision.state) ||
+            !rawVision.regionMasks || !Object.keys(rawVision.regionMasks).length) {
+          throw new Error(rawVision?.reason || "لم يتم اكتشاف قناع وجه موثوق.");
         }
+        if (rawVision.frame?.width !== frame.width || rawVision.frame?.height !== frame.height) {
+          throw new Error("live-makeup-source-frame-dimensions-mismatch");
+        }
+        // Stamp provenance only after this adapter has processed this exact captured
+        // canvas. This does not claim the separate preview tracker is same-frame.
+        const vision = {
+          ...rawVision,
+          frame: {
+            ...rawVision.frame,
+            id: frame.frameId,
+            timestamp: frame.timestamp,
+            coordinateSpace: "source-unmirrored-normalized"
+          }
+        };
         const source = beautyInputContext.getImageData(0, 0, frame.width, frame.height);
         const plan = cortex.plan(
           { makeupRequested: true },
