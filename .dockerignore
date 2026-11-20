@@ -1,8 +1,13 @@
 .git
 .github
 node_modules
+docs
+tests
+README.md
+PREVIEW.md
+*.md
 .DS_Store
-# Environment files and local credentials must never enter the public image.
+# Environment files and local credentials must never enter the build context.
 .env
 .env.*
 **/.env
