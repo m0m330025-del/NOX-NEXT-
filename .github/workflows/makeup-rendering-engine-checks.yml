@@ -17,6 +17,9 @@ on:
     paths:
       - "core/nox-makeup-rendering-engine.js"
       - "core/nox-live-makeup-controller.js"
+      - "core/nox-live-makeup-compositor.js"
+      - "core/camera.js"
+      - "tests/nox-live-makeup-compositor.test.mjs"
       - "tests/nox-live-makeup-controller.test.mjs"
       - "tests/nox-makeup-rendering-engine.test.mjs"
       - ".github/workflows/makeup-rendering-engine-checks.yml"
