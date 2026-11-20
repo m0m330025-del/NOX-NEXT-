@@ -3665,6 +3665,12 @@ export function initCamera() {
       if (generation !== cameraStartGeneration || disposed) return;
       stopTracks(stream);
       stream = null;
+      // A failed start must detach the stopped MediaStream from the video element.
+      // Otherwise a stale srcObject can survive the error and confuse the next start.
+      video.pause();
+      video.srcObject = null;
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
       setReady(false);
       const messages = {
         NotAllowedError: "إذن الكاميرا مرفوض. اسمح بالكاميرا من إعدادات المتصفح.",
@@ -3963,7 +3969,14 @@ export function initCamera() {
       const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported?.(type));
       recorder = new MediaRecorder(output, mimeType ? { mimeType } : undefined);
       recorder.ondataavailable = (event) => { if (event.data?.size) chunks.push(event.data); };
-      recorder.onerror = () => { recording = false; announce("حدث خطأ أثناء التسجيل."); };
+      recorder.onerror = () => {
+        recording = false;
+        chunks = [];
+        if (recordButton) recordButton.textContent = "فيديو";
+        stopTracks(recordingStream);
+        recordingStream = null;
+        announce("حدث خطأ أثناء التسجيل. تم إيقاف مسار التسجيل.");
+      };
       recorder.onstop = () => {
         recording = false;
         if (recordButton) recordButton.textContent = "فيديو";
