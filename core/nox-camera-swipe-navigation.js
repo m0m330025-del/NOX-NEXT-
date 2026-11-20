@@ -80,7 +80,7 @@ export function initCameraSwipeNavigation() {
   });
 
   orbit.addEventListener("click", (event) => {
-    if (Date.now() < suppressClickUntil) {
+    if (Date.now() < suppressClickUntil && event.detail !== 0) {
       event.preventDefault();
       event.stopImmediatePropagation();
     }
