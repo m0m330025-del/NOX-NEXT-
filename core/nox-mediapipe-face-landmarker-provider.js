@@ -99,11 +99,11 @@ export class NOXMediaPipeFaceLandmarkerProvider {
   async dispose() {
     this.lifecycleGeneration += 1;
     const pendingInitialization = this.initializePromise;
+    const task = this.landmarker;
     this.landmarker = null;
     this.vision = null;
     this.state = "idle";
     if (pendingInitialization) await pendingInitialization;
-    const task = this.landmarker;
     this.landmarker = null;
     this.vision = null;
     this.initializePromise = null;
