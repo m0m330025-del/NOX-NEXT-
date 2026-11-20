@@ -77,6 +77,42 @@ assert.equal(runtimeAfterSuccess.lastExecutionStatus, "success");
 assert.equal(runtimeAfterSuccess.samples, 2);
 assert.equal(runtimeAfterSuccess.measuredP95Ms, 3);
 
+
+let resolveSuperseded;
+const raceAdapter = new NOXDynamicEngineAdapter({
+  id: "async-race-engine",
+  instance: {},
+  process: input => input.defer
+    ? new Promise(resolve => { resolveSuperseded = resolve; })
+    : Promise.resolve({ value: "new-run" })
+});
+const oldRun = raceAdapter.handle({ defer: true });
+await Promise.resolve();
+assert.equal(typeof resolveSuperseded, "function");
+assert.deepEqual(await raceAdapter.handle({ defer: false }), { value: "new-run" });
+assert.equal(raceAdapter.getStatus().state, "ready");
+resolveSuperseded({ value: "stale-run" });
+await assert.rejects(oldRun, /engine-superseded/);
+assert.equal(raceAdapter.getStatus().state, "ready", "stale completion must not overwrite newer adapter state");
+assert.equal(raceAdapter.getStatus().samples, 1, "stale completion must not enter performance history");
+assert.equal(raceAdapter.getStatus().failures, 0, "superseded work is not an engine failure");
+
+let resolveAborted;
+const abortAdapter = new NOXDynamicEngineAdapter({
+  id: "async-abort-engine",
+  instance: {},
+  process: () => new Promise(resolve => { resolveAborted = resolve; })
+});
+const abortController = new AbortController();
+const abortedRun = abortAdapter.handle({}, { signal: abortController.signal });
+await Promise.resolve();
+abortController.abort();
+resolveAborted({ value: "late-aborted-output" });
+await assert.rejects(abortedRun, /engine-aborted/);
+assert.equal(abortAdapter.getStatus().state, "cancelled");
+assert.equal(abortAdapter.getStatus().samples, 0, "aborted output must not enter performance history");
+assert.equal(abortAdapter.getStatus().failures, 0, "aborted work is not an engine failure");
+
 host.setEnabled(adapter.id, false);
 assert.equal(cortex.plan({ useCustomScene: true }).engines.length, 0);
 host.setEnabled(adapter.id, true);
