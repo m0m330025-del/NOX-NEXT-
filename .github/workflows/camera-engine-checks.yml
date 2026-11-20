@@ -110,6 +110,7 @@ jobs:
           cp core/camera.js /tmp/camera.mjs
           cp app.js /tmp/app.mjs
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
+          cp core/nox-camera-render-surface.js /tmp/camera-render-surface.mjs
           cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
           cp core/nox-hybrid-fx-engine.js /tmp/nox-hybrid-fx-engine.mjs
           cp core/nox-bisenet-face-parsing-provider.js /tmp/bisenet-face-parsing-provider.mjs
@@ -138,6 +139,8 @@ jobs:
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
+          node --check /tmp/camera-render-surface.mjs
+          node tests/nox-camera-render-surface.test.mjs
           node --check /tmp/nox-original-filter-library.mjs
           node --check /tmp/nox-hybrid-fx-engine.mjs
           node --check /tmp/bisenet-face-parsing-provider.mjs
