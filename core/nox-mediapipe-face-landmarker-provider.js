@@ -15,32 +15,51 @@ export class NOXMediaPipeFaceLandmarkerProvider {
     this.landmarker = null;
     this.vision = null;
     this.state = "idle";
+    this.initializePromise = null;
+    this.lifecycleGeneration = 0;
   }
 
   async initialize() {
-    if (this.landmarker) return { available: true, state: "ready" };
+    if (this.landmarker && this.state === "ready") return { available: true, state: "ready" };
+    if (this.initializePromise) return this.initializePromise;
+    const generation = this.lifecycleGeneration;
     this.state = "loading";
-    try {
-      this.vision = await this.visionLoader();
-      const fileset = await this.vision.FilesetResolver.forVisionTasks(CONFIG.wasmRoot);
-      this.landmarker = await this.vision.FaceLandmarker.createFromOptions(fileset, {
-        baseOptions: { modelAssetPath: CONFIG.modelUrl, delegate: this.delegate },
-        runningMode: "IMAGE",
-        numFaces: 1,
-        minFaceDetectionConfidence: 0.55,
-        minFacePresenceConfidence: 0.55,
-        minTrackingConfidence: 0.55,
-        outputFaceBlendshapes: true,
-        outputFacialTransformationMatrixes: true
-      });
-      this.state = "ready";
-      return { available: true, state: "ready", provider: "MediaPipe FaceLandmarker", model: "face_landmarker.task" };
-    } catch (error) {
-      this.landmarker = null;
-      this.vision = null;
-      this.state = "unavailable";
-      return { available: false, state: "unavailable", reason: "face-landmarker-load-failed", detail: String(error?.message || error).slice(0, 180) };
-    }
+    this.initializePromise = (async () => {
+      let createdLandmarker = null;
+      try {
+        const vision = await this.visionLoader();
+        const fileset = await vision.FilesetResolver.forVisionTasks(CONFIG.wasmRoot);
+        createdLandmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: CONFIG.modelUrl, delegate: this.delegate },
+          runningMode: "IMAGE",
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.55,
+          minFacePresenceConfidence: 0.55,
+          minTrackingConfidence: 0.55,
+          outputFaceBlendshapes: true,
+          outputFacialTransformationMatrixes: true
+        });
+        if (generation !== this.lifecycleGeneration) {
+          try { createdLandmarker?.close?.(); } catch { /* stale initialization cleanup */ }
+          return { available: false, state: "idle", reason: "initialization-superseded" };
+        }
+        this.vision = vision;
+        this.landmarker = createdLandmarker;
+        this.state = "ready";
+        return { available: true, state: "ready", provider: "MediaPipe FaceLandmarker", model: "face_landmarker.task" };
+      } catch (error) {
+        try { createdLandmarker?.close?.(); } catch { /* best-effort cleanup */ }
+        if (generation === this.lifecycleGeneration) {
+          this.landmarker = null;
+          this.vision = null;
+          this.state = "unavailable";
+        }
+        return { available: false, state: "unavailable", reason: "face-landmarker-load-failed", detail: String(error?.message || error).slice(0, 180) };
+      } finally {
+        if (generation === this.lifecycleGeneration) this.initializePromise = null;
+      }
+    })();
+    return this.initializePromise;
   }
 
   detect(source) {
@@ -78,9 +97,16 @@ export class NOXMediaPipeFaceLandmarkerProvider {
   }
 
   async dispose() {
+    this.lifecycleGeneration += 1;
+    const pendingInitialization = this.initializePromise;
+    this.landmarker = null;
+    this.vision = null;
+    this.state = "idle";
+    if (pendingInitialization) await pendingInitialization;
     const task = this.landmarker;
     this.landmarker = null;
     this.vision = null;
+    this.initializePromise = null;
     this.state = "idle";
     try { task?.close?.(); } catch { /* best-effort WASM cleanup */ }
   }
