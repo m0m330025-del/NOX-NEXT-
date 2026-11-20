@@ -32,6 +32,13 @@ const missing = planner.evaluate({
 assert.equal(missing.decisions.find(item => item.engine === "motion").reason, "capability-evidence-unavailable");
 assert.equal(missing.steps.some(item => item.engine === "fusion"), false);
 
+const missingProvider = planner.evaluate({
+  registeredEngines: inventory.filter(item => item.id !== "flow"),
+  capabilityEvidence: evidence
+});
+assert.equal(missingProvider.selectedEngineCount, 0);
+assert.equal(missingProvider.decisions.find(item => item.engine === "motion").reason, "capability-evidence-unavailable");
+
 const conflict = planner.evaluate({
   registeredEngines: [
     { id: "a", registered: true, enabled: true, capabilities: ["scene-tone"], conflictsWith: ["b"] },
