@@ -177,3 +177,19 @@
 /* NOX Face Landmarker preview */
 #nox-face-landmarks-preview[hidden]{display:none!important}
 .nox-beauty-ai-panel #nox-face-landmarks-preview{pointer-events:none}
+
+.nox-hybrid-mixer{display:grid;gap:10px;margin-top:10px;padding:12px;border:1px solid rgba(104,224,255,.48);border-radius:14px;background:linear-gradient(145deg,#081a2b,#182344 58%,#29183d);color:#f5f8ff}
+.nox-hybrid-mixer[hidden]{display:none}
+.nox-hybrid-mixer-head,.nox-hybrid-mixer-footer,.nox-hybrid-layer-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nox-hybrid-mixer-head b{font-size:12px;letter-spacing:.12em;color:#8deaff}
+.nox-hybrid-mixer-head small,.nox-hybrid-layer small{font-size:10px;color:#b9c9df}
+.nox-hybrid-mixer-layers{display:grid;gap:8px}
+.nox-hybrid-layer{display:grid;gap:5px;padding:8px;border:1px solid rgba(168,193,231,.18);border-radius:10px;background:rgba(255,255,255,.035)}
+.nox-hybrid-layer.is-active{border-color:#73e6ff;background:rgba(67,177,220,.12)}
+.nox-hybrid-layer-top{font-size:11px}
+.nox-hybrid-layer-top input[type=checkbox]{accent-color:#72e8ff;width:16px;height:16px}
+.nox-hybrid-layer-top b{margin-right:auto;font-size:11px;color:#fff}
+.nox-hybrid-layer-top output{font-variant-numeric:tabular-nums;color:#ffe2a0;font-weight:800}
+.nox-hybrid-weight{width:100%;accent-color:#7ce9ff}
+.nox-hybrid-mixer-footer{font-size:10px;color:#bcd0e6}
+.nox-hybrid-reset{border:1px solid #8eb5d6;border-radius:8px;padding:6px 10px;background:#172f4b;color:#fff;font:700 10px Cairo,sans-serif}
