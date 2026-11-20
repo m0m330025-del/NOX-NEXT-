@@ -21,6 +21,45 @@ function iou(a, b) {
   return union > 0 ? intersection / union : 0;
 }
 
+
+function validLandmarkResult(result) {
+  return result?.detected === true &&
+    result.source === "mediapipe-face-landmarker-478" &&
+    Array.isArray(result.landmarks) && result.landmarks.length >= 468 &&
+    Number.isInteger(result.width) && result.width > 0 &&
+    Number.isInteger(result.height) && result.height > 0 &&
+    result.landmarks.every(point => point &&
+      Number.isFinite(point.x) && point.x >= 0 && point.x <= 1 &&
+      Number.isFinite(point.y) && point.y >= 0 && point.y <= 1 &&
+      Number.isFinite(point.z ?? 0));
+}
+
+function landmarkFaceBounds(result) {
+  const graph = result.connections?.faceOval;
+  const indices = new Set();
+  if (Array.isArray(graph) && graph.length) {
+    for (const edge of graph) {
+      if (Number.isInteger(edge?.start)) indices.add(edge.start);
+      if (Number.isInteger(edge?.end)) indices.add(edge.end);
+    }
+  }
+  const points = indices.size >= 8
+    ? [...indices].map(index => result.landmarks[index]).filter(Boolean)
+    : result.landmarks;
+  if (points.length < 8) return null;
+  const xs = points.map(point => point.x);
+  const ys = points.map(point => point.y);
+  const left = Math.min(...xs);
+  const top = Math.min(...ys);
+  const right = Math.max(...xs);
+  const bottom = Math.max(...ys);
+  const width = right - left;
+  const height = bottom - top;
+  if (!Number.isFinite(width) || !Number.isFinite(height) ||
+      width < 0.04 || height < 0.04 || width > 0.95 || height > 0.95) return null;
+  return { x: left, y: top, width, height };
+}
+
 function associationScore(previous, next) {
   const a = center(previous);
   const b = center(next);
@@ -37,6 +76,8 @@ export class NOXFaceTrackingEngine {
     this.minAssociation = clamp(Number(minAssociation) || 0.18, 0, 1);
     this.track = null;
     this.sequence = 0;
+    this.landmarkTrack = null;
+    this.landmarkSequence = 0;
   }
 
   update(detections = []) {
@@ -88,6 +129,74 @@ export class NOXFaceTrackingEngine {
     return this.snapshot("tracking");
   }
 
+
+  // Landmark tracking shares the same lifecycle, smoothing policy and loss
+  // handling as rectangle tracking while keeping provider-specific state isolated.
+  updateLandmarks(result) {
+    this.landmarkSequence += 1;
+    if (!validLandmarkResult(result)) return this.missLandmarks("invalid-or-missing-landmarks");
+    const nextBox = landmarkFaceBounds(result);
+    if (!nextBox) return this.missLandmarks("invalid-face-bounds");
+
+    const previous = this.landmarkTrack;
+    const nextCenter = center(nextBox);
+    const previousCenter = previous ? center(previous.box) : null;
+    const jumped = previousCenter &&
+      Math.hypot(nextCenter.x - previousCenter.x, nextCenter.y - previousCenter.y) > 0.22;
+    const reacquired = !previous || jumped || previous.missed > 0;
+    const alpha = reacquired ? 1 : this.smoothing;
+    const landmarks = result.landmarks.map((point, index) => {
+      const oldPoint = previous?.result?.landmarks?.[index];
+      if (!oldPoint || alpha >= 1) return { x: point.x, y: point.y, z: point.z ?? 0 };
+      return {
+        x: oldPoint.x * (1 - alpha) + point.x * alpha,
+        y: oldPoint.y * (1 - alpha) + point.y * alpha,
+        z: oldPoint.z * (1 - alpha) + (point.z ?? 0) * alpha
+      };
+    });
+    const box = !previous || reacquired ? nextBox : {
+      x: previous.box.x * (1 - alpha) + nextBox.x * alpha,
+      y: previous.box.y * (1 - alpha) + nextBox.y * alpha,
+      width: previous.box.width * (1 - alpha) + nextBox.width * alpha,
+      height: previous.box.height * (1 - alpha) + nextBox.height * alpha
+    };
+    const trackedResult = { ...result, landmarks };
+    this.landmarkTrack = { box, result: trackedResult, missed: 0 };
+    return {
+      state: reacquired ? "acquired" : "tracking",
+      sequence: this.landmarkSequence,
+      face: { box: { ...box }, landmarks },
+      result: trackedResult,
+      missedFrames: 0,
+      reacquired: Boolean(jumped)
+    };
+  }
+
+  missLandmarks(reason = "face-not-detected") {
+    if (!this.landmarkTrack) {
+      return { state: "lost", sequence: this.landmarkSequence, face: null, result: null, missedFrames: 1, reason };
+    }
+    this.landmarkTrack.missed += 1;
+    if (this.landmarkTrack.missed > this.maxMissedFrames) {
+      const missedFrames = this.landmarkTrack.missed;
+      this.landmarkTrack = null;
+      return { state: "lost", sequence: this.landmarkSequence, face: null, result: null, missedFrames, reason };
+    }
+    return {
+      state: "coasting",
+      sequence: this.landmarkSequence,
+      face: { box: { ...this.landmarkTrack.box }, landmarks: this.landmarkTrack.result.landmarks },
+      result: this.landmarkTrack.result,
+      missedFrames: this.landmarkTrack.missed,
+      reason
+    };
+  }
+
+  resetLandmarks() {
+    this.landmarkTrack = null;
+    this.landmarkSequence = 0;
+  }
+
   snapshot(state) {
     if (!this.track) return { state: "lost", face: null, sequence: this.sequence };
     return {
@@ -106,5 +215,6 @@ export class NOXFaceTrackingEngine {
   reset() {
     this.track = null;
     this.sequence = 0;
+    this.resetLandmarks();
   }
 }
