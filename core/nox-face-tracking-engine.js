@@ -106,7 +106,8 @@ export class NOXFaceTrackingEngine {
   constructor({ maxMissedFrames = 3, smoothing = 0.62, minAssociation = 0.18, expressionResponse = 1.5 } = {}) {
     this.maxMissedFrames = Math.max(1, Math.floor(maxMissedFrames));
     this.smoothing = clamp(Number(smoothing) || 0.62, 0, 1);
-    this.minAssociation = clamp(Number(minAssociation) || 0.18, 0, 1);\n    this.expressionResponse = clamp(Number(expressionResponse) || 1.5, 0, 4);
+    this.minAssociation = clamp(Number(minAssociation) || 0.18, 0, 1);
+    this.expressionResponse = clamp(Number(expressionResponse) || 1.5, 0, 4);
     this.track = null;
     this.sequence = 0;
     this.landmarkTrack = null;
