@@ -1820,6 +1820,7 @@ export function initCamera() {
 
   function resetOpticalFlow() {
     opticalFlowSession += 1;
+    opticalFlowProcessing = false;
     opticalFlowEngine.reset();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
