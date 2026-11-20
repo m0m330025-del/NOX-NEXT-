@@ -18,7 +18,7 @@ export class NOXEngineRegistry {
     this.entries = new Map();
   }
 
-  register({ id, name, category = "processing", instance, capabilities = [], getStatus, isEnabled } = {}) {
+  register({ id, name, category = "processing", instance, capabilities = [], requiresCapabilities = [], conflictsWith = [], estimatedCostMs = null, priority = 0, getStatus, isEnabled } = {}) {
     if (typeof id !== "string" || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(id)) {
       throw new TypeError("invalid-engine-id");
     }
@@ -30,6 +30,10 @@ export class NOXEngineRegistry {
       name: typeof name === "string" && name.trim() ? name.trim() : id,
       category: typeof category === "string" ? category : "processing",
       capabilities: [...new Set(Array.isArray(capabilities) ? capabilities.filter(item => typeof item === "string") : [])],
+      requiresCapabilities: [...new Set(Array.isArray(requiresCapabilities) ? requiresCapabilities.filter(item => typeof item === "string") : [])],
+      conflictsWith: [...new Set(Array.isArray(conflictsWith) ? conflictsWith.filter(item => typeof item === "string") : [])],
+      estimatedCostMs: Number.isFinite(estimatedCostMs) && estimatedCostMs >= 0 ? estimatedCostMs : null,
+      priority: Number.isFinite(priority) ? priority : 0,
       instance,
       getStatus: typeof getStatus === "function" ? getStatus : null,
       isEnabled: typeof isEnabled === "function" ? isEnabled : null
@@ -67,6 +71,10 @@ export class NOXEngineRegistry {
         name: entry.name,
         category: entry.category,
         capabilities: entry.capabilities.slice(),
+        requiresCapabilities: entry.requiresCapabilities.slice(),
+        conflictsWith: entry.conflictsWith.slice(),
+        estimatedCostMs: entry.estimatedCostMs,
+        priority: entry.priority,
         registered: true,
         statusAvailable,
         enabled,
