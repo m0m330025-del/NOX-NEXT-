@@ -14,6 +14,7 @@ const fakeVision = {
     FACE_LANDMARKS_LEFT_EYEBROW:edges,
     FACE_LANDMARKS_RIGHT_EYEBROW:edges,
     FACE_LANDMARKS_FACE_OVAL:edges,
+    FACE_LANDMARKS_TESSELATION:edges,
     createFromOptions:async(fileset,opts)=>{
       options={fileset,opts};
       return {detect:source=>{
@@ -34,6 +35,7 @@ const result=provider.detect({width:256,height:192});
 assert.equal(result.detected,true);
 assert.equal(result.landmarks.length,478);
 assert.equal(result.connections.lips,edges);
+assert.equal(result.connections.tessellation,edges);
 assert.equal(result.blendshapes[0].categoryName,"jawOpen");
 assert.equal(provider.detect({width:256,height:192}).detected,true);
 assert.throws(()=>provider.detect(null),/Invalid face landmark image/);
