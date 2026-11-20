@@ -27,10 +27,11 @@ export class NOXLiveMakeupController {
   async processNext() {
     if (!this.running || this.inFlight) return;
     this.inFlight = true;
+    const sessionController = this.controller;
     const sequence = ++this.sequence, capturedAt = this.clock();
     try {
       const frame = await this.captureFrame({ sequence, capturedAt, signal: this.controller.signal });
-      if (!this.running || this.controller.signal.aborted) return;
+      if (!this.running || sessionController.signal.aborted) return;
       if (!frame || typeof frame !== "object") throw new TypeError("live-makeup-frame-required");
       const result = await this.processFrame(frame, { sequence, capturedAt, signal: this.controller.signal });
       const ageMs = Math.max(0, this.clock() - capturedAt);
