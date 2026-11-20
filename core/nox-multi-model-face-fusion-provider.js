@@ -88,6 +88,16 @@ export class NOXMultiModelFaceFusionProvider {
       const detected = landmarkResult.value;
       if (detected.width === frame.width && detected.height === frame.height) {
         landmarkAnalysis = this.landmarksEngine.analyze(detected);
+        if (landmarkAnalysis?.source === "mediapipe-face-landmarker-478") {
+          // detect() consumes this exact frame.source object. Attach its provenance
+          // here so downstream geometry can reject stale or cross-frame landmarks.
+          landmarkAnalysis = {
+            ...landmarkAnalysis,
+            frameId: frame.frameId,
+            timestamp: frame.timestamp,
+            coordinateSpace: "source-unmirrored-normalized"
+          };
+        }
         landmarkBox = boxFromLandmarkAnalysis(landmarkAnalysis);
         if (landmarkBox) {
           alignmentIoU = intersectionOverUnion(segmentation.faceBox, landmarkBox);
