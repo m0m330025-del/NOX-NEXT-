@@ -14,7 +14,13 @@ assert.ok(ids.indexOf("face-detection") < ids.indexOf("face-landmarks"));
 assert.ok(ids.indexOf("face-landmarks") < ids.indexOf("facial-mask-builder"));
 assert.ok(ids.indexOf("facial-mask-builder") < ids.indexOf("makeup-rendering"));
 assert.ok(ids.includes("filter-render"));
+assert.ok(!ids.includes("makeup-rendering"), "makeup stays gated until trusted semantic region masks are available");
+assert.ok(beauty.rejected.some(item => item.id === "makeup-rendering" && item.reason === "engine-disabled"));
 assert.equal(beauty.execution, "not-started");
+
+const skinOnly = cortex.plan({ skinRequested: true }, { requested: ["skin-segmentation"], mode: "balanced" });
+assert.deepEqual(skinOnly.engines.map(engine => engine.id), ["skin-segmentation"],
+  "MediaPipe selfie segmentation is an independent provider and must not require browser FaceDetector");
 
 const motion = cortex.plan({ motion: true, temporalRequested: true, stabilization: true }, { mode: "lite" });
 assert.ok(motion.engines.some(engine => engine.id === "optical-flow"));
