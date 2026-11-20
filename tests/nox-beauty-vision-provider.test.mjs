@@ -90,6 +90,25 @@ adapter.setProvider({ segment: async () => providerOutput() });
 release(providerOutput());
 assert.equal((await pending).reason, "superseded-frame");
 
+
+let finishInitialization;
+const initializingAdapter = new NOXBeautyVisionProvider({
+  provider: {
+    initialize: () => new Promise(resolve => { finishInitialization = resolve; }),
+    segment: async () => providerOutput()
+  },
+  now: () => now
+});
+const staleAdapterInitialization = initializingAdapter.initialize();
+await Promise.resolve();
+await initializingAdapter.reset();
+finishInitialization({available:true});
+const staleAdapterResult = await staleAdapterInitialization;
+assert.equal(staleAdapterResult.available, false,
+  "adapter initialization must not report ready after reset");
+assert.equal(initializingAdapter.state, "idle",
+  "stale adapter initialization must not overwrite the reset state");
+
 let disposed = false;
 adapter.setProvider({ segment: async () => providerOutput(), dispose: async () => { disposed = true; } });
 await adapter.reset();
