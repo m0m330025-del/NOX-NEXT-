@@ -18,6 +18,12 @@ for (const token of [
   "opticalFlowRecoveryGate.evaluate(true)",
   "opticalFlowRecoveryGate.evaluate(false)",
   "recovering-\" + recovery.healthyStreak"
+  "cameraPipelineBudgetPlan",
+  "cameraPipelineWarmupComplete",
+  "runPipelineEngine(\"predictive-camera-intelligence\")",
+  "runPipelineEngine(\"smart-motion-separation\")",
+  "runPipelineEngine(\"temporal-alignment\")",
+  "runtimeSnapshot,"
 ]) {
   assert.ok(cameraSource.includes(token), "camera controlled-runtime integration missing: " + token);
 }
