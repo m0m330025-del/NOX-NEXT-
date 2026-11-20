@@ -7,8 +7,12 @@ on:
       - "core/camera.js"
       - "core/nox-filter-engine.js"
       - "core/nox-mediapipe-selfie-provider.js"
+      - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "core/nox-face-landmarks-engine.js"
       - "core/nox-beauty-vision-provider.js"
       - "core/nox-skin-segmentation-engine.js"
+      - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "core/nox-face-landmarks-engine.js"
       - "app.js"
       - "index.html"
       - "camera.css"
@@ -46,12 +50,16 @@ jobs:
           cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
           cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
+          cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
+          cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
           node --check /tmp/mediapipe-selfie-provider.mjs
           node --check /tmp/beauty-vision-provider.mjs
           node --check /tmp/skin-segmentation-engine.mjs
+          node --check /tmp/mediapipe-face-landmarker-provider.mjs
+          node --check /tmp/face-landmarks-engine.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -111,7 +119,10 @@ jobs:
             'NOXMediaPipeSelfieProvider', 'NOXBeautyVisionProvider',
             'NOXSkinSegmentationEngine', 'NOX BEAUTY VISION — REAL AI',
             'runBeautyMaskPreview', 'await releaseBeautyVision()',
-            'maxInputDimension: 256', 'beautySkinEngine.validateMask'
+            'maxInputDimension: 256', 'beautySkinEngine.validateMask',
+            'NOXMediaPipeFaceLandmarkerProvider', 'NOXFaceLandmarksEngine',
+            'runFaceLandmarksPreview', 'await releaseFaceLandmarker()',
+            'nox-face-landmarks-preview'
           ]) {
             if (!js.includes(token)) throw new Error('Real Beauty Vision camera integration missing: ' + token);
           }
@@ -119,7 +130,10 @@ jobs:
           if (!cameraCss.includes('.nox-beauty-ai-panel')) {
             throw new Error('Beauty Vision panel styles are missing');
           }
-          console.log('Opt-in MediaPipe face-skin preview and cleanup hooks verified');
+          if (!cameraCss.includes('#nox-face-landmarks-preview')) {
+            throw new Error('Face landmarks overlay styles are missing');
+          }
+          console.log('Opt-in MediaPipe face-skin and face-landmark previews verified');
           const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
