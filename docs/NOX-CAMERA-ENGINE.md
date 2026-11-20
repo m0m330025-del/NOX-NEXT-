@@ -199,3 +199,11 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The first six camera/vision adapters remain asynchronous-capable where required. Together, the two migration waves cover twelve existing engine IDs through the shared adapter host.
 - Deterministic contract tests cover synchronous output parity, bounded duration history, registry cost reporting, disabled state, cancellation, and rejection of asynchronous output from the synchronous path.
 - The adapter bridge does not make every registered engine automatically execute. Existing camera feature gates, explicit requests, CORTEX plans, and evidence checks remain in place. Device-level visual quality, frame timing, memory, thermal behavior, and battery impact remain untested on Galaxy M12.
+
+
+## Runtime lifecycle visibility — adapter and CORTEX state
+
+- `NOXDynamicEngineAdapterHost.getRuntimeSnapshot()` combines the live adapter connection/status with the latest CORTEX plan and latest per-engine execution result.
+- Diagnostics distinguish connected, enabled, included in the latest CORTEX plan, successful in the latest execution, failed in the latest execution, cumulative adapter failures, and measured p95 duration.
+- The engine orchestration planner's `recommend` decisions remain capability/evidence recommendations only. They are not treated as executable CORTEX handlers and do not activate engines automatically.
+- A missing latest execution is reported as `not-executed`; historical adapter failures remain separately visible through the cumulative failure count.
