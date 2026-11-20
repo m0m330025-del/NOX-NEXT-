@@ -245,6 +245,7 @@ export class NOXCortex {
 
       const controller = new AbortController();
       let timeoutId;
+      let externalAbortHandler;
       const startedAt = Date.now();
       try {
         const task = Promise.resolve().then(() => handler(current, {
@@ -259,7 +260,16 @@ export class NOXCortex {
             reject(new Error("engine-timeout"));
           }, timeoutMs);
         });
-        const output = await Promise.race([task, timeout]);
+        const abort = new Promise((_, reject) => {
+          if (!externalSignal) return;
+          externalAbortHandler = () => {
+            controller.abort();
+            reject(new Error("execution-aborted"));
+          };
+          externalSignal.addEventListener("abort", externalAbortHandler, { once: true });
+          if (externalSignal.aborted) externalAbortHandler();
+        });
+        const output = await Promise.race([task, timeout, abort]);
         if (output === undefined) throw new Error("engine-returned-undefined");
         current = output;
         completed.add(planned.id);
@@ -268,8 +278,13 @@ export class NOXCortex {
         results.push({ id: planned.id, status: "success", durationMs });
       } catch (error) {
         controller.abort();
-        failed.add(planned.id);
         const durationMs = Math.max(0, Date.now() - startedAt);
+        if (error?.message === "execution-aborted") {
+          stopped = true;
+          results.push({ id: planned.id, status: "cancelled", reason: "execution-aborted" });
+          break;
+        }
+        failed.add(planned.id);
         this.recordOutcome(planned.id, { durationMs, success: false });
         results.push({
           id: planned.id,
@@ -282,6 +297,7 @@ export class NOXCortex {
         }
       } finally {
         if (timeoutId !== undefined) clearTimeout(timeoutId);
+        if (externalAbortHandler) externalSignal.removeEventListener("abort", externalAbortHandler);
       }
     }
 
