@@ -19,7 +19,7 @@ assert.equal(cortex.engines.get("makeup-rendering").enabled, false,
 assert.equal(beauty.execution, "not-started");
 
 const liteFaceMask = cortex.plan(
-  { faceRequested: true, landmarksRequested: true, maskRequested: true },
+  { landmarksRequested: true, maskRequested: true },
   { requested: ["face-landmarks", "facial-mask-builder"], mode: "lite" }
 );
 assert.deepEqual(liteFaceMask.engines.map(engine => engine.id), ["face-landmarks", "facial-mask-builder"]);
