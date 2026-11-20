@@ -45,6 +45,35 @@ const cyclePlan = cyclic.plan({ useCycle: true });
 assert.equal(cyclePlan.engines.length, 0);
 assert.ok(cyclePlan.rejected.some(item => item.reason === "dependency-cycle"));
 
+const executable = new NOXCortex({ engines: [
+  { id: "source", cost: 1, when: context => context.run },
+  { id: "transform", cost: 1, requires: ["source"], when: context => context.run },
+  { id: "finalize", cost: 1, requires: ["transform"], when: context => context.run }
+] });
+const executionPlan = executable.plan({ run: true });
+const execution = await executable.execute(executionPlan, { value: 2 }, {
+  source: input => ({ value: input.value + 1 }),
+  transform: input => ({ value: input.value * 3 }),
+  finalize: input => ({ value: input.value + 4 })
+});
+assert.equal(execution.state, "completed");
+assert.deepEqual(execution.output, { value: 13 });
+assert.deepEqual(execution.completed, ["source", "transform", "finalize"]);
+
+const failedExecution = await executable.execute(executionPlan, { value: 2 }, {
+  source: () => { throw new Error("provider-failure"); },
+  transform: input => input,
+  finalize: input => input
+});
+assert.equal(failedExecution.state, "completed-with-errors");
+assert.equal(failedExecution.results[0].status, "failed");
+assert.equal(failedExecution.results[1].status, "skipped");
+assert.equal(failedExecution.results[2].status, "skipped");
+
+const missingHandler = await executable.execute(executionPlan, { value: 2 }, {});
+assert.equal(missingHandler.results[0].reason, "handler-not-registered");
+assert.equal(missingHandler.results[1].status, "skipped");
+
 const budget = cortex.plan({ lowLight: true, detailRecovery: true, photonFusion: true, waveMatter: true }, { mode: "lite" });
 assert.ok(budget.totalCost <= 3);
 assert.ok(budget.engines.length <= 3);
