@@ -3490,13 +3490,21 @@ export function initCamera() {
     resetCameraStabilization();
     clearSubjectLock();
     resetFaceTracking();
-    await releaseBeautyVision();
-    await releaseFaceLandmarker();
-    stopTracks(stream);
+
+    // Release the physical camera immediately. Model teardown can be slow or
+    // wait on a worker/runtime; it must never keep the device camera active.
+    const cameraStream = stream;
     stream = null;
+    stopTracks(cameraStream);
     video.pause();
     video.srcObject = null;
     setReady(false);
+
+    // Finish asynchronous model cleanup only after the camera is no longer live.
+    await Promise.all([
+      releaseBeautyVision(),
+      releaseFaceLandmarker()
+    ]);
     announce("تم إيقاف الكاميرا", false);
     updateDiagnostics();
   }
