@@ -112,7 +112,7 @@ jobs:
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
           cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
           cp core/nox-hybrid-fx-engine.js /tmp/nox-hybrid-fx-engine.mjs
-          cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
+          cp core/nox-bisenet-face-parsing-provider.js /tmp/bisenet-face-parsing-provider.mjs\n          cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
           cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
@@ -136,7 +136,7 @@ jobs:
           node --check /tmp/filter-engine.mjs
           node --check /tmp/nox-original-filter-library.mjs
           node --check /tmp/nox-hybrid-fx-engine.mjs
-          node --check /tmp/mediapipe-selfie-provider.mjs
+          node --check /tmp/bisenet-face-parsing-provider.mjs\n          node --check /tmp/mediapipe-selfie-provider.mjs
           node --check /tmp/beauty-vision-provider.mjs
           node --check /tmp/skin-segmentation-engine.mjs
           node --check /tmp/mediapipe-face-landmarker-provider.mjs
@@ -170,7 +170,7 @@ jobs:
           node tests/nox-engine-registry.test.mjs
           node tests/nox-engine-orchestration-planner.test.mjs
           node tests/nox-dynamic-engine-adapter.test.mjs
-          node tests/nox-cortex.test.mjs
+          node tests/nox-cortex.test.mjs\n          node tests/nox-bisenet-face-parsing-provider.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -227,7 +227,7 @@ jobs:
           }
           console.log('Camera face detection and geometric tracking integration hooks verified');
           for (const token of [
-            'NOXMediaPipeSelfieProvider', 'NOXBeautyVisionProvider',
+            'NOXBiSeNetFaceParsingProvider', 'NOXBeautyVisionProvider',
             'NOXSkinSegmentationEngine', 'NOX BEAUTY VISION — REAL AI',
             'runBeautyMaskPreview', 'await releaseBeautyVision()',
             'maxInputDimension: 256', 'beautySkinEngine.validateMask',
