@@ -107,6 +107,7 @@ const abortController = new AbortController();
 const abortedRun = abortAdapter.handle({}, { signal: abortController.signal });
 await Promise.resolve();
 abortController.abort();
+assert.equal(abortAdapter.getStatus().state, "cancelled", "abort must release adapter state immediately even if inference is still pending");
 resolveAborted({ value: "late-aborted-output" });
 await assert.rejects(abortedRun, /engine-aborted/);
 assert.equal(abortAdapter.getStatus().state, "cancelled");
