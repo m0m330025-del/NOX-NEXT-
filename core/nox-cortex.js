@@ -212,11 +212,97 @@ export class NOXCortex {
     return plan;
   }
 
+  async execute(plan, input, handlers = {}, options = {}) {
+    if (!plan || plan.state !== "planned" || !Array.isArray(plan.engines)) {
+      throw new TypeError("a valid NOX CORTEX plan is required");
+    }
+    const timeoutMs = Number.isFinite(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : 5000;
+    const externalSignal = options.signal;
+    const results = [];
+    const completed = new Set();
+    const failed = new Set();
+    let current = input;
+    let stopped = false;
+
+    for (const planned of plan.engines) {
+      if (externalSignal?.aborted) {
+        stopped = true;
+        results.push({ id: planned.id, status: "cancelled", reason: "execution-aborted" });
+        break;
+      }
+      const unmet = (planned.requires || []).filter(id => !completed.has(id));
+      if (unmet.length) {
+        failed.add(planned.id);
+        results.push({ id: planned.id, status: "skipped", reason: "dependency-not-completed", dependencies: unmet });
+        continue;
+      }
+      const handler = handlers[planned.id];
+      if (typeof handler !== "function") {
+        failed.add(planned.id);
+        results.push({ id: planned.id, status: "skipped", reason: "handler-not-registered" });
+        continue;
+      }
+
+      const controller = new AbortController();
+      let timeoutId;
+      const startedAt = Date.now();
+      try {
+        const task = Promise.resolve().then(() => handler(current, {
+          engineId: planned.id,
+          context: options.context || {},
+          previousResults: results.slice(),
+          signal: controller.signal
+        }));
+        const timeout = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            controller.abort();
+            reject(new Error("engine-timeout"));
+          }, timeoutMs);
+        });
+        const output = await Promise.race([task, timeout]);
+        if (output === undefined) throw new Error("engine-returned-undefined");
+        current = output;
+        completed.add(planned.id);
+        const durationMs = Math.max(0, Date.now() - startedAt);
+        this.recordOutcome(planned.id, { durationMs, success: true });
+        results.push({ id: planned.id, status: "success", durationMs });
+      } catch (error) {
+        controller.abort();
+        failed.add(planned.id);
+        const durationMs = Math.max(0, Date.now() - startedAt);
+        this.recordOutcome(planned.id, { durationMs, success: false });
+        results.push({
+          id: planned.id,
+          status: "failed",
+          reason: error?.message === "engine-timeout" ? "timeout" : "handler-error"
+        });
+        if (options.stopOnError === true) {
+          stopped = true;
+          break;
+        }
+      } finally {
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
+      }
+    }
+
+    const summary = {
+      state: stopped ? "stopped" : failed.size ? "completed-with-errors" : "completed",
+      execution: "finished",
+      results,
+      completed: [...completed],
+      failed: [...failed],
+      output: current
+    };
+    this.lastExecution = summary;
+    return summary;
+  }
+
   getStatus() {
     return {
       mode: this.mode,
       registeredEngines: this.engines.size,
       lastPlan: this.lastPlan,
+      lastExecution: this.lastExecution || null,
       telemetry: Object.fromEntries(this.telemetry)
     };
   }
