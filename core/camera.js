@@ -997,8 +997,7 @@ export function initCamera() {
     videoResult.pause();
     videoResult.hidden = true;
     photo.removeAttribute("src");
-    videoResult.removeAttribute("src");
-    save.removeAttribute("href");
+    videoResult.removeAttribute("src");    save.removeAttribute("href");
     result.hidden = true;  }
 
   function createShader(gl, type, source) {
@@ -1997,8 +1996,7 @@ export function initCamera() {
       gray[i] = (pixels[p] * 77 + pixels[p + 1] * 150 + pixels[p + 2] * 29) >> 8;
     }
     opticalFlowLastAt = now;
-    if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {
-      opticalFlowPrevious = gray;      opticalFlowWidth = sampleWidth;
+    if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {      opticalFlowPrevious = gray;      opticalFlowWidth = sampleWidth;
       opticalFlowHeight = sampleHeight;
       opticalFlowVectors = [];
       opticalFlowConfidence = 0;
@@ -2997,8 +2995,7 @@ export function initCamera() {
   $("#nox-photon-ghost-build")?.addEventListener("click", buildPhotonGhostGuard);
   $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
     resetPhotonTimeline();
-    announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
-    updateDiagnostics();  });
+    announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));    updateDiagnostics();  });
   $("#nox-photon-timeline-save")?.addEventListener("click", saveSelectedPhotonMoment);
 
   $("#nox-living-metal-toggle")?.addEventListener("click", () => {
@@ -3157,7 +3154,7 @@ export function initCamera() {
         selectedFilter = value === "" ? null : (NOX_FILTERS[id] || null);
       }
       if (stream) renderFrame(false);
-      announce(selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));
+      announce(selectedOriginalFilter ? "تم اختيار " + selectedOriginalFilter.id + " من مكتبة NOX ORIGINAL" : selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));
       updateDiagnostics();
     });
   }
