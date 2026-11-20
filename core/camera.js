@@ -2680,7 +2680,7 @@ export function initCamera() {
         .map((makeFilter, index) => {
           const activeIndex = hybridFallbackFilters.indexOf(makeFilter);
           return makeFilter(selectedHybridWeights[activeIndex]);
-        }).join(" ") : null;
+        }).join(" ") + (selectedChaosMode === "resonance" ? " contrast(1.04)" : selectedChaosMode === "phase-collision" ? " hue-rotate(28deg) contrast(1.08)" : selectedChaosMode === "chromatic-gravity" ? " saturate(1.22)" : " brightness(1.08) saturate(1.12)") : null;
       const baseFilter = selectedHybridFilter ? hybridFallback : selectedOriginalFilter ? originalFallback : selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
       const lowLightFilter = lowLightMode === "strong" ? "brightness(1.28) contrast(1.08) saturate(1.04)" : lowLightMode === "gentle" ? "brightness(1.14) contrast(1.04) saturate(1.02)" : "none";
       const detailFilter = detailRecoveryMode === "strong" ? "contrast(1.16) saturate(1.03)" : detailRecoveryMode === "natural" ? "contrast(1.08)" : "none";
