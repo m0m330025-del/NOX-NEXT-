@@ -1,5 +1,6 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
 import { ensureNOXCanvasSize } from "./nox-camera-render-surface.js";
+import { getNOXCoverCrop } from "./nox-camera-cover-crop.js";
 import { listNOXFilters } from "./nox-original-filter-library.js";
 import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CHAOS_MODES, getNOXChaosMode, createNOXChaosRecipe, validateNOXChaosRecipe, generateNOXChaosRecipe } from "./nox-hybrid-fx-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
@@ -3716,10 +3717,23 @@ export function initCamera() {
 
   function createOutputCanvas() {
     const canvas = document.createElement("canvas");
-    canvas.width = renderCanvas.width;
-    canvas.height = renderCanvas.height;
+    const stage = renderCanvas.closest(".nox-camera-v2-stage");
+    const targetWidth = stage?.clientWidth || 0;
+    const targetHeight = stage?.clientHeight || 0;
+    const crop = targetWidth > 0 && targetHeight > 0
+      ? getNOXCoverCrop(renderCanvas.width, renderCanvas.height, targetWidth, targetHeight)
+      : {
+          sx: 0, sy: 0, sw: renderCanvas.width, sh: renderCanvas.height,
+          outputWidth: renderCanvas.width, outputHeight: renderCanvas.height
+        };
+    canvas.width = crop.outputWidth;
+    canvas.height = crop.outputHeight;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(renderCanvas, 0, 0);
+    ctx.drawImage(
+      renderCanvas,
+      crop.sx, crop.sy, crop.sw, crop.sh,
+      0, 0, canvas.width, canvas.height
+    );
     drawCaption(ctx, canvas.width, canvas.height);
     return canvas;
   }
