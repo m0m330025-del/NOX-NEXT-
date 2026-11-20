@@ -97,3 +97,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The camera passes only the accepted global-consensus vectors to Temporal Alignment. Existing optical-flow vectors remain available to other camera features.
 - Deterministic tests cover background translation with a moving local cluster, ambiguous competing motion populations, local-only motion, and the alignment handoff.
 - The algorithm is sparse 2D motion segmentation, not dense optical flow, object recognition, depth estimation, or guaranteed foreground masking. Visual quality and device cost still require real-scene tests on Android Chrome, including Galaxy M12.
+
+
+## NOX Adaptive Temporal Fusion Engine
+
+- `core/nox-adaptive-temporal-fusion-engine.js` is a deterministic policy layer between the temporal-memory plan and Canvas compositing.
+- Each historical layer must pass alignment-confidence and freshness gates. Its opacity is then weighted by alignment confidence, dominant-motion confidence, background-consensus ratio, and exponential age decay.
+- If the current motion-separation result is missing, ambiguous, or below its confidence/consensus gates, historical layers are not composited. The current live camera frame remains the visible base.
+- The policy returns selected and rejected layer decisions with reasons for diagnostics. It does not generate pixels or perform per-pixel/semantic foreground masking.
+- Deterministic tests cover confidence-based selection, age decay, stale-layer rejection, low alignment confidence, ambiguous motion, and insufficient background consensus.
+- The implementation is source-level only; visual tuning, edge behavior, and performance must be checked on real scenes and target devices before making image-quality claims.
