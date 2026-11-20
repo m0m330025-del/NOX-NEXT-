@@ -107,3 +107,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The policy returns selected and rejected layer decisions with reasons for diagnostics. It does not generate pixels or perform per-pixel/semantic foreground masking.
 - Deterministic tests cover confidence-based selection, age decay, stale-layer rejection, low alignment confidence, ambiguous motion, and insufficient background consensus.
 - The implementation is source-level only; visual tuning, edge behavior, and performance must be checked on real scenes and target devices before making image-quality claims.
+
+## NOX Multi-Engine Intelligence Brain
+
+- `core/nox-multi-engine-intelligence-brain.js` evaluates existing camera signals and produces a deterministic, explainable coordination plan.
+- Inputs are limited to measured or already available values: low-power device hint, measured render cost and target frame budget, optical-flow vector count/confidence/age, dominant-motion consensus, temporal-alignment status, and whether temporal mode is enabled.
+- It classifies the current pipeline as usable, held, protected, or inactive. Historical fusion is considered eligible only when fresh flow, accepted global-motion consensus, and valid aligned history are all present; otherwise the live frame is explicitly protected.
+- The quality governor only recommends a lower-cost profile when measured render cost crosses the configured budget. This first integration does not silently change quality tiers or toggle engines.
+- The brain does not infer temperature, battery state, scene semantics, depth, or sensor properties that the browser does not expose. It does not create pixels or replace the specialist engines.
+- A deterministic test covers a complete evidence-backed path, low-power overload, stale flow, ambiguous motion, missing data, missing alignment, disabled temporal mode, and reset behavior.
+- This is a source-level coordination layer. CI does not establish real-device performance or visual improvement; Android Chrome testing remains required.
