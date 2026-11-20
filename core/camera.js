@@ -519,12 +519,15 @@ export function initCamera() {
 
   const signaturePanel = document.createElement("section");
   signaturePanel.className = "nox-signature-fx-panel";
+  signaturePanel.style.cssText = "display:grid;gap:8px;padding:12px;margin:10px 0;border:1px solid rgba(133,105,255,.34);border-radius:14px;background:linear-gradient(135deg,rgba(33,24,66,.92),rgba(13,24,42,.92));color:#f5f3ff;";
   const signatureTitle = document.createElement("b");
   signatureTitle.textContent = "NOX SIGNATURE FX — مؤثرات حصرية";
   const signatureHint = document.createElement("small");
   signatureHint.textContent = "مؤثرات إجرائية متحركة تعمل محليًا أثناء المعاينة والتصوير.";
   const signatureSelect = document.createElement("select");
   signatureSelect.id = "nox-signature-fx";
+  signatureSelect.setAttribute("aria-label", "اختيار مؤثر NOX الحصري");
+  signatureSelect.style.cssText = "width:100%;min-height:42px;padding:9px 12px;border:1px solid rgba(175,160,255,.45);border-radius:10px;background:#17152b;color:#fff;font:inherit;";
   [["off","بدون مؤثر إضافي"],["aurora","AURORA VEIL — ستائر الشفق"],["prism","PRISM RIFT — شقوق المنشور"],["quantum","QUANTUM DUST — غبار كمي"],["liquid","LIQUID ORBIT — مدارات سائلة"],["holo","HOLO SCAN — مسح هولوجرافي"]].forEach(([value,label]) => {
     const option = document.createElement("option");
     option.value = value;
@@ -2643,7 +2646,7 @@ export function initCamera() {
       waveMatter: waveMatterMode !== "off",
       scienceOptics: scienceMode !== "off",
       photonFusion: photonFusionCanvas !== null,
-      filterSelected: Boolean(selectedFilter) || selectedLens !== 0
+      filterSelected: Boolean(selectedFilter) || selectedLens !== 0 || signatureMode !== "off"
     }, { mode: cortexMode });
     let panel = $("#nox-camera-diagnostics");
     if (!panel) {
@@ -2665,6 +2668,7 @@ export function initCamera() {
       ["آخر تنفيذ للعقل", cortex.getStatus().lastExecution?.state || "لم يبدأ التنفيذ"],
       ["قناع الشفاه الهندسي", latestFacialMaskPreview?.masks?.lips ? latestFacialMaskPreview.masks.lips.pixelCount + " بكسل — معاينة فقط، بلا ثقة دلالية" : "غير متاح / لم يُحلل"],
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
+      ["NOX Signature FX", signatureMode === "off" ? "متوقف" : signatureSelect.selectedOptions[0]?.textContent || signatureMode],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalMemoryEngine.getStatus().frameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["NOX PHOTON TIME MACHINE", photonTimelineEnabled ? "نشط — " + photonTimelineOrder.length + "/" + photonTimelineSlots.length + " عينات زمنية / اختيار " + (photonTimelineSelectedIndex + 1) : "متوقف"],
