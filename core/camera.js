@@ -725,7 +725,7 @@ export function initCamera() {
           case "capture-decision": return temporalMemoryEngine.getCaptureDecision(input.now);
           case "commit-capture": return temporalMemoryEngine.commitCapture(input.now);
           case "composite-plan": return temporalMemoryEngine.getCompositePlan(input.mode, input.width, input.capturedCurrent);
-          case "reset": return temporalMemoryEngine.reset();
+          case "reset": temporalMemoryEngine.reset(); return { reset: true };
           default: throw new Error("unknown-temporal-memory-operation");
         }
       }
@@ -741,7 +741,7 @@ export function initCamera() {
           case "ingest": return temporalAlignmentEngine.ingest(input.vectors, input.options);
           case "capture": return temporalAlignmentEngine.onCapture(input.index);
           case "transform": return temporalAlignmentEngine.getTransform(input.index);
-          case "reset": return temporalAlignmentEngine.reset();
+          case "reset": temporalAlignmentEngine.reset(); return { reset: true };
           default: throw new Error("unknown-temporal-alignment-operation");
         }
       }
@@ -752,7 +752,7 @@ export function initCamera() {
       capabilities: ["global-motion-consensus", "local-motion-outliers"],
       when: context => context.motion === true,
       processSync: input => input.operation === "reset"
-        ? motionSeparationEngine.reset()
+        ? (motionSeparationEngine.reset(), { reset: true })
         : input.operation === "status"
           ? motionSeparationEngine.getStatus()
           : motionSeparationEngine.process(input.vectors)
@@ -763,7 +763,7 @@ export function initCamera() {
       requires: ["temporal-alignment"], capabilities: ["confidence-gated-frame-fusion"],
       when: context => context.temporalRequested === true,
       processSync: input => input.operation === "reset"
-        ? adaptiveTemporalFusionEngine.reset()
+        ? (adaptiveTemporalFusionEngine.reset(), { reset: true })
         : adaptiveTemporalFusionEngine.plan(input)
     }),
     new NOXDynamicEngineAdapter({
@@ -772,7 +772,7 @@ export function initCamera() {
       capabilities: ["short-horizon-motion-estimation"],
       when: context => context.motionPrediction === true,
       processSync: input => {
-        if (input.operation === "reset") return noxPredictiveCameraIntelligence.reset();
+        if (input.operation === "reset") { noxPredictiveCameraIntelligence.reset(); return { reset: true }; }
         if (input.operation === "observe") return noxPredictiveCameraIntelligence.observe(input.sample);
         return noxPredictiveCameraIntelligence.evaluate(input.evidence);
       }
@@ -783,7 +783,7 @@ export function initCamera() {
       capabilities: ["luminance", "contrast", "motion-state"],
       when: context => context.sceneAnalysis === true,
       processSync: input => input.operation === "reset"
-        ? noxSceneIntelligenceEngine.reset()
+        ? (noxSceneIntelligenceEngine.reset(), { reset: true })
         : noxSceneIntelligenceEngine.evaluate(input.evidence)
     })
   ];
