@@ -23,6 +23,24 @@ const rendered = engine.render(image, masks, {
 });
 assert.equal(rendered.state, "rendered");
 assert.equal(rendered.changedPixels, 2);
+assert.equal(rendered.overlay.width, width);
+assert.equal(rendered.overlay.height, height);
+assert.equal(rendered.overlay.data.length, width * height * 4);
+assert.equal(rendered.overlay.data[5 * 4 + 3] > 0, true);
+assert.equal(rendered.overlay.data[0 * 4 + 3], 0,
+  "the engine overlay must remain transparent outside accepted semantic masks");
+const reconstructed = new Uint8ClampedArray(sourcePixels);
+for (let i = 0; i < width * height; i += 1) {
+  const p = i * 4, alpha = rendered.overlay.data[p + 3] / 255;
+  for (let channel = 0; channel < 3; channel += 1) {
+    reconstructed[p + channel] = reconstructed[p + channel] * (1 - alpha) +
+      rendered.overlay.data[p + channel] * alpha;
+  }
+}
+for (let i = 0; i < reconstructed.length; i += 1) {
+  assert.ok(Math.abs(reconstructed[i] - rendered.image.data[i]) <= 1,
+    "transparent engine overlay must reproduce the engine's rendered image");
+}
 assert.notDeepEqual(
   Array.from(rendered.image.data.slice(5 * 4, 5 * 4 + 3)),
   Array.from(sourcePixels.slice(5 * 4, 5 * 4 + 3))
