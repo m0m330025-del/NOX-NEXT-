@@ -15,6 +15,7 @@ import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
 import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
 import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-engine.js";
 import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
+import { NOXMultiEngineIntelligenceBrain } from "./nox-multi-engine-intelligence-brain.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -377,6 +378,7 @@ export function initCamera() {
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
   const adaptiveTemporalFusionEngine = new NOXAdaptiveTemporalFusionEngine();
+  const multiEngineIntelligenceBrain = new NOXMultiEngineIntelligenceBrain();
   let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
@@ -2657,7 +2659,24 @@ export function initCamera() {
       panel.innerHTML = "<summary>تشخيص توافق الجهاز</summary><dl></dl>";
       page.querySelector(".nox-camera-v2-tools")?.append(panel);
     }
+    const intelligencePlan = multiEngineIntelligenceBrain.evaluate({
+      lowPower,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      opticalFlow: {
+        enabled: opticalFlowMode !== "off",
+        vectorCount: opticalFlowVectors.length,
+        confidence: opticalFlowConfidence,
+        ageMs: opticalFlowLastAt > 0 ? Math.max(0, performance.now() - opticalFlowLastAt) : null
+      },
+      motion: motionSeparationResult,
+      alignment: temporalAlignmentEngine.getStatus(),
+      temporal: { enabled: temporalMode !== "off" }
+    });
     const rows = [
+      ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
+      ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
+      ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["HTTPS", supported.secure ? "متاح" : "غير آمن — يلزم HTTPS"],
       ["getUserMedia", supported.getUserMedia ? "متاح" : "غير مدعوم"],
       ["MediaRecorder", supported.mediaRecorder ? "متاح" : "غير مدعوم"],
