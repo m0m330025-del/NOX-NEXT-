@@ -2634,7 +2634,15 @@ export function initCamera() {
       const filters = ["none", "brightness(1.08) saturate(1.1)", "sepia(.18) saturate(1.12)", "hue-rotate(145deg) saturate(1.2)", "saturate(1.45) contrast(1.04)", "sepia(.42) contrast(1.05)", "grayscale(1) contrast(1.08)"];
       ctx.save();
       const originalFallback = selectedOriginalFilter ? ["saturate(1.25) contrast(1.08) hue-rotate(18deg)", "saturate(1.35) contrast(1.12)", "saturate(1.4) hue-rotate(38deg)", "saturate(1.45) contrast(1.08)", "brightness(1.08) saturate(1.22)", "grayscale(1) contrast(1.2)", "contrast(1.12) saturate(1.25)", "sepia(.22) contrast(1.14)", "brightness(.92) contrast(1.18)", "saturate(1.55) hue-rotate(65deg)"][selectedOriginalFilter.familyIndex] : null;
-      const baseFilter = selectedOriginalFilter ? originalFallback : selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
+      const hybridFallback = selectedHybridFilter ? [
+        "saturate(1.42) hue-rotate(28deg) contrast(1.08)",
+        "saturate(1.5) hue-rotate(205deg) contrast(1.14)",
+        "brightness(1.12) saturate(1.62) contrast(1.08)",
+        "contrast(1.32) saturate(1.35) hue-rotate(155deg)",
+        "saturate(1.38) hue-rotate(188deg) contrast(1.12)",
+        "saturate(1.5) hue-rotate(242deg) brightness(1.06)"
+      ][selectedHybridFilter.shaderMode - 1] : null;
+      const baseFilter = selectedHybridFilter ? hybridFallback : selectedOriginalFilter ? originalFallback : selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
       const lowLightFilter = lowLightMode === "strong" ? "brightness(1.28) contrast(1.08) saturate(1.04)" : lowLightMode === "gentle" ? "brightness(1.14) contrast(1.04) saturate(1.02)" : "none";
       const detailFilter = detailRecoveryMode === "strong" ? "contrast(1.16) saturate(1.03)" : detailRecoveryMode === "natural" ? "contrast(1.08)" : "none";
       ctx.filter = [baseFilter, lowLightFilter, detailFilter].filter(value => value !== "none").join(" ") || "none";
