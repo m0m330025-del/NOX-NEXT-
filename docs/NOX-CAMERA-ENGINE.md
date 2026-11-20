@@ -178,3 +178,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The adapter passes cancellation signals to the engine implementation; actual cancellation depends on the implementation honoring that signal. Timeout and failure isolation remain enforced by CORTEX.
 - Deterministic tests cover contract validation, late registration, execution through CORTEX, input rejection, enable/disable, bounded measured-cost telemetry, conflict rejection, duplicate IDs, and unregister cleanup.
 - These are source-level and CI checks. No Galaxy M12 visual, thermal, battery, or device-performance claim is made.
+
+## First camera runtime migration to Dynamic Engine Adapter v1
+
+- The live camera runtime now creates a `NOXDynamicEngineAdapterHost` and routes six existing camera/vision engine IDs through adapter handlers: `optical-flow`, `face-detection`, `face-tracking`, `face-landmarks`, `facial-mask-builder`, and `skin-segmentation`.
+- Existing engine IDs are adopted in place. CORTEX and the runtime registry support reversible descriptor replacement so adapter attachment does not require renaming established pipelines; detach restores the prior descriptor when the adapter still owns the active registration.
+- Optical-flow, face-detection/tracking, face-landmark/mask, and skin-segmentation calls now obtain their handlers from `dynamicEngineHost.getHandlers()`. Their existing sampling cadence, model initialization, confidence validation, rendering, and camera session guards remain in the camera host.
+- The adapter host supplies measured per-call duration and failure status to the registry. CORTEX still enforces its existing plan, dependency, timeout, cancellation, and stop-on-error behavior.
+- This is a first migration wave, not a claim that every camera module has been converted. Temporal policy modules and diagnostic-only engines remain directly instantiated/registered because their interfaces are not all executable processing handlers.
+- Automated tests cover adapter adoption of a pre-existing engine ID and restoration of the original CORTEX/registry descriptors on detach. The camera workflow checks that the six migrated IDs are registered and that live execution uses the shared handler host.
+- The adapter is an execution bridge, not a permission to run all engines. Existing user-triggered and evidence-gated flows remain the activation points. No visual, thermal, battery, or frame-rate improvement is claimed before physical-device testing.
