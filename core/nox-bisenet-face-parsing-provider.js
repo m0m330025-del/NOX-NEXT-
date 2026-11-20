@@ -182,10 +182,13 @@ export class NOXBiSeNetFaceParsingProvider {
     this.expectedModelBytes = Math.max(0, Math.floor(Number(modelBytes) || 0));
     this.preprocessFrame = preprocessFrame; this.canvasFactory = canvasFactory;
     this.runtime = null; this.session = null; this.inputName = null; this.outputName = null;
-    this.state = "idle"; this.sequence = 0;
+    this.state = "idle"; this.sequence = 0; this.lifecycleGeneration = 0;
   }
 
   async initialize() {
+    const generation = this.lifecycleGeneration;
+    let createdSession = null;
+    let createdRuntime = null;
     if (this.session) return { available: true, state: "ready", provider: "BiSeNet-ResNet18-ONNX" };
     if (typeof this.modelUrl !== "string" || !this.modelUrl.trim()) {
       this.state = "unavailable";
@@ -195,10 +198,14 @@ export class NOXBiSeNetFaceParsingProvider {
     try {
       if (this.sessionFactory) {
         const created = await this.sessionFactory(this.modelUrl, this.executionProviders);
-        this.runtime = created.runtime || null; this.session = created.session || created;
+        createdRuntime = created.runtime || null;
+        createdSession = created.session || created;
       } else {
-        this.runtime = await this.runtimeLoader();
-        if (!this.runtime?.InferenceSession?.create || !this.runtime?.Tensor) throw new Error("onnx-runtime-api-unavailable");
+        createdRuntime = await this.runtimeLoader();
+        if (generation !== this.lifecycleGeneration) {
+          return { available: false, state: "idle", reason: "initialization-superseded" };
+        }
+        if (!createdRuntime?.InferenceSession?.create || !createdRuntime?.Tensor) throw new Error("onnx-runtime-api-unavailable");
         if (typeof this.fetchImpl !== "function" || !this.cryptoProvider?.subtle?.digest) {
           throw new Error("model-integrity-verification-unavailable");
         }
@@ -212,15 +219,26 @@ export class NOXBiSeNetFaceParsingProvider {
         const digest = await this.cryptoProvider.subtle.digest("SHA-256", modelBuffer);
         const actualSha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
         if (!this.modelSha256 || actualSha256 !== this.modelSha256) throw new Error("bisenet-model-sha256-mismatch");
-        this.session = await this.runtime.InferenceSession.create(new Uint8Array(modelBuffer), { executionProviders: this.executionProviders });
+        createdSession = await createdRuntime.InferenceSession.create(new Uint8Array(modelBuffer), { executionProviders: this.executionProviders });
       }
-      const inputs = this.session.inputNames || this.session.getInputs?.().map(item => item.name);
-      const outputs = this.session.outputNames || this.session.getOutputs?.().map(item => item.name);
-      this.inputName = inputs?.[0] || null; this.outputName = outputs?.[0] || null;
-      if (!this.inputName || !this.outputName) throw new Error("onnx-model-io-metadata-unavailable");
+      if (generation !== this.lifecycleGeneration) {
+        try { await createdSession?.release?.(); } catch { /* stale initialization cleanup */ }
+        return { available: false, state: "idle", reason: "initialization-superseded" };
+      }
+      const inputs = createdSession.inputNames || createdSession.getInputs?.().map(item => item.name);
+      const outputs = createdSession.outputNames || createdSession.getOutputs?.().map(item => item.name);
+      const inputName = inputs?.[0] || null;
+      const outputName = outputs?.[0] || null;
+      if (!inputName || !outputName) throw new Error("onnx-model-io-metadata-unavailable");
+      this.runtime = createdRuntime; this.session = createdSession;
+      this.inputName = inputName; this.outputName = outputName;
       this.state = "ready";
       return { available: true, state: "ready", provider: "BiSeNet-ResNet18-ONNX", model: "yakhyo/face-parsing-resnet18", inputSize: this.modelInputSize, classes: DEFAULTS.classCount };
     } catch (error) {
+      if (generation !== this.lifecycleGeneration) {
+        try { await createdSession?.release?.(); } catch { /* stale initialization cleanup */ }
+        return { available: false, state: "idle", reason: "initialization-superseded" };
+      }
       this.session = null; this.runtime = null; this.state = "unavailable";
       return { available: false, state: this.state, reason: "bisenet-model-load-failed", detail: String(error?.message || error).slice(0, 160) };
     }
@@ -278,6 +296,7 @@ export class NOXBiSeNetFaceParsingProvider {
   }
 
   async dispose() {
+    this.lifecycleGeneration += 1;
     this.sequence += 1;
     const session = this.session; this.session = null; this.runtime = null;
     this.inputName = null; this.outputName = null; this.state = "idle";
