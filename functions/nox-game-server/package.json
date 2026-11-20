@@ -1,0 +1,13 @@
+{
+  "name": "nox-game-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "node-appwrite": "^17.0.0"
+  }
+}
