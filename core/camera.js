@@ -3602,6 +3602,14 @@ export function initCamera() {
         return;
       }
       stream = nextStream;
+      for (const track of stream.getVideoTracks()) {
+        track.addEventListener("ended", () => {
+          if (generation !== cameraStartGeneration || stream !== nextStream) return;
+          void stopCamera().finally(() => {
+            if (!disposed) announce("انقطع بث الكاميرا من الجهاز. شغّلها مرة أخرى للمتابعة.", false);
+          });
+        }, { once: true });
+      }
       video.srcObject = stream;
       video.muted = true;
       await video.play();
