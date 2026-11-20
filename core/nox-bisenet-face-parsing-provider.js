@@ -73,14 +73,18 @@ function cropLetterboxed(source, sourceWidth, sourceHeight, rect) {
   }
   return { data: output, width, height };
 }
-function resizeNearest(source, sourceWidth, sourceHeight, targetWidth, targetHeight) {
-  if (sourceWidth === targetWidth && sourceHeight === targetHeight) return new source.constructor(source);
-  const output = new source.constructor(targetWidth * targetHeight);
+function resizeBilinearFloat(source, sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  if (sourceWidth === targetWidth && sourceHeight === targetHeight) return new Float32Array(source);
+  const output = new Float32Array(targetWidth * targetHeight);
   for (let y = 0; y < targetHeight; y += 1) {
-    const sy = Math.min(sourceHeight - 1, Math.floor((y + 0.5) * sourceHeight / targetHeight));
+    const sy = Math.max(0, Math.min(sourceHeight - 1, (y + 0.5) * sourceHeight / targetHeight - 0.5));
+    const y0 = Math.floor(sy), y1 = Math.min(sourceHeight - 1, y0 + 1), fy = sy - y0;
     for (let x = 0; x < targetWidth; x += 1) {
-      const sx = Math.min(sourceWidth - 1, Math.floor((x + 0.5) * sourceWidth / targetWidth));
-      output[y * targetWidth + x] = source[sy * sourceWidth + sx];
+      const sx = Math.max(0, Math.min(sourceWidth - 1, (x + 0.5) * sourceWidth / targetWidth - 0.5));
+      const x0 = Math.floor(sx), x1 = Math.min(sourceWidth - 1, x0 + 1), fx = sx - x0;
+      const top = source[y0 * sourceWidth + x0] * (1 - fx) + source[y0 * sourceWidth + x1] * fx;
+      const bottom = source[y1 * sourceWidth + x0] * (1 - fx) + source[y1 * sourceWidth + x1] * fx;
+      output[y * targetWidth + x] = Math.max(0, Math.min(1, top * (1 - fy) + bottom * fy));
     }
   }
   return output;
@@ -89,6 +93,8 @@ function decodeLogits(logits, width, height, classCount) {
   const pixels = width * height;
   if (!logits || logits.length !== classCount * pixels) throw new Error("invalid-bisenet-output-shape");
   const labels = new Uint8Array(pixels), confidence = new Float32Array(pixels);
+  const semanticIds = [1, 2, 3, 12, 13];
+  const semanticProbabilities = new Map(semanticIds.map(id => [id, new Float32Array(pixels)]));
   for (let pixel = 0; pixel < pixels; pixel += 1) {
     let maxLogit = -Infinity;
     for (let c = 0; c < classCount; c += 1) {
@@ -102,25 +108,35 @@ function decodeLogits(logits, width, height, classCount) {
     for (let c = 0; c < classCount; c += 1) {
       const probability = Math.exp(Number(logits[c * pixels + pixel]) - maxLogit) / denominator;
       if (probability > bestProbability) { bestProbability = probability; bestClass = c; }
+      const semantic = semanticProbabilities.get(c);
+      if (semantic) semantic[pixel] = probability;
     }
     labels[pixel] = bestClass;
     confidence[pixel] = bestProbability;
   }
-  return { labels, confidence };
+  return { labels, confidence, semanticProbabilities };
 }
-function makeRegionMask(labels, confidence, width, height, targetWidth, targetHeight, ids) {
-  const selected = new Uint8Array(width * height);
-  let count = 0, confidenceSum = 0;
-  for (let i = 0; i < labels.length; i += 1) {
-    if (!ids.includes(labels[i])) continue;
-    selected[i] = 1; count += 1; confidenceSum += confidence[i];
+function makeRegionMask(probabilities, width, height, targetWidth, targetHeight) {
+  if (!probabilities || probabilities.length !== width * height) return null;
+  let activeCount = 0, confidenceSum = 0;
+  for (let i = 0; i < probabilities.length; i += 1) {
+    const probability = probabilities[i];
+    if (probability >= 0.5) { activeCount += 1; confidenceSum += probability; }
   }
-  if (count < DEFAULTS.minRegionPixels) return null;
-  const restoredLabels = resizeNearest(selected, width, height, targetWidth, targetHeight);
-  const restoredConfidence = resizeNearest(confidence, width, height, targetWidth, targetHeight);
-  const data = new Float32Array(targetWidth * targetHeight);
-  for (let i = 0; i < data.length; i += 1) if (restoredLabels[i]) data[i] = restoredConfidence[i];
-  return { data, confidence: confidenceSum / count };
+  if (activeCount < DEFAULTS.minRegionPixels) return null;
+  const data = resizeBilinearFloat(probabilities, width, height, targetWidth, targetHeight);
+  return { data, confidence: confidenceSum / activeCount };
+}
+function combineClassProbabilities(probabilities, ids) {
+  const first = probabilities.get(ids[0]);
+  if (!first) return null;
+  const combined = new Float32Array(first.length);
+  for (let i = 0; i < combined.length; i += 1) {
+    let value = 0;
+    for (const id of ids) value += probabilities.get(id)?.[i] || 0;
+    combined[i] = Math.min(1, value);
+  }
+  return combined;
 }
 function faceBounds(labels, width, height) {
   let left = width, top = height, right = -1, bottom = -1;
@@ -212,9 +228,15 @@ export class NOXBiSeNetFaceParsingProvider {
     }
     const faceBox = faceBounds(croppedLabels.data, croppedLabels.width, croppedLabels.height);
     if (!faceBox) throw new Error("bisenet-face-skin-not-found");
-    const skin = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.skin);
-    const lips = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.lips);
-    const brows = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.brows);
+    const croppedSemantic = new Map();
+    for (const [classId, probabilities] of decoded.semanticProbabilities) {
+      croppedSemantic.set(classId, cropLetterboxed(
+        probabilities, this.modelInputSize, this.modelInputSize, letterbox
+      ).data);
+    }
+    const skin = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.skin), croppedLabels.width, croppedLabels.height, width, height);
+    const lips = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.lips), croppedLabels.width, croppedLabels.height, width, height);
+    const brows = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.brows), croppedLabels.width, croppedLabels.height, width, height);
     if (!skin) throw new Error("bisenet-skin-mask-not-found");
     return {
       width, height, frameId, timestamp,
