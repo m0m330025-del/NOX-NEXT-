@@ -558,6 +558,7 @@ export function initCamera() {
   let latestFaceLandmarksAnalysis = null;
   let faceLandmarksLiveEnabled = false;
   let faceLandmarksLastAt = 0;
+  let faceLandmarksSession = 0;
   let faceLandmarksProcessing = false;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
@@ -980,6 +981,7 @@ export function initCamera() {
       faceLandmarksStatus.textContent = "شغّل الكاميرا وانتظر ظهور الصورة أولًا.";
       return;
     }
+    const session = ++faceLandmarksSession;
     faceLandmarksButton.disabled = true;
     faceLandmarksState = "جارٍ تحميل نموذج نقاط الوجه";
     faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
@@ -991,6 +993,7 @@ export function initCamera() {
         const initialized = await faceLandmarkerProvider.initialize();
         if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
       }
+      if (session !== faceLandmarksSession || !stream) return;
       faceLandmarkTemporalTracker.reset();
       faceLandmarksLastAt = 0;
       faceLandmarksLiveEnabled = true;
@@ -998,6 +1001,7 @@ export function initCamera() {
       faceLandmarksStatus.textContent = "تم تحميل النموذج. جارٍ بدء التتبع الحي…";
       processLiveFaceLandmarks(performance.now(), true);
     } catch (error) {
+      if (session !== faceLandmarksSession) return;
       faceLandmarksLiveEnabled = false;
       faceLandmarksState = "غير متاح";
       faceLandmarksButton.textContent = "إعادة محاولة تتبع الوجه الحي";
@@ -1040,6 +1044,7 @@ export function initCamera() {
   faceDigitalTwinButton.addEventListener("click", runFaceDigitalTwinDiagnostic);
 
   async function releaseFaceLandmarker() {
+    faceLandmarksSession += 1;
     faceLandmarksLiveEnabled = false;
     faceLandmarksProcessing = false;
     faceLandmarksLastAt = 0;
