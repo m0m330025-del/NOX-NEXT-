@@ -1,4 +1,5 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
+import { ensureNOXCanvasSize } from "./nox-camera-render-surface.js";
 import { listNOXFilters } from "./nox-original-filter-library.js";
 import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CHAOS_MODES, getNOXChaosMode, createNOXChaosRecipe, validateNOXChaosRecipe, generateNOXChaosRecipe } from "./nox-hybrid-fx-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
@@ -2952,18 +2953,12 @@ export function initCamera() {
     const scale = Math.min(1, maxDimension / Math.max(width, height));
     const outWidth = Math.max(2, Math.round(width * scale));
     const outHeight = Math.max(2, Math.round(height * scale));
-    if (renderCanvas.width !== outWidth || renderCanvas.height !== outHeight) {
-      renderCanvas.width = outWidth;
-      renderCanvas.height = outHeight;
-    }
+    ensureNOXCanvasSize(renderCanvas, outWidth, outHeight);
     if (renderer) {
       const { gl, canvas: glCanvas, texture } = renderer;
       // Assigning canvas dimensions clears its drawing buffer. Only resize when
       // the source dimensions actually change; keep the viewport current per frame.
-      if (glCanvas.width !== outWidth || glCanvas.height !== outHeight) {
-        glCanvas.width = outWidth;
-        glCanvas.height = outHeight;
-      }
+      ensureNOXCanvasSize(glCanvas, outWidth, outHeight);
       gl.viewport(0, 0, outWidth, outHeight);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
