@@ -123,6 +123,7 @@ jobs:
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           cp core/nox-face-roll-estimator.js /tmp/face-roll-estimator.mjs
+          cp core/nox-face-roll-delta.js /tmp/face-roll-delta.mjs
           cp core/nox-face-roll-estimator.js core/nox-face-roll-estimator.mjs
           cp core/nox-face-landmark-temporal-tracker.js /tmp/face-landmark-temporal-tracker.mjs
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
@@ -155,6 +156,8 @@ jobs:
           node --check /tmp/face-landmarks-engine.mjs
           node --check /tmp/face-roll-estimator.mjs
           node tests/nox-face-roll-estimator.test.mjs
+          node --check /tmp/face-roll-delta.mjs
+          node tests/nox-face-roll-delta.test.mjs
           node --check /tmp/face-landmark-temporal-tracker.mjs
           node --check /tmp/optical-flow-engine.mjs
           node --check /tmp/temporal-memory-engine.mjs
