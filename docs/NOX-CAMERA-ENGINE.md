@@ -49,3 +49,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The reported confidence is a local match-uniqueness/texture heuristic, not a calibrated probability or a measure of semantic correctness. Low-texture and identical frames may produce no vectors.
 - The new deterministic test covers translated texture, vector direction/ranges, still frames, input bounds, and reset behavior. GitHub Actions is configured to run it for relevant PR and branch pushes.
 - This is a source-level integration only. It has not been benchmarked or tested on Galaxy M12 or iOS hardware; do not assume real-device frame-rate or thermal performance.
+
+
+## NOX Temporal Memory Engine (policy extraction)
+
+- Ring-buffer policy is isolated in `core/nox-temporal-memory-engine.js`: bounded sample dimensions, Lite/standard slot counts and capture intervals, freshness timestamps, write-slot selection, sequence, reset/invalidation, and deterministic composite-layer plans.
+- `core/camera.js` remains the Canvas adapter: it allocates/captures the actual canvases and draws the returned layers. The live rendering path remains synchronous; no asynchronous work was added to the frame loop.
+- Existing profiles are preserved: Lite samples at a maximum side of 160 with 3 slots / 180 ms; standard samples at a maximum side of 224 with 4 slots / 120 ms.
+- This extraction does not align historical frames with optical flow, estimate camera motion for temporal warping, or guarantee ghost suppression. The CORTEX `temporal-memory` dependency remains a registry contract and is not claimed as an executed camera handler.
+- A deterministic Node test covers profile sizing, capture cadence, ring wrap, composite-plan modes, reset, and invalid inputs. Physical-device performance and visual quality remain untested.
