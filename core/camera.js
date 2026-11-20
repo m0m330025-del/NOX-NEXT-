@@ -2790,7 +2790,7 @@ export function initCamera() {
       waveMatter: waveMatterMode !== "off",
       scienceOptics: scienceMode !== "off",
       photonFusion: photonFusionCanvas !== null,
-      filterSelected: Boolean(selectedFilter) || selectedLens !== 0 || signatureMode !== "off"
+      filterSelected: Boolean(selectedFilter) || Boolean(selectedOriginalFilter) || Boolean(selectedHybridFilter) || selectedLens !== 0 || signatureMode !== "off"
     }, { mode: cortexMode });
     let panel = $("#nox-camera-diagnostics");
     if (!panel) {
