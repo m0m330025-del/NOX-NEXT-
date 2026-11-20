@@ -64,7 +64,7 @@ export function validateNOXChaosRecipe(value) {
   if (!value || value.version !== 1 || typeof value.name !== "string" ||
       !Array.isArray(value.ids) || !Array.isArray(value.weights) ||
       value.weights.length !== NOX_HYBRID_FILTERS.length) return null;
-  const ids = value.ids.filter((id) => BY_ID.has(String(id)));
+  const ids = [...new Set(value.ids.map(String).filter((id) => BY_ID.has(id)))];
   if (!ids.length) return null;
   return createNOXChaosRecipe(value.name, ids, value.weights, getNOXChaosMode(value.mode).id);
 }
