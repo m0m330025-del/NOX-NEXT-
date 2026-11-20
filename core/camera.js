@@ -11,6 +11,7 @@ import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
 import { NOXSparseOpticalFlowEngine } from "./nox-optical-flow-engine.js";
+import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -334,11 +335,7 @@ export function initCamera() {
   let livingMetalPhase = 0;
   let temporalMode = "off";
   let temporalBuffers = [];
-  let temporalWriteIndex = 0;
-  let temporalFrameCount = 0;
-  let temporalLastCaptureAt = 0;
-  let temporalSampleWidth = 0;
-  let temporalSampleHeight = 0;
+  const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
   let opticalFlowSession = 0;
@@ -1043,11 +1040,7 @@ export function initCamera() {
       buffer.canvas.height = 1;
     });
     temporalBuffers = [];
-    temporalWriteIndex = 0;
-    temporalFrameCount = 0;
-    temporalLastCaptureAt = 0;
-    temporalSampleWidth = 0;
-    temporalSampleHeight = 0;
+    temporalMemoryEngine.reset();
   }
 
 
@@ -1768,19 +1761,18 @@ export function initCamera() {
   }
 
   function ensureTemporalMemory(width, height) {
-    const maxSide = lowPower ? 160 : 224;
-    const scale = Math.min(1, maxSide / Math.max(width, height));
-    const sampleWidth = Math.max(1, Math.round(width * scale));
-    const sampleHeight = Math.max(1, Math.round(height * scale));
-    const bufferCount = lowPower ? 3 : 4;
-    if (sampleWidth === temporalSampleWidth && sampleHeight === temporalSampleHeight && temporalBuffers.length === bufferCount) return;
-    resetTemporalMemory();
-    temporalSampleWidth = sampleWidth;
-    temporalSampleHeight = sampleHeight;
-    temporalBuffers = Array.from({ length: bufferCount }, () => {
+    const profile = temporalMemoryEngine.configure(width, height, { lowPower });
+    if (temporalBuffers.length === profile.bufferCount &&
+        temporalBuffers[0]?.canvas.width === profile.sampleWidth &&
+        temporalBuffers[0]?.canvas.height === profile.sampleHeight) return;
+    temporalBuffers.forEach((buffer) => {
+      buffer.canvas.width = 1;
+      buffer.canvas.height = 1;
+    });
+    temporalBuffers = Array.from({ length: profile.bufferCount }, () => {
       const canvas = document.createElement("canvas");
-      canvas.width = sampleWidth;
-      canvas.height = sampleHeight;
+      canvas.width = profile.sampleWidth;
+      canvas.height = profile.sampleHeight;
       return { canvas, context: canvas.getContext("2d", { alpha: false }) };
     }).filter((buffer) => buffer.context);
   }
@@ -1790,30 +1782,27 @@ export function initCamera() {
     ensureTemporalMemory(width, height);
     if (!temporalBuffers.length) return;
     const now = performance.now();
-    const interval = lowPower ? 180 : 120;
+    const capture = temporalMemoryEngine.getCaptureDecision(now);
     let capturedCurrent = false;
-    if (!temporalLastCaptureAt || now - temporalLastCaptureAt >= interval) {
-      const buffer = temporalBuffers[temporalWriteIndex];
-      buffer.context.drawImage(renderCanvas, 0, 0, temporalSampleWidth, temporalSampleHeight);
-      temporalWriteIndex = (temporalWriteIndex + 1) % temporalBuffers.length;
-      temporalFrameCount = Math.min(temporalFrameCount + 1, temporalBuffers.length);
-      temporalLastCaptureAt = now;
+    if (capture.capture) {
+      const buffer = temporalBuffers[capture.index];
+      if (!buffer) {
+        resetTemporalMemory();
+        return;
+      }
+      buffer.context.drawImage(renderCanvas, 0, 0, buffer.canvas.width, buffer.canvas.height);
+      temporalMemoryEngine.commitCapture(now);
       capturedCurrent = true;
     }
-    if (temporalMode === "off" || temporalFrameCount < 2) return;
-    const firstAge = capturedCurrent ? 2 : 1;
-    if (temporalFrameCount < firstAge) return;
+    const plan = temporalMemoryEngine.getCompositePlan(temporalMode, width, capturedCurrent);
+    if (!plan.length) return;
     ctx.save();
     ctx.globalCompositeOperation = temporalMode === "motion-trace" ? "screen" : "source-over";
-    for (let age = temporalFrameCount; age >= firstAge; age -= 1) {
-      const index = (temporalWriteIndex - age + temporalBuffers.length) % temporalBuffers.length;
-      const buffer = temporalBuffers[index];
-      const strength = temporalMode === "motion-trace"
-        ? 0.08 + ((temporalFrameCount - age) * 0.025)
-        : 0.12 + ((temporalFrameCount - age) * 0.035);
-      ctx.globalAlpha = strength;
-      const offset = temporalMode === "time-echo" ? (temporalFrameCount - age + 1) * width * 0.004 : 0;
-      ctx.drawImage(buffer.canvas, offset, 0, width, height);
+    for (const layer of plan) {
+      const buffer = temporalBuffers[layer.index];
+      if (!buffer) continue;
+      ctx.globalAlpha = layer.alpha;
+      ctx.drawImage(buffer.canvas, layer.offset, 0, width, height);
     }
     ctx.restore();
   }
@@ -2538,7 +2527,7 @@ export function initCamera() {
       ["قناع الشفاه الهندسي", latestFacialMaskPreview?.masks?.lips ? latestFacialMaskPreview.masks.lips.pixelCount + " بكسل — معاينة فقط، بلا ثقة دلالية" : "غير متاح / لم يُحلل"],
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
-      ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
+      ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalMemoryEngine.getStatus().frameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["NOX PHOTON TIME MACHINE", photonTimelineEnabled ? "نشط — " + photonTimelineOrder.length + "/" + photonTimelineSlots.length + " عينات زمنية / اختيار " + (photonTimelineSelectedIndex + 1) : "متوقف"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
@@ -2549,7 +2538,7 @@ export function initCamera() {
       ["NOX True Detail Recovery", detailRecoveryMode === "off" ? "متوقف" : detailRecoveryMode === "natural" ? "حدة طبيعية — WebGL" : "حدة قوية — WebGL"],
       ["NOX Motion Freeze", motionFreezeEnabled ? "مساعد توقيت الالتقاط — حركة " + motionFreezeState + (motionFreezeLastSpeed === null ? "" : " / " + motionFreezeLastSpeed.toFixed(2) + " px/sample") : "متوقف"],
       ["NOX Wave Matter", waveMatterMode === "off" ? "متوقف" : waveMatterMode === "thin-film" ? "تداخل طبقات رقيقة — محاكاة" : waveMatterMode === "dispersion" ? "تشتت لوني — محاكاة" : "تشتت جوي — محاكاة"],
-      ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
+      ["حجم الذاكرة الزمنية", temporalBuffers.length ? (temporalMemoryEngine.getStatus().profile?.sampleWidth || 0) + " × " + (temporalMemoryEngine.getStatus().profile?.sampleHeight || 0) + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
       ["NOX Face Landmarks", faceLandmarksState],
