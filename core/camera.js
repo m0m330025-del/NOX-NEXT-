@@ -618,16 +618,29 @@ export function initCamera() {
           const initialized = await faceLandmarkerProvider.initialize();
           if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
         }
-        const scale = Math.min(1, 256 / Math.max(source.videoWidth, source.videoHeight));
-        const width = Math.max(2, Math.round(source.videoWidth * scale));
-        const height = Math.max(2, Math.round(source.videoHeight * scale));
-        beautyInputCanvas.width = width;
-        beautyInputCanvas.height = height;
-        beautyInputContext.drawImage(source, 0, 0, width, height);
-        const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
-        if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
-        return { detected, analysis: faceLandmarksEngine.analyze(detected) };
+        const sourceWidth = source.videoWidth || source.width;
+        const sourceHeight = source.videoHeight || source.height;
+        const maxDimension = lowPower ? 192 : 256;
+        const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+        const width = Math.max(2, Math.round(sourceWidth * scale));
+        const height = Math.max(2, Math.round(sourceHeight * scale));
+        faceLandmarkInputCanvas.width = width;
+        faceLandmarkInputCanvas.height = height;
+        faceLandmarkInputContext.drawImage(source, 0, 0, width, height);
+        const detected = faceLandmarkerProvider.detect(faceLandmarkInputCanvas);
+        return { detected, analysis: detected.detected ? faceLandmarksEngine.analyze(detected) : null };
       }
+    }),
+    new NOXDynamicEngineAdapter({
+      id: "face-landmark-temporal-tracker", name: "Face Landmark Temporal Tracker", category: "vision",
+      instance: faceLandmarkTemporalTracker, cost: 1, priority: 96,
+      requires: ["face-landmarks"], requiresCapabilities: ["landmark-analysis"],
+      capabilities: ["live-landmark-smoothing", "short-loss-coasting"],
+      when: context => context.liveFaceTracking === true,
+      process: input => ({
+        ...input,
+        tracking: faceLandmarkTemporalTracker.update(input?.detected)
+      })
     }),
     new NOXDynamicEngineAdapter({
       id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision",
@@ -903,7 +916,7 @@ export function initCamera() {
     return true;
   }
 
-  function processLiveFaceLandmarks(now = performance.now(), force = false) {
+  async function processLiveFaceLandmarks(now = performance.now(), force = false) {
     if (!faceLandmarksLiveEnabled || !stream || video.readyState < 2 ||
         !faceLandmarkerProvider || faceLandmarkerProvider.state !== "ready" ||
         faceLandmarksProcessing) return;
@@ -912,18 +925,22 @@ export function initCamera() {
     faceLandmarksLastAt = now;
     faceLandmarksProcessing = true;
     try {
-      const maxDimension = lowPower ? 192 : 256;
-      const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
-      const width = Math.max(2, Math.round(video.videoWidth * scale));
-      const height = Math.max(2, Math.round(video.videoHeight * scale));
-      if (faceLandmarkInputCanvas.width !== width || faceLandmarkInputCanvas.height !== height) {
-        faceLandmarkInputCanvas.width = width;
-        faceLandmarkInputCanvas.height = height;
+      const plan = cortex.plan(
+        { faceRequested: true, landmarksRequested: true, liveFaceTracking: true },
+        { requested: ["face-landmarks", "face-landmark-temporal-tracker"], mode: lowPower ? "lite" : "balanced" }
+      );
+      const execution = await cortex.execute(plan, video, dynamicEngineHost.getHandlers(), {
+        timeoutMs: 2200,
+        stopOnError: true,
+        context: { lowPower, liveFaceTracking: true }
+      });
+      if (!faceLandmarksLiveEnabled || !stream) return;
+      if (execution.state !== "completed" || !execution.output?.tracking) {
+        const failed = execution.results.find(item => item.status === "failed");
+        throw new Error(failed?.reason || "تعذر تنفيذ مسار التتبع عبر NOX CORTEX");
       }
-      faceLandmarkInputContext.drawImage(video, 0, 0, width, height);
-      const detected = faceLandmarkerProvider.detect(faceLandmarkInputCanvas);
-      const tracked = faceLandmarkTemporalTracker.update(detected);
-      if (tracked.state === "lost" || !tracked.result) {
+      const tracking = execution.output.tracking;
+      if (tracking.state === "lost" || !tracking.result) {
         latestFaceLandmarksAnalysis = null;
         latestFacialMaskPreview = null;
         faceLandmarksState = "بانتظار اكتشاف الوجه";
@@ -932,23 +949,24 @@ export function initCamera() {
         faceLandmarksStatus.textContent = "لم يظهر وجه موثوق في الإطار الحالي — التتبع سيستأنف تلقائيًا عند ظهوره.";
         return;
       }
-      const analysis = faceLandmarksEngine.analyze(tracked.result);
+      const analysis = faceLandmarksEngine.analyze(tracking.result);
       if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
         throw new Error("تعذر استخراج مناطق الوجه من نقاط التتبع");
       }
       latestFaceLandmarksAnalysis = analysis;
       latestFacialMaskPreview = null;
-      faceLandmarksState = tracked.state === "coasting"
+      faceLandmarksState = tracking.state === "coasting"
         ? "ثبات مؤقت — " + analysis.landmarkCount + " نقطة"
         : "تتبع حي — " + analysis.landmarkCount + " نقطة";
       faceDigitalTwinButton.disabled = false;
       faceDigitalTwinStatus.textContent = "النقاط الحية متاحة للتقرير البحثي؛ لا تُستخدم كأقنعة مكياج.";
       faceLandmarksStatus.textContent =
-        (tracked.state === "coasting" ? "فقد مؤقت — الاحتفاظ بآخر نقاط موثوقة. " : "تتبع حي نشط. ") +
-        "الحالة: " + tracked.state + " — المناطق: " + Object.keys(analysis.regions).join("، ") +
+        (tracking.state === "coasting" ? "فقد مؤقت — الاحتفاظ بآخر نقاط موثوقة. " : "تتبع حي نشط. ") +
+        "الحالة: " + tracking.state + " — المناطق: " + Object.keys(analysis.regions).join("، ") +
         (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
-        ". التحديث كل " + interval + " مللي ثانية تقريبًا.";
+        ". التحديث كل " + interval + " مللي ثانية تقريبًا عبر NOX CORTEX.";
     } catch (error) {
+      if (!faceLandmarksLiveEnabled) return;
       faceLandmarksState = "خطأ في التتبع";
       faceLandmarksStatus.textContent = "تعذر تحديث نقاط الوجه: " + String(error?.message || error).slice(0, 150);
       faceLandmarkTemporalTracker.reset();
