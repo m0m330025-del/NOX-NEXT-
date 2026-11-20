@@ -207,3 +207,14 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Diagnostics distinguish connected, enabled, included in the latest CORTEX plan, successful in the latest execution, failed in the latest execution, cumulative adapter failures, and measured p95 duration.
 - The engine orchestration planner's `recommend` decisions remain capability/evidence recommendations only. They are not treated as executable CORTEX handlers and do not activate engines automatically.
 - A missing latest execution is reported as `not-executed`; historical adapter failures remain separately visible through the cumulative failure count.
+
+
+## NOX Adaptive Runtime Scheduling — measured-cost stage
+
+- `core/nox-adaptive-runtime-scheduler.js` evaluates a proposed CORTEX plan against the live adapter snapshot.
+- It uses adapter-measured p95 duration only. A declared estimate or an unmeasured warm-up adapter is not treated as a measured runtime cost.
+- It checks adapter connection/enabled/running state, dependency eligibility, conflicts, and the remaining frame budget.
+- The budget is derived from the target frame duration minus the measured camera frame cost and a safety reserve (1.25 ms balanced / 2.5 ms low-power).
+- Brain recommendations are attached as context; they do not override CORTEX dependencies or force execution.
+- The current camera integration is diagnostics-only: it reports eligible/held engines and estimated p95 budget, but does not alter the existing render or processing path and does not call `execute()` itself.
+- This intentionally preserves image behavior while the scheduler contract is validated. Any future runtime gating must be enabled explicitly for one pipeline and tested against image-output parity and device performance first.
