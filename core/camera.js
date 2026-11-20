@@ -3214,16 +3214,24 @@ export function initCamera() {
       stableFrameStreak += 1;
       slowFrameStreak = Math.max(0, slowFrameStreak - 1);
     }
-    if (slowFrameStreak >= 8 && qualityTier < QUALITY_TIERS.length - 1) {
+    const qualityDecision = noxNeuralCameraOrchestrator.getAdaptiveRecommendation({
+      lowPower,
+      currentTier: qualityTier
+    });
+    if (qualityDecision.action === "recommend-reduce-load" && qualityTier < QUALITY_TIERS.length - 1) {
       qualityTier += 1;
       slowFrameStreak = 0;
       stableFrameStreak = 0;
-      announce("NOX Adaptive Rescue: خفض الحمل إلى " + QUALITY_TIERS[qualityTier].name, true);
+      announce("NOX Neural Decision: خفض الحمل بعد " + qualityDecision.overloadSamples +
+        " عينات ضغط مؤكدة — " + QUALITY_TIERS[qualityTier].name, true);
       updateDiagnostics();
-    } else if (stableFrameStreak >= 150 && qualityTier > (lowPower ? 1 : 0)) {
+    } else if (qualityDecision.action === "recommend-one-tier-recovery" &&
+        qualityTier > (lowPower ? 1 : 0)) {
       qualityTier -= 1;
       stableFrameStreak = 0;
-      announce("NOX Adaptive Rescue: استعادة تدريجية — " + QUALITY_TIERS[qualityTier].name, true);
+      slowFrameStreak = 0;
+      announce("NOX Neural Decision: استعادة مستوى واحد بعد ثبات الأداء — " +
+        QUALITY_TIERS[qualityTier].name, true);
       updateDiagnostics();
     }
     if (scheduleNext && stream && !disposed) animationFrame = requestAnimationFrame(() => renderFrame(true));
