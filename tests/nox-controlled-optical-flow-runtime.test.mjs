@@ -27,6 +27,27 @@ for (const token of [
 ]) {
   assert.ok(cameraSource.includes(token), "camera controlled-runtime integration missing: " + token);
 }
+const opticalFlowStart = cameraSource.indexOf("async function estimateOpticalFlow");
+const opticalFlowFinally = cameraSource.indexOf("} finally {", opticalFlowStart);
+const opticalFlowFinallyEnd = cameraSource.indexOf("\n    }\n  }", opticalFlowFinally);
+assert.ok(opticalFlowStart >= 0 && opticalFlowFinally > opticalFlowStart && opticalFlowFinallyEnd > opticalFlowFinally,
+  "optical-flow execution must retain a finally block");
+assert.match(
+  cameraSource.slice(opticalFlowFinally, opticalFlowFinallyEnd),
+  /if \(session === opticalFlowSession\)\s*opticalFlowProcessing = false;/,
+  "a stale Optical Flow session must not release a newer session's processing lock"
+);
+
+let activeSession = 1;
+let processing = true;
+const staleSession = activeSession;
+activeSession += 1;
+processing = false; // reset releases the old session's lock
+processing = true;  // a new inference acquires it
+if (staleSession === activeSession) processing = false;
+assert.equal(processing, true,
+  "completion of an old inference must leave the newer inference lock held");
+
 assert.ok(
   cameraSource.indexOf("noxAdaptiveRuntimeScheduler.evaluate({", cameraSource.indexOf("async function estimateOpticalFlow")) <
     cameraSource.indexOf("const execution = await cortex.execute(", cameraSource.indexOf("async function estimateOpticalFlow")),
