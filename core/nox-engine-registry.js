@@ -73,7 +73,7 @@ export class NOXEngineRegistry {
         capabilities: entry.capabilities.slice(),
         requiresCapabilities: entry.requiresCapabilities.slice(),
         conflictsWith: entry.conflictsWith.slice(),
-        estimatedCostMs: entry.estimatedCostMs,
+        estimatedCostMs: entry.estimatedCostMs ?? (Number.isFinite(rawStatus?.estimatedCostMs) && rawStatus.estimatedCostMs >= 0 ? rawStatus.estimatedCostMs : null),
         priority: entry.priority,
         registered: true,
         statusAvailable,
