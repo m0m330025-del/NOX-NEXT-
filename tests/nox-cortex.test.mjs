@@ -23,7 +23,7 @@ assert.ok(motion.totalCost <= 3);
 
 cortex.setEngineEnabled("face-detection", false);
 const blocked = cortex.plan({ faceRequested: true, landmarksRequested: true, maskRequested: true });
-assert.ok(!blocked.engines.some(engine => engine.id === "face-landmarks"));
+assert.ok(!blocked.engines.some(engine => ["face-landmarks", "facial-mask-builder", "makeup-rendering"].includes(engine.id)));
 assert.ok(blocked.rejected.some(item => item.reason === "dependency-unavailable"));
 
 const custom = new NOXCortex({ engines: [
