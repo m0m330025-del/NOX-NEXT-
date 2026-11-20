@@ -155,3 +155,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Adding a new engine to the camera runtime requires creating its instance and registering it once with a stable ID, name, category, capabilities, and optional status reader. The brain and its decision logic do not need engine-specific edits.
 - This discovers registered runtime instances, not arbitrary files or uninstantiated modules. Browser JavaScript cannot enumerate source files from a directory. Registration does not automatically activate or execute an engine; execution remains gated by evidence, capability, and performance checks.
 - Deterministic tests cover late registration, status read failures, safe status summarization, unregister, clear, and invalid IDs.
+
+## NOX Engine Orchestration Planner
+
+- `core/nox-engine-orchestration-planner.js` converts the runtime registry inventory and measured capability evidence into a deterministic, ordered recommendation plan.
+- Capability dependencies enforce prerequisite order: sparse motion vectors before global-motion consensus, then global translation alignment, then confidence-gated frame fusion. Missing, stale, or low-confidence evidence blocks dependent capabilities.
+- The planner filters unregistered and explicitly disabled engines, reports unknown status without treating it as proof of activation, and applies explicit conflict declarations when present.
+- Optional registry metadata supports `requiresCapabilities`, `conflictsWith`, `estimatedCostMs`, and `priority`. Under low-power or overloaded conditions, engines with unknown cost are held; known costs must fit the measured remaining frame budget.
+- The camera diagnostics show the proposed engine order and each hold/recommend reason. The plan is advisory only: `executionPerformed` remains false and no engine is started, stopped, or reconfigured by this layer.
+- The current cost model is opt-in metadata, not measured per-engine runtime cost. Engines without cost estimates can appear in balanced recommendations but are conservatively held under performance constraints.
+- Deterministic tests cover late-added engines, missing capability evidence, dependency ordering, conflicts, disabled engines, low confidence, unknown costs, overload, and budget rejection. Physical image quality and Galaxy M12 performance remain unverified.
