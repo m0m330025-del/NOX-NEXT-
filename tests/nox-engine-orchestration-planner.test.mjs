@@ -21,7 +21,7 @@ const evidence = [
 ];
 const plan = planner.evaluate({ registeredEngines: inventory, capabilityEvidence: evidence });
 assert.equal(plan.status, "recommendation-ready");
-assert.deepEqual(plan.steps.map(item => item.engine), ["fusion", "align", "motion", "flow", "new-engine"]);
+assert.deepEqual(plan.steps.map(item => item.engine), ["flow", "new-engine", "motion", "align", "fusion"]);
 assert.equal(plan.executionPerformed, false);
 assert.equal(plan.decisions.find(item => item.engine === "new-engine").reason, "capability-and-evidence-gates-passed");
 
@@ -29,7 +29,7 @@ const missing = planner.evaluate({
   registeredEngines: inventory,
   capabilityEvidence: evidence.filter(item => item.capability !== "global-motion-consensus")
 });
-assert.ok(missing.decisions.find(item => item.engine === "motion").reason.includes("dependency-unavailable"));
+assert.equal(missing.decisions.find(item => item.engine === "motion").reason, "capability-evidence-unavailable");
 assert.equal(missing.steps.some(item => item.engine === "fusion"), false);
 
 const conflict = planner.evaluate({
