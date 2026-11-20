@@ -4,6 +4,7 @@ import { NOXCortex } from "../core/nox-cortex.js";
 import { NOXAdaptiveRuntimeScheduler } from "../core/nox-adaptive-runtime-scheduler.js";
 import { NOXDynamicEngineAdapter, NOXDynamicEngineAdapterHost } from "../core/nox-dynamic-engine-adapter.js";
 import { NOXSparseOpticalFlowEngine } from "../core/nox-optical-flow-engine.js";
+import { NOXOpticalFlowRecoveryGate } from "../core/nox-optical-flow-recovery-gate.js";
 
 const cameraSource = readFileSync(new URL("../core/camera.js", import.meta.url), "utf8");
 for (const token of [
@@ -13,7 +14,10 @@ for (const token of [
   "noxAdaptiveRuntimeScheduler.evaluate({",
   "if (!gate.eligibleEngineIds.includes(\"optical-flow\"))",
   "opticalFlowRuntimeGate = \"held-frame-cost-unavailable\"",
-  "opticalFlowRuntimeGate = warmupComplete ? \"executed-controlled\" : \"executed-warmup\""
+  "opticalFlowRuntimeGate = warmupComplete ? \"executed-controlled\" : \"executed-warmup\"",
+  "opticalFlowRecoveryGate.evaluate(true)",
+  "opticalFlowRecoveryGate.evaluate(false)",
+  "recovering-\" + recovery.healthyStreak"
 ]) {
   assert.ok(cameraSource.includes(token), "camera controlled-runtime integration missing: " + token);
 }
@@ -22,6 +26,20 @@ assert.ok(
     cameraSource.indexOf("const execution = await cortex.execute(", cameraSource.indexOf("async function estimateOpticalFlow")),
   "runtime budget gate must run before the existing CORTEX execution"
 );
+
+const recoveryGate = new NOXOpticalFlowRecoveryGate({ requiredConsecutive: 3 });
+assert.equal(recoveryGate.evaluate(true).allowed, true, "initial eligible operation should not be delayed");
+assert.equal(recoveryGate.evaluate(false).allowed, false, "an overload must block the next run");
+assert.equal(recoveryGate.evaluate(true).allowed, false, "first healthy evaluation must remain in recovery");
+assert.equal(recoveryGate.evaluate(true).allowed, false, "second healthy evaluation must remain in recovery");
+const recovered = recoveryGate.evaluate(true);
+assert.equal(recovered.allowed, true, "third consecutive healthy evaluation restores operation");
+assert.equal(recovered.recovering, false);
+assert.equal(recoveryGate.evaluate(false).healthyStreak, 0, "a renewed overload resets recovery progress");
+assert.equal(recoveryGate.evaluate(true).allowed, false);
+assert.equal(recoveryGate.evaluate(false).healthyStreak, 0, "an unstable recovery streak must restart");
+recoveryGate.reset();
+assert.equal(recoveryGate.evaluate(true).allowed, true, "reset starts a fresh session");
 
 const width = 64;
 const height = 48;
