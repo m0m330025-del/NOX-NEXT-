@@ -802,8 +802,8 @@ export function initCamera() {
     if (!analysis?.regions || !faceLandmarksContext) return false;
     const width = analysis.width;
     const height = analysis.height;
-    faceLandmarksOverlay.width = width;
-    faceLandmarksOverlay.height = height;
+    if (faceLandmarksOverlay.width !== width) faceLandmarksOverlay.width = width;
+    if (faceLandmarksOverlay.height !== height) faceLandmarksOverlay.height = height;
     faceLandmarksContext.clearRect(0, 0, width, height);
     const colors = { lips: "#ff4e91", leftEye: "#62d9ff", rightEye: "#62d9ff", leftEyebrow: "#ffd166", rightEyebrow: "#ffd166", faceOval: "#7df0b1" };
     for (const [name, region] of Object.entries(analysis.regions)) {
@@ -884,7 +884,6 @@ export function initCamera() {
       clearFaceLandmarksPreview();
     } finally {
       faceLandmarksProcessing = false;
-      updateDiagnostics();
     }
   }
 
@@ -982,7 +981,7 @@ export function initCamera() {
     faceDigitalTwinStatus.textContent = "تم إيقاف محرك نقاط الوجه وتحرير موارده.";
     faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
     faceLandmarksState = "متوقف";
-    faceLandmarksButton.textContent = "تحميل محرك نقاط الوجه (478 نقطة)";
+    faceLandmarksButton.textContent = "تشغيل تتبع الوجه الحي (478 نقطة)";
     faceLandmarksButton.disabled = true;
     faceLandmarksStatus.textContent = "تم تحرير موارد نموذج نقاط الوجه.";
   }
