@@ -6,6 +6,9 @@ on:
     paths:
       - "core/nox-makeup-rendering-engine.js"
       - "core/nox-live-makeup-controller.js"
+      - "core/camera.js"
+      - "tests/nox-live-makeup-compositor.test.mjs"
+      - "core/nox-live-makeup-compositor.js"
       - "tests/nox-live-makeup-controller.test.mjs"
       - "tests/nox-makeup-rendering-engine.test.mjs"
       - ".github/workflows/makeup-rendering-engine-checks.yml"
@@ -41,6 +44,14 @@ jobs:
         run: |
           cp core/nox-live-makeup-controller.js core/nox-live-makeup-controller.mjs
           node tests/nox-live-makeup-controller.test.mjs
+      - name: Check live makeup compositor syntax
+        run: |
+          cp core/nox-live-makeup-compositor.js /tmp/nox-live-makeup-compositor.mjs
+          node --check /tmp/nox-live-makeup-compositor.mjs
+      - name: Run live makeup compositor tests
+        run: |
+          cp core/nox-live-makeup-compositor.js core/nox-live-makeup-compositor.mjs
+          node tests/nox-live-makeup-compositor.test.mjs
       - name: Run makeup mask tests
         run: |
           cp core/nox-makeup-rendering-engine.js core/nox-makeup-rendering-engine.mjs
