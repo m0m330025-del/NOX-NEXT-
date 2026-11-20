@@ -81,6 +81,32 @@ const conflict = scheduler.evaluate({
 });
 assert.equal(conflict.steps[1].reason, "runtime-engine-conflict");
 
+const cameraPipeline = scheduler.evaluate({
+  cortexPlan: {
+    state: "planned",
+    engines: [
+      { id: "optical-flow", requires: [], conflictsWith: [] },
+      { id: "predictive-camera-intelligence", requires: ["optical-flow"], conflictsWith: [] },
+      { id: "smart-motion-separation", requires: ["optical-flow"], conflictsWith: [] },
+      { id: "temporal-alignment", requires: ["smart-motion-separation"], conflictsWith: [] }
+    ]
+  },
+  runtimeSnapshot: [
+    { id: "optical-flow", connected: true, enabled: true, state: "ready", measuredP95Ms: 3 },
+    { id: "predictive-camera-intelligence", connected: true, enabled: true, state: "ready", measuredP95Ms: 2 },
+    { id: "smart-motion-separation", connected: true, enabled: true, state: "ready", measuredP95Ms: 2 },
+    { id: "temporal-alignment", connected: true, enabled: true, state: "ready", measuredP95Ms: 3 }
+  ],
+  targetFrameMs: 20,
+  frameCostMs: 10
+});
+assert.deepEqual(cameraPipeline.eligibleEngineIds, [
+  "optical-flow", "predictive-camera-intelligence", "smart-motion-separation"
+], "priority order must preserve core flow and motion consensus before temporal alignment");
+assert.equal(cameraPipeline.steps[3].reason, "measured-p95-exceeds-remaining-frame-budget");
+assert.equal(cameraPipeline.estimatedTotalMs, 7);
+assert.equal(cameraPipeline.executionPerformed, false);
+
 scheduler.reset();
 assert.equal(scheduler.getSchedule().state, "no-evaluation");
 assert.throws(() => scheduler.evaluate({ cortexPlan: null }), /valid-cortex-plan-required/);
