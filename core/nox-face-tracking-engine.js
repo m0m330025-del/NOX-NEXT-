@@ -141,9 +141,37 @@ export class NOXFaceTrackingEngine {
     const previous = this.landmarkTrack;
     const nextCenter = center(nextBox);
     const previousCenter = previous ? center(previous.box) : null;
-    const jumped = previousCenter &&
-      Math.hypot(nextCenter.x - previousCenter.x, nextCenter.y - previousCenter.y) > 0.22;
-    const reacquired = !previous || jumped || previous.missed > 0;
+    const jumpDistance = previousCenter
+      ? Math.hypot(nextCenter.x - previousCenter.x, nextCenter.y - previousCenter.y)
+      : 0;
+    const jumped = Boolean(previousCenter && jumpDistance > 0.22);
+
+    // A large one-frame displacement can be a detector hand-off to another
+    // person. Confirm it on a second consecutive frame before switching tracks.
+    if (previous && jumped) {
+      const pending = previous.pendingJump;
+      const pendingCenter = pending ? center(pending.box) : null;
+      const pendingDistance = pendingCenter
+        ? Math.hypot(nextCenter.x - pendingCenter.x, nextCenter.y - pendingCenter.y)
+        : Infinity;
+      if (!pending || pendingDistance > 0.16) {
+        previous.pendingJump = { box: nextBox, result, hits: 1 };
+        return {
+          state: "coasting",
+          sequence: this.landmarkSequence,
+          face: { box: { ...previous.box }, landmarks: previous.result.landmarks },
+          result: previous.result,
+          missedFrames: previous.missed,
+          reason: "unconfirmed-large-displacement"
+        };
+      }
+      previous.pendingJump.hits += 1;
+      this.landmarkTrack = null;
+      return this.updateConfirmedLandmarkReacquisition(result, nextBox);
+    }
+
+    if (previous?.pendingJump) previous.pendingJump = null;
+    const reacquired = !previous || previous.missed > 0;
     const alpha = reacquired ? 1 : this.smoothing;
     const landmarks = result.landmarks.map((point, index) => {
       const oldPoint = previous?.result?.landmarks?.[index];
@@ -161,7 +189,7 @@ export class NOXFaceTrackingEngine {
       height: previous.box.height * (1 - alpha) + nextBox.height * alpha
     };
     const trackedResult = { ...result, landmarks };
-    this.landmarkTrack = { box, result: trackedResult, missed: 0 };
+    this.landmarkTrack = { box, result: trackedResult, missed: 0, pendingJump: null };
     return {
       state: reacquired ? "acquired" : "tracking",
       sequence: this.landmarkSequence,
@@ -172,10 +200,25 @@ export class NOXFaceTrackingEngine {
     };
   }
 
+  updateConfirmedLandmarkReacquisition(result, nextBox) {
+    const trackedResult = { ...result, landmarks: result.landmarks.map(point => ({ ...point })) };
+    this.landmarkTrack = { box: { ...nextBox }, result: trackedResult, missed: 0, pendingJump: null };
+    return {
+      state: "acquired",
+      sequence: this.landmarkSequence,
+      face: { box: { ...nextBox }, landmarks: trackedResult.landmarks },
+      result: trackedResult,
+      missedFrames: 0,
+      reacquired: true,
+      reason: "confirmed-large-displacement"
+    };
+  }
+
   missLandmarks(reason = "face-not-detected") {
     if (!this.landmarkTrack) {
       return { state: "lost", sequence: this.landmarkSequence, face: null, result: null, missedFrames: 1, reason };
     }
+    this.landmarkTrack.pendingJump = null;
     this.landmarkTrack.missed += 1;
     if (this.landmarkTrack.missed > this.maxMissedFrames) {
       const missedFrames = this.landmarkTrack.missed;
