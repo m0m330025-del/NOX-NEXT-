@@ -303,7 +303,7 @@
 .nox-camera-v2-stage #nox-camera-exit{min-width:46px;min-height:46px}
 @media(max-width:760px){
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tabs{
-    position:fixed;z-index:1004;left:50%;bottom:calc(276px + env(safe-area-inset-bottom));
+    position:fixed;z-index:1004;left:50%;bottom:calc(378px + env(safe-area-inset-bottom));
     transform:translateX(-50%);width:min(calc(100vw - 36px),360px);margin:0;
     gap:7px;padding:5px;background:rgba(12,7,31,.82);backdrop-filter:blur(16px);
   }
@@ -311,7 +311,7 @@
     min-height:42px;padding:8px 6px;font-size:11px;
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-section-title{
-    bottom:calc(330px + env(safe-area-inset-bottom));
+    bottom:calc(438px + env(safe-area-inset-bottom));
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-orbit{
     bottom:calc(10px + env(safe-area-inset-bottom));
