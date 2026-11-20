@@ -84,7 +84,7 @@ export class NOXOcclusionIntelligence {
     const hasVisibility = Array.isArray(visibility) && visibility.length === landmarks.length;
     if (hasVisibility) visibility.forEach((v,i)=>{ if (Number.isFinite(v) && v < 0.5) occluded.add(i); });
     const validIndices=[...occluded].filter(i=>i>=0&&i<landmarks.length);
-    return { state: validIndices.length ? "partial" : (hasVisibility || occludedIndices.length ? "clear-observed" : "indeterminate"),
+    return { state: validIndices.length ? "partial" : (hasVisibility || (Array.isArray(occludedIndices) && occludedIndices.length > 0) ? "clear-observed" : "indeterminate"),
       source:source || "caller-supplied-occlusion-evidence",
       occludedPointIndices:validIndices,
       visiblePointCount:hasVisibility?visibility.filter(v=>Number.isFinite(v)&&v>=0.5).length:null,
