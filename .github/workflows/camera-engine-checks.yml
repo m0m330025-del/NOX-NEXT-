@@ -1,6 +1,17 @@
 name: NOX Camera Engine Checks
 
 on:
+  push:
+    branches: [feature/nox-camera-swipe-ui]
+    paths:
+      - "camera.css"
+      - ".github/workflows/camera-engine-checks.yml"
+      - "core/nox-camera-swipe-navigation.js"
+      - "tests/nox-camera-swipe-navigation.test.mjs"
+      - "core/camera.js"
+      - "app.js"
+      - "index.html"
+      - "camera.css"
   pull_request:
     branches: [main, feature/nox-camera-engine-rebuild]
     paths:
