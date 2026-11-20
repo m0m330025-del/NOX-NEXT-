@@ -17,7 +17,7 @@ for (const token of [
   "opticalFlowRuntimeGate = warmupComplete ? \"executed-controlled\" : \"executed-warmup\"",
   "opticalFlowRecoveryGate.evaluate(true)",
   "opticalFlowRecoveryGate.evaluate(false)",
-  "recovering-\" + recovery.healthyStreak"
+  "recovering-\" + recovery.healthyStreak",
   "cameraPipelineBudgetPlan",
   "cameraPipelineWarmupComplete",
   "runPipelineEngine(\"predictive-camera-intelligence\")",
