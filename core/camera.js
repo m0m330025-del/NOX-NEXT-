@@ -21,6 +21,7 @@ import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js
 import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelligence.js";
 import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 import { NOXEngineRegistry } from "./nox-engine-registry.js";
+import { NOXEngineOrchestrationPlanner } from "./nox-engine-orchestration-planner.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -463,6 +464,7 @@ export function initCamera() {
   let temporalMode = "off";
   let temporalBuffers = [];
   const noxEngineRegistry = new NOXEngineRegistry();
+  const noxEngineOrchestrationPlanner = new NOXEngineOrchestrationPlanner();
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
@@ -2824,10 +2826,40 @@ export function initCamera() {
       frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
       targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
     });
+    const flowAgeMs = opticalFlowLastAt > 0 ? Math.max(0, performance.now() - opticalFlowLastAt) : null;
+    const alignmentEvidence = temporalAlignmentEngine.getStatus();
+    const memoryEvidence = noxNeuralCameraOrchestrator.getMemoryStatus();
+    const flowEvidenceReady = opticalFlowMode !== "off" && flowAgeMs !== null && flowAgeMs <= 700 &&
+      opticalFlowVectors.length >= 4 && opticalFlowConfidence >= 0.06;
+    const motionEvidenceReady = flowEvidenceReady && motionSeparationResult.accepted === true &&
+      Number.isFinite(motionSeparationResult.confidence) && motionSeparationResult.confidence >= 0.14 &&
+      Number.isFinite(motionSeparationResult.backgroundRatio) && motionSeparationResult.backgroundRatio >= 0.55;
+    const alignmentEvidenceReady = motionEvidenceReady && Number.isInteger(alignmentEvidence.validSlots) &&
+      alignmentEvidence.validSlots > 0 && alignmentEvidence.lastAccepted?.confidence >= 0.22;
+    const engineOrchestrationPlan = noxEngineOrchestrationPlanner.evaluate({
+      registeredEngines: intelligencePlan.engineInventory,
+      lowPower,
+      performanceMode: intelligencePlan.performanceMode,
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
+      capabilityEvidence: [
+        { capability: "sparse-motion-vectors", available: flowEvidenceReady, confidence: opticalFlowConfidence, reason: flowEvidenceReady ? "fresh-confident-optical-flow" : "fresh-flow-evidence-unavailable" },
+        { capability: "global-motion-consensus", available: motionEvidenceReady, confidence: motionSeparationResult.confidence || 0, reason: motionEvidenceReady ? "dominant-global-motion-confirmed" : "global-motion-consensus-unavailable" },
+        { capability: "global-translation-alignment", available: alignmentEvidenceReady, confidence: alignmentEvidence.lastAccepted?.confidence || 0, reason: alignmentEvidenceReady ? "trusted-alignment-available" : "trusted-alignment-unavailable" },
+        { capability: "confidence-gated-frame-fusion", available: temporalMode !== "off" && alignmentEvidenceReady, confidence: alignmentEvidence.lastAccepted?.confidence || 0, reason: temporalMode !== "off" && alignmentEvidenceReady ? "temporal-fusion-evidence-ready" : "temporal-fusion-evidence-unavailable" },
+        { capability: "luminance", available: Boolean(sceneLuminanceMetrics), confidence: scenePlan.confidence || 0, reason: sceneLuminanceMetrics ? "measured-grayscale-luminance" : "luminance-sample-unavailable" },
+        { capability: "contrast", available: Boolean(sceneLuminanceMetrics), confidence: scenePlan.confidence || 0, reason: sceneLuminanceMetrics ? "measured-grayscale-contrast" : "contrast-sample-unavailable" },
+        { capability: "motion-state", available: flowEvidenceReady, confidence: opticalFlowConfidence, reason: flowEvidenceReady ? "fresh-motion-sample" : "motion-sample-unavailable" },
+        { capability: "short-term-performance-memory", available: memoryEvidence.sampleCount > 0, confidence: Math.min(1, memoryEvidence.sampleCount / 4), reason: memoryEvidence.sampleCount > 0 ? "measured-frame-history-present" : "frame-history-empty" }
+      ]
+    });
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["الاكتشاف التلقائي للمحركات", intelligencePlan.discoveredEngineCount + " محرك مسجل — " + intelligencePlan.engineInventory.map(engine => engine.name + (engine.statusAvailable ? " ✓" : " •")).join("، ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
+      ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
+      ["حالة مخطط التشغيل", engineOrchestrationPlan.status + " — " + engineOrchestrationPlan.mode + " — توصية فقط؛ لم يتم تشغيل أي محرك"],
+      ["قرارات توافق المحركات", engineOrchestrationPlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["ذاكرة التكيف قصيرة المدى", intelligencePlan.adaptiveMemory.action + " — " + intelligencePlan.adaptiveMemory.reason + " — " + intelligencePlan.adaptiveMemory.sampleCount + "/" + intelligencePlan.adaptiveMemory.historyLimit + " إطار"],
       ["NOX Predictive Camera Intelligence", predictivePlan.action + " — " + predictivePlan.reason + " — ثقة " + Math.round(predictivePlan.confidence * 100) + "% / أفق " + (predictivePlan.horizonMs ?? "—") + "ms"],
