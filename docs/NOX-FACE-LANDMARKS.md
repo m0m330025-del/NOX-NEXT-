@@ -17,6 +17,7 @@
 - The provider now also returns the official `FACE_LANDMARKS_TESSELATION` edge graph.
 - The builder reconstructs mesh triangles from those official edges and accepts the lip region only when the official lip graph forms exactly two closed loops.
 - The larger loop is treated as the outer lip boundary and the smaller as the inner mouth opening; rasterization is restricted to the annulus and to the supplied face mesh triangles.
+- Mesh reconstruction is bounded by 20,000 input edges, 64 neighbors per vertex, and 50,000 reconstructed triangles to reject pathological graph inputs before expensive work.
 - The builder currently emits a geometry-only lip preview. It intentionally sets no confidence score, so the existing makeup compositor must reject it.
 - Eyelids, brows, and cheeks remain unavailable. The eye graph does not identify upper/lower eyelid surfaces, eyebrow lines are not hair masks, and no cheek segmentation is supplied.
 
