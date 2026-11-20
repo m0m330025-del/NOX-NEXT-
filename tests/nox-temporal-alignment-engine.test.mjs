@@ -23,8 +23,11 @@ assert.equal(engine.ingest(weak, { sequence: 2, width: 64, height: 48 }).accepte
 const localized = vectors.map((vector, index) => ({
   ...vector, x: 0.45 + index * 0.001, y: 0.45 + index * 0.001
 }));
+engine.onCapture(0);
 assert.equal(engine.ingest(localized, { sequence: 3, width: 64, height: 48 }).reason,
   "localized-motion-vectors");
+assert.equal(engine.getTransform(0).valid, false,
+  "localized foreground motion must invalidate the previous global transform");
 const inconsistent = vectors.map((vector, index) => ({
   ...vector, dx: index % 2 ? 0.09 : -0.09
 }));
