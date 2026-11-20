@@ -165,3 +165,16 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The camera diagnostics show the proposed engine order and each hold/recommend reason. The plan is advisory only: `executionPerformed` remains false and no engine is started, stopped, or reconfigured by this layer.
 - The current cost model is opt-in metadata, not measured per-engine runtime cost. Engines without cost estimates can appear in balanced recommendations but are conservatively held under performance constraints.
 - Deterministic tests cover late-added engines, missing capability evidence, dependency ordering, conflicts, disabled engines, low confidence, unknown costs, overload, and budget rejection. Physical image quality and Galaxy M12 performance remain unverified.
+
+## NOX Dynamic Engine Adapter Contract v1
+
+- `core/nox-dynamic-engine-adapter.js` defines a versioned contract for adding a new runtime engine without writing a bespoke CORTEX handler map or registry entry.
+- Required fields: stable `id`, runtime `instance`, and an async-capable `process(input, context)` function. Optional fields describe `name`, `category`, CORTEX budget `cost` units, `priority`, engine-ID dependencies (`requires`), advertised `capabilities`, `conflictsWith`, an evidence/context predicate (`when`), input/output validators, and an explicit `dispose` callback.
+- The adapter registers the same engine with NOX CORTEX and the runtime engine registry. It supplies a ready-to-use handler map through `NOXDynamicEngineAdapterHost.getHandlers()`, and supports enable/disable and unregister lifecycle operations.
+- CORTEX now rejects a candidate pipeline when a newly added engine conflicts with an already selected engine. Dynamic removal clears its CORTEX entry and registry descriptor; dependent plans are then rejected if their prerequisite is no longer registered.
+- Each adapter records a bounded history of measured process durations and failures. After the configured minimum sample count, its measured p95 duration is exposed as `estimatedCostMs` through registry snapshots. A declared estimate takes precedence. These are measured adapter-call durations, not isolated GPU/kernel timings.
+- CORTEX `cost` remains an abstract mode-budget unit; it is not milliseconds. The measured `estimatedCostMs` is a separate signal used by the camera orchestration planner when frame-time constraints are active.
+- Registration does not itself execute or activate the engine. The host must explicitly request a CORTEX plan and call `execute()` with the adapter host's handlers. Existing specialist engines are not silently migrated to the new adapter in this change.
+- The adapter passes cancellation signals to the engine implementation; actual cancellation depends on the implementation honoring that signal. Timeout and failure isolation remain enforced by CORTEX.
+- Deterministic tests cover contract validation, late registration, execution through CORTEX, input rejection, enable/disable, bounded measured-cost telemetry, conflict rejection, duplicate IDs, and unregister cleanup.
+- These are source-level and CI checks. No Galaxy M12 visual, thermal, battery, or device-performance claim is made.
