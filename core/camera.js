@@ -2536,10 +2536,10 @@ export function initCamera() {
           reason: "runtime-budget-held"
         };
       }
-      if (runPipelineEngine("temporal-alignment") && motionSeparationResult.accepted) {
+      if (runPipelineEngine("temporal-alignment")) {
         dynamicEngineHost.runSync("temporal-alignment", {
           operation: "ingest",
-          vectors: motionSeparationResult.globalVectors,
+          vectors: motionSeparationResult.accepted ? motionSeparationResult.globalVectors : [],
           options: { sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight }
         });
       } else if (cameraPipelineWarmupComplete) {
