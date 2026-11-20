@@ -2,10 +2,11 @@ import assert from "node:assert/strict";
 import { NOXFacialMaskBuilder } from "../core/nox-facial-mask-builder.mjs";
 
 const point = (x, y) => ({ x, y, z: 0 });
-const landmarks = [
+const landmarks = Array.from({ length: 478 }, () => point(0.98, 0.98));
+landmarks.splice(0, 8,
   point(0.1,0.1), point(0.9,0.1), point(0.9,0.9), point(0.1,0.9),
   point(0.35,0.35), point(0.65,0.35), point(0.65,0.65), point(0.35,0.65)
-];
+);
 const cycle = ids => ids.map((id, index) => ({ start: id, end: ids[(index + 1) % ids.length] }));
 const triangles = [
   [0,1,5],[0,5,4],[1,2,6],[1,6,5],
