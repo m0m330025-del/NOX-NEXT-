@@ -2537,6 +2537,8 @@ export function initCamera() {
       ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
       ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],
       ["NOX CORTEX", cortexMode + " — " + cortexPlan.engines.map(engine => engine.id).join(" ← ") + " — تكلفة " + cortexPlan.totalCost + "/" + cortexPlan.budget.maxCost + (cortexPlan.rejected.length ? " — مستبعد " + cortexPlan.rejected.length : "")],
+      ["آخر تنفيذ للعقل", cortex.getStatus().lastExecution?.state || "لم يبدأ التنفيذ"],
+      ["قناع الشفاه الهندسي", latestFacialMaskPreview?.masks?.lips ? latestFacialMaskPreview.masks.lips.pixelCount + " بكسل — معاينة فقط، بلا ثقة دلالية" : "غير متاح / لم يُحلل"],
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
