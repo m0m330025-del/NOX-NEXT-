@@ -46,4 +46,18 @@ const invalid = builder.build({ ...input, landmarks: [{x:2,y:0.2}] });
 assert.equal(invalid.state, "unavailable");
 const tooLarge = builder.build(input, { width: 2048, height: 2048 });
 assert.equal(tooLarge.state, "unavailable");
+
+// Reject pathological mesh hubs before quadratic triangle reconstruction.
+const highDegreeEdges = Array.from({ length: 65 }, (_, index) => ({
+  start: 0, end: index + 8
+}));
+const excessiveDegree = builder.build({
+  ...input,
+  connections: {
+    lips: input.connections.lips,
+    tessellation: highDegreeEdges
+  }
+});
+assert.equal(excessiveDegree.state, "unavailable");
+assert.equal(excessiveDegree.reason, "closed-lip-loops-or-tessellation-missing");
 console.log("NOX Facial Mask Builder tests passed");
