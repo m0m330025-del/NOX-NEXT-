@@ -7,11 +7,13 @@ const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
 export class NOXLiveMakeupCompositor {
   constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35 } = {}) {
-    if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||\n        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8) {
+    if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
+        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8) {
       throw new TypeError("invalid-live-makeup-compositor-options");
     }
     this.canvasFactory = canvasFactory;
-    this.maxAgeMs = maxAgeMs;\n    this.edgeSoftness = edgeSoftness;
+    this.maxAgeMs = maxAgeMs;
+    this.edgeSoftness = edgeSoftness;
     this.canvas = null;
     this.sequence = 0;
     this.capturedAt = 0;
