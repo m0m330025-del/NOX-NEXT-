@@ -123,6 +123,7 @@ jobs:
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           cp core/nox-face-roll-estimator.js /tmp/face-roll-estimator.mjs
+          cp core/nox-face-roll-estimator.js core/nox-face-roll-estimator.mjs
           cp core/nox-face-landmark-temporal-tracker.js /tmp/face-landmark-temporal-tracker.mjs
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
           cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
