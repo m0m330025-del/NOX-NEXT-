@@ -19,6 +19,7 @@ import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-en
 import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
 import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js";
 import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelligence.js";
+import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -447,6 +448,8 @@ export function initCamera() {
   const adaptiveTemporalFusionEngine = new NOXAdaptiveTemporalFusionEngine();
   const noxNeuralCameraOrchestrator = new NOXNeuralCameraOrchestrator();
   const noxPredictiveCameraIntelligence = new NOXPredictiveCameraIntelligence();
+  const noxSceneIntelligenceEngine = new NOXSceneIntelligenceEngine();
+  let sceneLuminanceMetrics = null;
   let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
@@ -2017,6 +2020,8 @@ export function initCamera() {
     motionSeparationEngine.reset();
     adaptiveTemporalFusionEngine.reset();
     noxPredictiveCameraIntelligence.reset();
+    noxSceneIntelligenceEngine.reset();
+    sceneLuminanceMetrics = null;
     motionSeparationResult = motionSeparationEngine.getStatus();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
@@ -2065,6 +2070,11 @@ export function initCamera() {
     for (let i = 0, p = 0; i < gray.length; i += 1, p += 4) {
       gray[i] = (pixels[p] * 77 + pixels[p + 1] * 150 + pixels[p + 2] * 29) >> 8;
     }
+    let luminanceSum = 0;
+    let luminanceSquaredSum = 0;
+    for (const value of gray) { const normalized = value / 255; luminanceSum += normalized; luminanceSquaredSum += normalized * normalized; }
+    const meanLuminance = luminanceSum / gray.length;
+    sceneLuminanceMetrics = { meanLuminance, contrast: Math.sqrt(Math.max(0, luminanceSquaredSum / gray.length - meanLuminance * meanLuminance)) };
     opticalFlowLastAt = now;
     if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {      opticalFlowPrevious = gray;      opticalFlowWidth = sampleWidth;
       opticalFlowHeight = sampleHeight;
@@ -2770,12 +2780,19 @@ export function initCamera() {
       frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
       targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
     });
+    const scenePlan = noxSceneIntelligenceEngine.evaluate({
+      ...(sceneLuminanceMetrics || {}),
+      motion: { enabled: opticalFlowMode !== "off", accepted: motionSeparationResult.accepted, vectorCount: motionSeparationResult.backgroundCount || 0 },
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
+    });
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["ذاكرة التكيف قصيرة المدى", intelligencePlan.adaptiveMemory.action + " — " + intelligencePlan.adaptiveMemory.reason + " — " + intelligencePlan.adaptiveMemory.sampleCount + "/" + intelligencePlan.adaptiveMemory.historyLimit + " إطار"],
       ["NOX Predictive Camera Intelligence", predictivePlan.action + " — " + predictivePlan.reason + " — ثقة " + Math.round(predictivePlan.confidence * 100) + "% / أفق " + (predictivePlan.horizonMs ?? "—") + "ms"],
+      ["NOX Scene Intelligence", scenePlan.lighting + " / تباين " + scenePlan.contrast + " / حركة " + scenePlan.movement + " / أداء " + scenePlan.performance + " — " + scenePlan.recommendation + " — ثقة " + Math.round(scenePlan.confidence * 100) + "%"],
       ["HTTPS", supported.secure ? "متاح" : "غير آمن — يلزم HTTPS"],
       ["getUserMedia", supported.getUserMedia ? "متاح" : "غير مدعوم"],
       ["MediaRecorder", supported.mediaRecorder ? "متاح" : "غير مدعوم"],
