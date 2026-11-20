@@ -185,7 +185,7 @@ jobs:
           node tests/nox-cortex.test.mjs
           node tests/nox-adaptive-runtime-scheduler.test.mjs
           node tests/nox-controlled-optical-flow-runtime.test.mjs
-          node tests/nox-bisenet-face-parsing-provider.test.mjs
+          node tests/nox-bisenet-face-parsing-provider.test.mjs\n          cp core/nox-live-makeup-compositor.js /tmp/nox-live-makeup-compositor.mjs\n          node --check /tmp/nox-live-makeup-compositor.mjs\n          node tests/nox-live-makeup-compositor.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
