@@ -33,5 +33,8 @@ const recipe = createNOXChaosRecipe("My Fusion", ["chroma-tide", "aurora-relic"]
 assert.deepEqual(recipe.ids, ["chroma-tide", "aurora-relic"]);
 assert.equal(recipe.mode, "phase-collision");
 assert.equal(validateNOXChaosRecipe(recipe).ids.length, 2);
+const deduplicated = validateNOXChaosRecipe({ ...recipe, ids: ["chroma-tide", "chroma-tide", "unknown", "aurora-relic"] });
+assert.deepEqual(deduplicated.ids, ["chroma-tide", "aurora-relic"]);
+assert.equal(validateNOXChaosRecipe({ ...recipe, ids: ["unknown"] }), null);
 assert.equal(validateNOXChaosRecipe({ version: 9 }), null);
 assert.throws(() => createNOXChaosRecipe("", ["chroma-tide"], []));
