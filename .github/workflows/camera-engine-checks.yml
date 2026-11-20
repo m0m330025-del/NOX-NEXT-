@@ -56,7 +56,7 @@ on:
       - "camera.css"
       - ".github/workflows/camera-engine-checks.yml"
   push:
-    branches: ["feature/nox-camera-engine-rebuild"]
+    branches: ["feature/nox-camera-engine-rebuild", "feature/nox-camera-swipe-ui"]
     paths:
       - "core/nox-*.js"
       - "tests/nox-*.test.mjs"
