@@ -8,6 +8,10 @@ on:
       - "core/nox-filter-engine.js"
       - "core/nox-original-filter-library.js"
       - "tests/nox-original-filter-library.test.mjs"
+      - "core/nox-hybrid-fx-engine.js"
+      - "tests/nox-hybrid-fx-engine.test.mjs"
+      - "core/nox-hybrid-fx-engine.js"
+      - "tests/nox-hybrid-fx-engine.test.mjs"
       - "docs/NOX-1000-ORIGINAL-FILTERS.md"
       - "core/nox-temporal-memory-engine.js"
       - "tests/nox-temporal-memory-engine.test.mjs"
@@ -83,6 +87,7 @@ jobs:
           cp app.js /tmp/app.mjs
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
           cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
+          cp core/nox-hybrid-fx-engine.js /tmp/nox-hybrid-fx-engine.mjs
           cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
           cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
@@ -99,6 +104,7 @@ jobs:
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
           node --check /tmp/nox-original-filter-library.mjs
+          node --check /tmp/nox-hybrid-fx-engine.mjs
           node --check /tmp/mediapipe-selfie-provider.mjs
           node --check /tmp/beauty-vision-provider.mjs
           node --check /tmp/skin-segmentation-engine.mjs
@@ -112,6 +118,7 @@ jobs:
           node --check /tmp/multi-engine-intelligence-brain.mjs
           node --check /tmp/neural-camera-orchestrator.mjs
           node tests/nox-original-filter-library.test.mjs
+          node tests/nox-hybrid-fx-engine.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
           node tests/nox-temporal-alignment-engine.test.mjs
@@ -197,6 +204,16 @@ jobs:
           const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
+          }
+          const hybridEngineModule = await import('file:///tmp/nox-hybrid-fx-engine.mjs');
+          if (hybridEngineModule.NOX_HYBRID_FILTER_COUNT !== 6 ||
+              hybridEngineModule.NOX_HYBRID_FILTERS.some((filter) => filter.engines.length < 3)) {
+            throw new Error('NOX Hybrid Lab must expose six compositions of at least three engines');
+          }
+          for (const token of ['NOX_HYBRID_FILTERS', 'getNOXHybridFilter', 'selectedHybridFilter', 'renderer.hybrid', 'u_hybrid', 'CHROMA TIDE', 'PRISM FORGE', 'QUANTUM BLOOM', 'TOPOGRAPHIC DREAM', 'ECHO MATTER', 'AURORA RELIC']) {
+            if (!js.includes(token) && !hybridEngineModule.NOX_HYBRID_FILTERS.some((filter) => filter.name === token)) {
+              throw new Error('NOX Hybrid Lab integration token missing: ' + token);
+            }
           }
           const originalCatalogModule = await import('file:///tmp/nox-original-filter-library.mjs');
           if (originalCatalogModule.NOX_FILTER_COUNT !== 1000 || originalCatalogModule.listNOXFilters().length !== 1000) {
