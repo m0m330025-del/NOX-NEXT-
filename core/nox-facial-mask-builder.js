@@ -38,6 +38,48 @@ function pointInPolygon(point, polygon) {
   return inside;
 }
 
+function orientation(a, b, c) {
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const abC = orientation(a, b, c);
+  const abD = orientation(a, b, d);
+  const cdA = orientation(c, d, a);
+  const cdB = orientation(c, d, b);
+  return ((abC > 1e-10 && abD < -1e-10) || (abC < -1e-10 && abD > 1e-10)) &&
+    ((cdA > 1e-10 && cdB < -1e-10) || (cdA < -1e-10 && cdB > 1e-10));
+}
+
+function isSimplePolygon(polygon) {
+  if (polygon.length < 3) return false;
+  for (let i = 0; i < polygon.length; i += 1) {
+    const a = polygon[i];
+    const b = polygon[(i + 1) % polygon.length];
+    for (let j = i + 1; j < polygon.length; j += 1) {
+      if (j === i || j === (i + 1) % polygon.length || (j + 1) % polygon.length === i) continue;
+      const c = polygon[j];
+      const d = polygon[(j + 1) % polygon.length];
+      if (segmentsIntersect(a, b, c, d)) return false;
+    }
+  }
+  return true;
+}
+
+function isContainedContour(inner, outer) {
+  if (!inner.every(point => pointInPolygon(point, outer))) return false;
+  for (let i = 0; i < inner.length; i += 1) {
+    const a = inner[i];
+    const b = inner[(i + 1) % inner.length];
+    const midpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (!pointInPolygon(midpoint, outer)) return false;
+    for (let j = 0; j < outer.length; j += 1) {
+      if (segmentsIntersect(a, b, outer[j], outer[(j + 1) % outer.length])) return false;
+    }
+  }
+  return true;
+}
+
 function closedLoops(connections, landmarks) {
   if (!Array.isArray(connections) || connections.length < 6 || connections.length > 256) return [];
   const adjacency = new Map();
@@ -158,6 +200,9 @@ export class NOXFacialMaskBuilder {
     }
     const outer = sortedLoops[0].points;
     const inner = sortedLoops[1].points;
+    if (!isSimplePolygon(outer) || !isSimplePolygon(inner) || !isContainedContour(inner, outer)) {
+      return { state: "unavailable", masks: {}, unavailable, reason: "invalid-or-nonnested-lip-contours" };
+    }
     const candidates = triangles.map(indices => indices.map(index => landmarks[index]))
       .filter(([a, b, c]) => {
         const center = { x: (a.x + b.x + c.x) / 3, y: (a.y + b.y + c.y) / 3 };
