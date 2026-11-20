@@ -7,6 +7,8 @@
  */
 const MAX_PIXELS = 1_048_576;
 const MAX_MESH_EDGES = 20_000;
+const MAX_VERTEX_DEGREE = 64;
+const MAX_MESH_TRIANGLES = 50_000;
 
 function validPoint(point) {
   return point && Number.isFinite(point.x) && Number.isFinite(point.y) &&
@@ -93,6 +95,7 @@ function meshTriangles(edges, landmarkCount) {
     adjacency.get(lo).add(hi);
     adjacency.get(hi).add(lo);
   }
+  if ([...adjacency.values()].some(neighbors => neighbors.size > MAX_VERTEX_DEGREE)) return [];
   const triangles = [];
   for (const [a, neighbors] of adjacency) {
     const ordered = [...neighbors].filter(value => value > a).sort((x, y) => x - y);
@@ -100,7 +103,10 @@ function meshTriangles(edges, landmarkCount) {
       const b = ordered[i];
       for (let j = i + 1; j < ordered.length; j += 1) {
         const c = ordered[j];
-        if (adjacency.get(b)?.has(c)) triangles.push([a, b, c]);
+        if (adjacency.get(b)?.has(c)) {
+          triangles.push([a, b, c]);
+          if (triangles.length > MAX_MESH_TRIANGLES) return [];
+        }
       }
     }
   }
