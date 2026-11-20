@@ -62,9 +62,23 @@ jobs:
           copy('camera.css');
           copy('camera-pro.css');
           copy('styles.css');
-          for (const dir of ['docs','tests']) {
-            if (fs.existsSync(path.join(root,dir))) {
-              fs.cpSync(path.join(root,dir), path.join(out,dir), {recursive:true});
+          if (fs.existsSync(path.join(root,'docs'))) {
+            fs.cpSync(path.join(root,'docs'), path.join(out,'docs'), {recursive:true});
+          }
+          if (fs.existsSync(path.join(root,'tests'))) {
+            const testOut = path.join(out,'tests');
+            fs.mkdirSync(testOut, {recursive:true});
+            for (const name of fs.readdirSync(path.join(root,'tests'))) {
+              if (!name.endsWith('.test.mjs') || name === 'auth-contract.test.mjs') continue;
+              const testPath = path.join('tests', name);
+              const testSource = fs.readFileSync(path.join(root,testPath), 'utf8');
+              const relativeSpecs = [...testSource.matchAll(/(?:import|export)\\s+(?:[^'"]*?\\s+from\\s+)?['"]([^'"]+)['"]/g)]
+                .map(match => match[1]).filter(spec => spec.startsWith('.'));
+              const allPresent = relativeSpecs.every(spec => {
+                const target = path.resolve(root, path.dirname(testPath), spec);
+                return target.startsWith(root + path.sep) && fs.existsSync(target) && fs.statSync(target).isFile();
+              });
+              if (allPresent) copy(testPath);
             }
           }
           console.log('Collected files:', seen.size);
