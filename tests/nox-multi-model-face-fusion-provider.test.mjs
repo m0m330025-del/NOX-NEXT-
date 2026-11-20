@@ -60,6 +60,26 @@ await assert.rejects(()=>required.segment(frame),/required-landmark-fusion-unava
 
 await fusion.dispose();
 
+let finishFusionInitialization;
+const pendingFusion = new NOXMultiModelFaceFusionProvider({
+  segmentationProvider: {
+    initialize: () => new Promise(resolve => { finishFusionInitialization = resolve; }),
+    segment: async () => { throw new Error("not-used"); },
+    dispose: async () => {}
+  },
+  landmarkProvider: { initialize: async () => ({available:true}), detect: () => detected }
+});
+const staleFusionInitialization = pendingFusion.initialize();
+await Promise.resolve();
+await pendingFusion.dispose();
+finishFusionInitialization({available:true});
+const staleFusionResult = await staleFusionInitialization;
+assert.equal(staleFusionResult.available, false,
+  "fusion initialization must not report ready after dispose");
+assert.equal(pendingFusion.state, "idle",
+  "stale fusion initialization must not overwrite the disposed state");
+
+
 let borrowedLandmarkDisposed = 0;
 let segmentationDisposed = 0;
 const borrowed = new NOXMultiModelFaceFusionProvider({
