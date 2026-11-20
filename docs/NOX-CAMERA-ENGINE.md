@@ -87,3 +87,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Configured maximum sample dimensions are clamped to 256 pixels per side to keep the block-matching workload bounded; the default remains 128.
 - Confidence thresholds are clamped to the inclusive 0–1 range. The confidence output remains a local heuristic, not a calibrated probability.
 - Deterministic tests cover invalid configuration, upper bounds, and safe fallback behavior. This does not replace device profiling or visual validation.
+
+
+## NOX Smart Motion Separation (dominant global-flow consensus)
+
+- `core/nox-smart-motion-separation-engine.js` evaluates sparse flow vectors and finds a dominant displacement consensus using bounded residual matching.
+- Global camera-motion candidates must contain at least 55% of usable vectors, meet a minimum sample count, and span at least 25% of both normalized image axes. Equal competing motion populations are rejected rather than guessed.
+- Non-consensus vectors are kept separate. Spatially connected, motion-consistent outlier groups are exposed as localized-motion candidates; this is not semantic person/object detection.
+- The camera passes only the accepted global-consensus vectors to Temporal Alignment. Existing optical-flow vectors remain available to other camera features.
+- Deterministic tests cover background translation with a moving local cluster, ambiguous competing motion populations, local-only motion, and the alignment handoff.
+- The algorithm is sparse 2D motion segmentation, not dense optical flow, object recognition, depth estimation, or guaranteed foreground masking. Visual quality and device cost still require real-scene tests on Android Chrome, including Galaxy M12.
