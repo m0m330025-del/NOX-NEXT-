@@ -38,3 +38,33 @@ export function buildNOXHybridSelection(ids = [], weights = []) {
   });
   return Object.freeze({ mask, weights: Object.freeze(normalizedWeights), count: NOX_HYBRID_FILTERS.filter((filter) => selected.has(filter.id)).length });
 }
+
+export const NOX_CHAOS_MODES = Object.freeze([
+  Object.freeze({ id: "resonance", name: "RESONANCE", mode: 1, description: "نبض متزامن مع سطوع الصورة" }),
+  Object.freeze({ id: "phase-collision", name: "PHASE COLLISION", mode: 2, description: "تصادم الأطوار وتباين متحرك" }),
+  Object.freeze({ id: "chromatic-gravity", name: "CHROMATIC GRAVITY", mode: 3, description: "جذب لوني نحو بؤرة متغيرة" }),
+  Object.freeze({ id: "temporal-bloom", name: "TEMPORAL BLOOM", mode: 4, description: "تبادل زمني بين طبقات التوهج" })
+]);
+export function getNOXChaosMode(id) {
+  return NOX_CHAOS_MODES.find((item) => item.id === String(id)) || NOX_CHAOS_MODES[0];
+}
+export function createNOXChaosRecipe(name, ids = [], weights = [], mode = "resonance") {
+  const cleanName = String(name || "").trim().slice(0, 32);
+  if (!cleanName) throw new TypeError("Recipe name is required");
+  const selection = buildNOXHybridSelection(ids, weights);
+  if (!selection.count) throw new TypeError("At least one hybrid layer is required");
+  return Object.freeze({
+    version: 1, name: cleanName,
+    ids: NOX_HYBRID_FILTERS.filter((item, index) => selection.mask & (2 ** index)).map((item) => item.id),
+    weights: selection.weights,
+    mode: getNOXChaosMode(mode).id
+  });
+}
+export function validateNOXChaosRecipe(value) {
+  if (!value || value.version !== 1 || typeof value.name !== "string" ||
+      !Array.isArray(value.ids) || !Array.isArray(value.weights) ||
+      value.weights.length !== NOX_HYBRID_FILTERS.length) return null;
+  const ids = value.ids.filter((id) => BY_ID.has(String(id)));
+  if (!ids.length) return null;
+  return createNOXChaosRecipe(value.name, ids, value.weights, getNOXChaosMode(value.mode).id);
+}
