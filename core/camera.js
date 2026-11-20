@@ -9,6 +9,7 @@ import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
+import { NOXFaceLandmarkTemporalTracker } from "./nox-face-landmark-temporal-tracker.js";
 import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
@@ -550,10 +551,14 @@ export function initCamera() {
   let beautyVisionProvider = null;
   let faceLandmarkerProvider = null;
   const faceLandmarksEngine = new NOXFaceLandmarksEngine();
+  const faceLandmarkTemporalTracker = new NOXFaceLandmarkTemporalTracker({ smoothing: 0.58, maxMissedFrames: 2 });
   const facialMaskBuilder = new NOXFacialMaskBuilder();
   let latestFacialMaskPreview = null;
   let faceLandmarksState = "متوقف";
   let latestFaceLandmarksAnalysis = null;
+  let faceLandmarksLiveEnabled = false;
+  let faceLandmarksLastAt = 0;
+  let faceLandmarksProcessing = false;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
@@ -569,6 +574,7 @@ export function initCamera() {
   noxEngineRegistry.register({ id: "face-tracking", name: "Face Tracking", category: "vision", instance: faceTrackingEngine, capabilities: ["face-track-continuity"] });
   noxEngineRegistry.register({ id: "face-region", name: "Face Region", category: "vision", instance: faceRegionEngine, capabilities: ["face-region-geometry"] });
   noxEngineRegistry.register({ id: "face-landmarks", name: "Face Landmarks", category: "vision", instance: faceLandmarksEngine, capabilities: ["landmark-analysis"] });
+  noxEngineRegistry.register({ id: "face-landmark-temporal-tracker", name: "Face Landmark Temporal Tracker", category: "vision", instance: faceLandmarkTemporalTracker, capabilities: ["live-landmark-smoothing", "short-loss-coasting"] });
   noxEngineRegistry.register({ id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision", instance: facialMaskBuilder, capabilities: ["geometric-face-masks"] });
   noxEngineRegistry.register({ id: "skin-segmentation", name: "Skin Segmentation", category: "vision", instance: beautySkinEngine, capabilities: ["skin-region-segmentation"] });
   const dynamicEngineHost = new NOXDynamicEngineAdapterHost({ cortex, registry: noxEngineRegistry });
@@ -667,6 +673,8 @@ export function initCamera() {
   let beautyState = "متوقف";
   const beautyInputCanvas = document.createElement("canvas");
   const beautyInputContext = beautyInputCanvas.getContext("2d", { willReadFrequently: true });
+  const faceLandmarkInputCanvas = document.createElement("canvas");
+  const faceLandmarkInputContext = faceLandmarkInputCanvas.getContext("2d", { willReadFrequently: true });
   const beautyOverlay = document.createElement("canvas");
   beautyOverlay.id = "nox-beauty-ai-mask-preview";
   beautyOverlay.hidden = true;
@@ -691,11 +699,11 @@ export function initCamera() {
   beautyPanel.append(beautyTitle, beautyButton, beautyStatus, beautyPrivacy);
   const faceLandmarksButton = document.createElement("button");
   faceLandmarksButton.type = "button";
-  faceLandmarksButton.textContent = "تحميل محرك نقاط الوجه (478 نقطة)";
+  faceLandmarksButton.textContent = "تشغيل تتبع الوجه الحي (478 نقطة)";
   faceLandmarksButton.disabled = true;
   const faceLandmarksStatus = document.createElement("small");
   faceLandmarksStatus.setAttribute("role", "status");
-  faceLandmarksStatus.textContent = "يحدد الشفاه والعينين والحواجب من نقاط MediaPipe الفعلية، دون إنشاء أقنعة تجميل وهمية.";
+  faceLandmarksStatus.textContent = "تتبع حي لنقاط الوجه مع تنعيم زمني. الأقنعة التجميلية الدقيقة لا تُفعّل دون مزود أقنعة دلالية موثوق." ;
   beautyPanel.append(faceLandmarksButton, faceLandmarksStatus);
   const faceDigitalTwinButton = document.createElement("button");
   faceDigitalTwinButton.type = "button";
@@ -822,54 +830,106 @@ export function initCamera() {
     return true;
   }
 
+  function processLiveFaceLandmarks(now = performance.now(), force = false) {
+    if (!faceLandmarksLiveEnabled || !stream || video.readyState < 2 ||
+        !faceLandmarkerProvider || faceLandmarkerProvider.state !== "ready" ||
+        faceLandmarksProcessing) return;
+    const interval = lowPower ? 380 : 240;
+    if (!force && now - faceLandmarksLastAt < interval) return;
+    faceLandmarksLastAt = now;
+    faceLandmarksProcessing = true;
+    try {
+      const maxDimension = lowPower ? 192 : 256;
+      const scale = Math.min(1, maxDimension / Math.max(video.videoWidth, video.videoHeight));
+      const width = Math.max(2, Math.round(video.videoWidth * scale));
+      const height = Math.max(2, Math.round(video.videoHeight * scale));
+      if (faceLandmarkInputCanvas.width !== width || faceLandmarkInputCanvas.height !== height) {
+        faceLandmarkInputCanvas.width = width;
+        faceLandmarkInputCanvas.height = height;
+      }
+      faceLandmarkInputContext.drawImage(video, 0, 0, width, height);
+      const detected = faceLandmarkerProvider.detect(faceLandmarkInputCanvas);
+      const tracked = faceLandmarkTemporalTracker.update(detected);
+      if (tracked.state === "lost" || !tracked.result) {
+        latestFaceLandmarksAnalysis = null;
+        latestFacialMaskPreview = null;
+        faceLandmarksState = "بانتظار اكتشاف الوجه";
+        faceDigitalTwinButton.disabled = true;
+        clearFaceLandmarksPreview();
+        faceLandmarksStatus.textContent = "لم يظهر وجه موثوق في الإطار الحالي — التتبع سيستأنف تلقائيًا عند ظهوره.";
+        return;
+      }
+      const analysis = faceLandmarksEngine.analyze(tracked.result);
+      if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
+        throw new Error("تعذر استخراج مناطق الوجه من نقاط التتبع");
+      }
+      latestFaceLandmarksAnalysis = analysis;
+      latestFacialMaskPreview = null;
+      faceLandmarksState = tracked.state === "coasting"
+        ? "ثبات مؤقت — " + analysis.landmarkCount + " نقطة"
+        : "تتبع حي — " + analysis.landmarkCount + " نقطة";
+      faceDigitalTwinButton.disabled = false;
+      faceDigitalTwinStatus.textContent = "النقاط الحية متاحة للتقرير البحثي؛ لا تُستخدم كأقنعة مكياج.";
+      faceLandmarksStatus.textContent =
+        (tracked.state === "coasting" ? "فقد مؤقت — الاحتفاظ بآخر نقاط موثوقة. " : "تتبع حي نشط. ") +
+        "الحالة: " + tracked.state + " — المناطق: " + Object.keys(analysis.regions).join("، ") +
+        (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
+        ". التحديث كل " + interval + " مللي ثانية تقريبًا.";
+    } catch (error) {
+      faceLandmarksState = "خطأ في التتبع";
+      faceLandmarksStatus.textContent = "تعذر تحديث نقاط الوجه: " + String(error?.message || error).slice(0, 150);
+      faceLandmarkTemporalTracker.reset();
+      latestFaceLandmarksAnalysis = null;
+      faceDigitalTwinButton.disabled = true;
+      clearFaceLandmarksPreview();
+    } finally {
+      faceLandmarksProcessing = false;
+      updateDiagnostics();
+    }
+  }
+
   async function runFaceLandmarksPreview() {
+    if (faceLandmarksLiveEnabled) {
+      faceLandmarksLiveEnabled = false;
+      faceLandmarkTemporalTracker.reset();
+      faceLandmarksLastAt = 0;
+      latestFaceLandmarksAnalysis = null;
+      latestFacialMaskPreview = null;
+      faceLandmarksState = "متوقف";
+      faceLandmarksButton.textContent = "تشغيل تتبع الوجه الحي (478 نقطة)";
+      faceDigitalTwinButton.disabled = true;
+      clearFaceLandmarksPreview();
+      faceLandmarksStatus.textContent = "تم إيقاف تتبع الوجه الحي. نموذج MediaPipe سيظل محمّلًا حتى إيقاف الكاميرا.";
+      updateDiagnostics();
+      return;
+    }
     if (!stream || video.readyState < 2) {
       faceLandmarksStatus.textContent = "شغّل الكاميرا وانتظر ظهور الصورة أولًا.";
       return;
     }
     faceLandmarksButton.disabled = true;
-    latestFacialMaskPreview = null;
     faceLandmarksState = "جارٍ تحميل نموذج نقاط الوجه";
     faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
     try {
-      const plan = cortex.plan(
-        { faceRequested: true, landmarksRequested: true, maskRequested: true },
-        { requested: ["face-landmarks", "facial-mask-builder"], mode: lowPower ? "lite" : "balanced" }
-      );
-      const execution = await cortex.execute(
-        plan, video, dynamicEngineHost.getHandlers(),
-        { timeoutMs: 15000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced", lowPower } }
-      );
-      if (execution.state !== "completed" || !execution.output?.analysis) {
-        const failed = execution.results.find(item => item.status === "failed");
-        throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تحليل الوجه" : "تعذر تنفيذ مسار الوجه والأقنعة عبر NOX CORTEX");
+      if (!faceLandmarkerProvider) {
+        faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
       }
-      const analysis = execution.output.analysis;
-      latestFacialMaskPreview = execution.output.maskPreview;
-      latestFaceLandmarksAnalysis = analysis;
-      if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
-        throw new Error("تعذر استخراج نقاط المناطق");
+      if (faceLandmarkerProvider.state !== "ready") {
+        const initialized = await faceLandmarkerProvider.initialize();
+        if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
       }
-      faceLandmarksState = "نشط — " + analysis.landmarkCount + " نقطة";
-      faceDigitalTwinButton.disabled = false;
-      faceDigitalTwinStatus.textContent = "النقاط جاهزة. التقرير سيعرض الأدلة والبيانات المجهولة دون إنشاء أقنعة تجميل.";
-      const lipMask = latestFacialMaskPreview?.masks?.lips;
-      faceLandmarksStatus.textContent =
-        "تم تحديد " + Object.keys(analysis.regions).join("، ") +
-        (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
-        (lipMask ? " — قناع هندسي أولي للشفاه: " + lipMask.pixelCount + " بكسل، دون درجة ثقة." : " — قناع الشفاه غير متاح: " + (latestFacialMaskPreview?.reason || "لا توجد هندسة صالحة")) +
-        ". القناع للمعاينة الهندسية فقط ولا يُقبل كمصدر مكياج.";
-      faceLandmarksButton.textContent = "إعادة تحليل ملامح الوجه";
+      faceLandmarkTemporalTracker.reset();
+      faceLandmarksLastAt = 0;
+      faceLandmarksLiveEnabled = true;
+      faceLandmarksButton.textContent = "إيقاف تتبع الوجه الحي";
+      faceLandmarksStatus.textContent = "تم تحميل النموذج. جارٍ بدء التتبع الحي…";
+      processLiveFaceLandmarks(performance.now(), true);
     } catch (error) {
+      faceLandmarksLiveEnabled = false;
       faceLandmarksState = "غير متاح";
-      latestFaceLandmarksAnalysis = null;
-      latestFacialMaskPreview = null;
-      faceDigitalTwinButton.disabled = true;
-      faceDigitalTwinStatus.textContent = "التشخيص غير متاح حتى نجاح تحليل نقاط الوجه.";
-      faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
+      faceLandmarksButton.textContent = "إعادة محاولة تتبع الوجه الحي";
+      faceLandmarksStatus.textContent = "تعذر تحميل التتبع: " + String(error?.message || error).slice(0, 180);
       clearFaceLandmarksPreview();
-      faceLandmarksStatus.textContent = "تعذر التحليل: " + String(error?.message || error).slice(0, 180);
-      faceLandmarksButton.textContent = "إعادة محاولة تحميل نقاط الوجه";
     } finally {
       faceLandmarksButton.disabled = !stream;
       updateDiagnostics();
@@ -907,6 +967,10 @@ export function initCamera() {
   faceDigitalTwinButton.addEventListener("click", runFaceDigitalTwinDiagnostic);
 
   async function releaseFaceLandmarker() {
+    faceLandmarksLiveEnabled = false;
+    faceLandmarksProcessing = false;
+    faceLandmarksLastAt = 0;
+    faceLandmarkTemporalTracker.reset();
     clearFaceLandmarksPreview();
     if (faceLandmarkerProvider) {
       try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort cleanup */ }
@@ -2756,6 +2820,7 @@ export function initCamera() {
       renderMode = lowPower ? "WebGL منخفض الطاقة" : "WebGL";
     }
     requestFaceDetection(frameNow);
+    processLiveFaceLandmarks(frameNow);
     const outputContext = renderCanvas.getContext("2d");
     if (outputContext) {
       estimateOpticalFlow();
