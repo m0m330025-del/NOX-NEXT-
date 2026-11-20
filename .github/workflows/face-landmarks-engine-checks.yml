@@ -6,8 +6,11 @@ on:
     paths:
       - "core/nox-face-landmarks-engine.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "core/nox-facial-mask-builder.js"
+      - "tests/nox-facial-mask-builder.test.mjs"
       - "tests/nox-face-landmarks-engine.test.mjs"
       - "tests/nox-mediapipe-face-landmarker-provider.test.mjs"
+      - "tests/nox-facial-mask-builder.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
@@ -32,11 +35,15 @@ jobs:
         run: |
           cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js core/nox-mediapipe-face-landmarker-provider.mjs
+          cp core/nox-facial-mask-builder.js core/nox-facial-mask-builder.mjs
       - name: Check syntax
         run: |
           node --check core/nox-face-landmarks-engine.mjs
           node --check core/nox-mediapipe-face-landmarker-provider.mjs
+          node --check core/nox-facial-mask-builder.mjs
       - name: Run landmark region tests
         run: node tests/nox-face-landmarks-engine.test.mjs
       - name: Run MediaPipe provider contract tests
         run: node tests/nox-mediapipe-face-landmarker-provider.test.mjs
+      - name: Run facial mask geometry tests
+        run: node tests/nox-facial-mask-builder.test.mjs
