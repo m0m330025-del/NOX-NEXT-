@@ -204,7 +204,8 @@ export class NOXBiSeNetFaceParsingProvider {
 export const NOX_BISENET_FACE_PARSING_MODEL = Object.freeze({
   provider: "BiSeNet-ResNet18-ONNX",
   source: "https://github.com/yakhyo/face-parsing",
-  repositoryLicense: "MIT",\n  weightAndTrainingDataReview: "confirm upstream weight and CelebAMask-HQ data terms before commercial redistribution",
+  repositoryLicense: "MIT",
+  weightAndTrainingDataReview: "confirm upstream weight and CelebAMask-HQ data terms before commercial redistribution",
   modelUrl: DEFAULTS.modelUrl,
   sha256: "0d9bd318e46987c3bdbfacae9e2c0f461cae1c6ac6ea6d43bbe541a91727e33f",
   downloadBytes: 53205364,
