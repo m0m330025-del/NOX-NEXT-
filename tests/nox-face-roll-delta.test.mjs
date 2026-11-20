@@ -22,5 +22,7 @@ assert.equal(calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: es
 const wrap = calculateNOXFaceRollDelta({ capturedRoll: estimate("wrap-a", Math.PI - 0.05, 1000), currentRoll: estimate("wrap-b", -Math.PI + 0.05, 1050), nowMonotonicMs: 1060 });
 assert.equal(wrap.state, "accepted");
 assert.ok(Math.abs(wrap.deltaRadians - 0.1) < 1e-8, "angle delta must use shortest wrapped path");
+const scaledResolution = calculateNOXFaceRollDelta({ capturedRoll: captured, currentRoll: estimate("scaled", 0.2, 1050, 1280, 960), nowMonotonicMs: 1060 });
+assert.equal(scaledResolution.state, "accepted", "same aspect ratio at a different resolution must remain compatible");
 assert.equal(calculateNOXFaceRollDelta({ capturedRoll: { ...captured, frame: { ...captured.frame, capturedAtMonotonicMs: undefined } }, currentRoll: estimate("x", 0.2, 1050), nowMonotonicMs: 1060 }).state, "rejected");
 console.log("NOX face roll delta tests passed");
