@@ -132,11 +132,14 @@ function makeRegionMask(probabilities, width, height, targetWidth, targetHeight)
   }
   return { data, confidence: confidenceSum / activeCount };
 }
-function combineClassProbabilities(probabilities, ids) {
+function combineClassProbabilities(probabilities, ids, winningLabels) {
   const first = probabilities.get(ids[0]);
-  if (!first) return null;
+  if (!first || !winningLabels || winningLabels.length !== first.length) return null;
+  const selectedIds = new Set(ids);
   const combined = new Float32Array(first.length);
   for (let i = 0; i < combined.length; i += 1) {
+    // Prevent low-probability tails from tinting unrelated semantic regions.
+    if (!selectedIds.has(winningLabels[i])) continue;
     let value = 0;
     for (const id of ids) value += probabilities.get(id)?.[i] || 0;
     combined[i] = Math.min(1, value);
@@ -236,9 +239,9 @@ export class NOXBiSeNetFaceParsingProvider {
         probabilities, this.modelInputSize, this.modelInputSize, letterbox
       ).data);
     }
-    const skin = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.skin), croppedLabels.width, croppedLabels.height, width, height);
-    const lips = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.lips), croppedLabels.width, croppedLabels.height, width, height);
-    const brows = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.brows), croppedLabels.width, croppedLabels.height, width, height);
+    const skin = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.skin, croppedLabels.data), croppedLabels.width, croppedLabels.height, width, height);
+    const lips = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.lips, croppedLabels.data), croppedLabels.width, croppedLabels.height, width, height);
+    const brows = makeRegionMask(combineClassProbabilities(croppedSemantic, CLASS_IDS.brows, croppedLabels.data), croppedLabels.width, croppedLabels.height, width, height);
     if (!skin) throw new Error("bisenet-skin-mask-not-found");
     return {
       width, height, frameId, timestamp,
