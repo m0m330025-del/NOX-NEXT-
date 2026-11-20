@@ -340,6 +340,8 @@ export function initCamera() {
   let temporalSampleWidth = 0;
   let temporalSampleHeight = 0;
   let opticalFlowMode = "off";
+  let opticalFlowProcessing = false;
+  let opticalFlowSession = 0;
   let opticalFlowCanvas = null;
   let opticalFlowContext = null;
   let opticalFlowPrevious = null;
@@ -1817,6 +1819,8 @@ export function initCamera() {
   }
 
   function resetOpticalFlow() {
+    opticalFlowSession += 1;
+    opticalFlowEngine.reset();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
     opticalFlowVectors = [];
@@ -1838,8 +1842,8 @@ export function initCamera() {
     opticalFlowContext = opticalFlowCanvas.getContext("2d", { willReadFrequently: true, alpha: false });
   }
 
-  function estimateOpticalFlow() {
-    if (opticalFlowMode === "off" || !video.videoWidth || !video.videoHeight) return;
+  async function estimateOpticalFlow() {
+    if (opticalFlowMode === "off" || !video.videoWidth || !video.videoHeight || opticalFlowProcessing) return;
     const now = performance.now();
     const interval = lowPower ? 240 : 160;
     if (opticalFlowLastAt && now - opticalFlowLastAt < interval) return;
@@ -1873,19 +1877,41 @@ export function initCamera() {
       opticalFlowConfidence = 0;
       return;
     }
-    const flowResult = opticalFlowEngine.process(gray, opticalFlowPrevious, sampleWidth, sampleHeight, {
-      cellStep: 8,
-      patchRadius: 1,
-      searchRadius: lowPower ? 2 : 3
-    });
-    opticalFlowVectors = flowResult.vectors;
-    opticalFlowConfidence = flowResult.confidence;
-    updateMotionFreezeState();
-    updateCameraStabilization();
-    opticalFlowPrevious = gray;
-    opticalFlowSequence += 1;
-    updateSubjectLock(gray, sampleWidth, sampleHeight);
-    updateTrackedRegionFromFlow();
+
+    const session = opticalFlowSession;
+    const previous = opticalFlowPrevious;
+    opticalFlowProcessing = true;
+    try {
+      const plan = cortex.plan({ motion: true }, {
+        requested: ["optical-flow"],
+        mode: lowPower ? "lite" : "balanced"
+      });
+      const execution = await cortex.execute({
+        ...plan,
+      }, { current: gray, previous, width: sampleWidth, height: sampleHeight }, {
+        "optical-flow": input => opticalFlowEngine.process(
+          input.current, input.previous, input.width, input.height, {
+            cellStep: 8,
+            patchRadius: 1,
+            searchRadius: lowPower ? 2 : 3
+          }
+        )
+      }, { timeoutMs: 1200, stopOnError: true });
+      if (session !== opticalFlowSession || !stream ||
+          execution.state !== "completed" || !execution.output?.vectors) return;
+      opticalFlowVectors = execution.output.vectors;
+      opticalFlowConfidence = execution.output.confidence;
+      updateMotionFreezeState();
+      updateCameraStabilization();
+      opticalFlowPrevious = gray;
+      opticalFlowSequence += 1;
+      updateSubjectLock(gray, sampleWidth, sampleHeight);
+      updateTrackedRegionFromFlow();
+    } catch {
+      // A failed flow sample is discarded; the last valid motion state remains intact.
+    } finally {
+      opticalFlowProcessing = false;
+    }
   }
 
   function clearSubjectLock() {
