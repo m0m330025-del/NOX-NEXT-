@@ -68,3 +68,66 @@ export function validateNOXChaosRecipe(value) {
   if (!ids.length) return null;
   return createNOXChaosRecipe(value.name, ids, value.weights, getNOXChaosMode(value.mode).id);
 }
+
+
+/** Stable canonical key: quantized weights prevent float-noise duplicates. */
+export function getNOXChaosRecipeSignature(value) {
+  const recipe = validateNOXChaosRecipe(value);
+  if (!recipe) return "";
+  const active = recipe.ids.slice().sort();
+  const weights = recipe.weights.map((weight) => Math.round(weight * 20));
+  return [active.join(","), weights.join("."), recipe.mode].join("|");
+}
+
+export function scoreNOXChaosRecipe(value, history = []) {
+  const recipe = validateNOXChaosRecipe(value);
+  if (!recipe) return 0;
+  const active = new Set(recipe.ids);
+  const validHistory = (Array.isArray(history) ? history : []).map(validateNOXChaosRecipe).filter(Boolean);
+  if (!validHistory.length) return 1;
+  const distances = validHistory.map((prior) => {
+    const other = new Set(prior.ids);
+    const union = new Set([...active, ...other]);
+    let intersection = 0;
+    active.forEach((id) => { if (other.has(id)) intersection += 1; });
+    const jaccard = union.size ? 1 - intersection / union.size : 0;
+    const weightDistance = recipe.weights.reduce((sum, weight, index) => sum + Math.abs(weight - prior.weights[index]), 0) / NOX_HYBRID_FILTERS.length;
+    const modeDistance = recipe.mode === prior.mode ? 0 : 0.18;
+    return Math.min(1, jaccard * 0.62 + weightDistance * 0.28 + modeDistance);
+  });
+  const novelty = Math.min(...distances);
+  const balance = 1 - Math.min(1, Math.abs(recipe.ids.length - 3.2) / 3.2);
+  return Number((novelty * 0.82 + balance * 0.18).toFixed(4));
+}
+
+/** Deterministic evolutionary search over layer sets, weights and coupling modes. */
+export function generateNOXChaosRecipe(history = [], options = {}) {
+  const prior = (Array.isArray(history) ? history : []).map(validateNOXChaosRecipe).filter(Boolean);
+  const seed = Number.isFinite(Number(options.seed)) ? Number(options.seed) >>> 0 : 0x4e4f5801;
+  let state = seed || 1;
+  const random = () => {
+    state = (1664525 * state + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  const seen = new Set(prior.map(getNOXChaosRecipeSignature));
+  let best = null;
+  let bestScore = -1;
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    const ids = NOX_HYBRID_FILTERS.filter(() => random() > 0.43).map((item) => item.id);
+    if (ids.length < 2) ids.push(NOX_HYBRID_FILTERS[Math.floor(random() * NOX_HYBRID_FILTERS.length)].id);
+    const uniqueIds = [...new Set(ids)];
+    const weights = NOX_HYBRID_FILTERS.map((filter) => {
+      const evolved = filter.mix + (random() - 0.5) * 0.58;
+      return Math.max(0.08, Math.min(0.85, Math.round(evolved * 100) / 100));
+    });
+    const mode = NOX_CHAOS_MODES[Math.floor(random() * NOX_CHAOS_MODES.length)].id;
+    const candidate = createNOXChaosRecipe("NOX EVOLVE " + String(attempt + 1).padStart(3, "0"), uniqueIds, weights, mode);
+    const signature = getNOXChaosRecipeSignature(candidate);
+    if (!signature || seen.has(signature)) continue;
+    const score = scoreNOXChaosRecipe(candidate, prior);
+    if (score > bestScore) { best = candidate; bestScore = score; }
+    if (score >= 0.72) break;
+  }
+  if (!best) return null;
+  return Object.freeze({ ...best, score: bestScore, signature: getNOXChaosRecipeSignature(best) });
+}
