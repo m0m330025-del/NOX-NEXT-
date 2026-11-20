@@ -5,7 +5,8 @@
 .nox-camera-page>.feature-heading p{font-size:12px;opacity:.72}
 .nox-camera-v2{grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:20px;align-items:start;padding:14px;border:1px solid rgba(225,198,135,.22);border-radius:28px;background:linear-gradient(145deg,#100e1b,#171326 55%,#0c0b14);box-shadow:0 24px 70px #08061055}
 .nox-camera-v2-stage{width:min(100%,480px);max-height:min(76svh,820px);min-height:420px;aspect-ratio:9/16;border:1px solid #ffffff24;border-radius:28px;background:#09080e;box-shadow:0 18px 50px #0008}
-.nox-camera-v2-stage>video{display:none!important}
+.nox-camera-v2-stage>video{display:block!important;opacity:0!important;pointer-events:none!important}
+.nox-camera-v2-stage>canvas#nox-camera-render{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .nox-camera-v2-stage.is-live>canvas#nox-camera-render{display:block!important}
 .nox-camera-v2-stage .nox-camera-v2-top{top:14px;left:14px;right:14px}
 .nox-camera-v2-stage .nox-camera-v2-top button{width:44px;height:44px;border:1px solid #ffffff35;background:#08080dcc;box-shadow:0 4px 18px #0005}
