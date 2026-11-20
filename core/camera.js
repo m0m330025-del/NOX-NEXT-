@@ -556,6 +556,7 @@ export function initCamera() {
       return;
     }
     faceLandmarksButton.disabled = true;
+    latestFacialMaskPreview = null;
     faceLandmarksState = "جارٍ تحميل نموذج نقاط الوجه";
     faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
     try {
@@ -613,6 +614,7 @@ export function initCamera() {
     } catch (error) {
       faceLandmarksState = "غير متاح";
       latestFaceLandmarksAnalysis = null;
+      latestFacialMaskPreview = null;
       faceDigitalTwinButton.disabled = true;
       faceDigitalTwinStatus.textContent = "التشخيص غير متاح حتى نجاح تحليل نقاط الوجه.";
       faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
