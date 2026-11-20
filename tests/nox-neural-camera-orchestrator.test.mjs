@@ -11,6 +11,20 @@ const overloaded = orchestrator.getAdaptiveRecommendation({ currentTier: 1 });
 assert.equal(overloaded.action, "recommend-reduce-load");
 assert.equal(overloaded.reason, "repeated-frame-budget-overload");
 assert.equal(overloaded.overloadSamples, 3);
+const committedOverload = orchestrator.commitAdaptiveDecision(overloaded.action);
+assert.equal(committedOverload.accepted, true);
+assert.equal(committedOverload.cooldownRemaining, 12);
+assert.equal(orchestrator.getAdaptiveRecommendation({ currentTier: 2 }).reason, "decision-cooldown-active");
+orchestrator.observeFrame({ frameCostMs: -1, targetFrameMs: 33.3 });
+assert.equal(orchestrator.getAdaptiveRecommendation({ currentTier: 2 }).cooldownRemaining, 12);
+for (let i = 0; i < 11; i += 1) {
+  orchestrator.observeFrame({ frameCostMs: 35, targetFrameMs: 33.3 });
+}
+assert.equal(orchestrator.getAdaptiveRecommendation({ currentTier: 2 }).cooldownRemaining, 1);
+orchestrator.observeFrame({ frameCostMs: 35, targetFrameMs: 33.3 });
+assert.equal(orchestrator.getAdaptiveRecommendation({ currentTier: 2 }).cooldownRemaining, 0);
+assert.equal(orchestrator.getAdaptiveRecommendation({ currentTier: 2 }).action, "recommend-reduce-load");
+assert.equal(orchestrator.commitAdaptiveDecision("hold").accepted, false);
 
 orchestrator.reset();
 for (let i = 0; i < 6; i += 1) {
