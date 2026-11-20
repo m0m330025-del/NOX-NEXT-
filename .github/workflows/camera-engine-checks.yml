@@ -123,6 +123,7 @@ jobs:
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js core/nox-mediapipe-face-landmarker-provider.mjs
+          cp core/nox-multi-model-face-fusion-provider.js core/nox-multi-model-face-fusion-provider.mjs
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
           cp core/nox-face-roll-estimator.js /tmp/face-roll-estimator.mjs
