@@ -86,13 +86,13 @@ assert.equal(registry.snapshot().length, 0);
 assert.equal(unregister(), false);
 
 const conflictCortex = new NOXCortex({ engines: [
-  { id: "stable-pipeline", cost: 1, priority: 20, when: context => context.useStable === true },
-  { id: "custom-conflicting", cost: 1, priority: 10, when: context => context.useCustom === true }
+  { id: "stable-pipeline", cost: 1, priority: 20, when: context => context.useStable === true }
 ] });
 const conflictRegistry = new NOXEngineRegistry();
 const conflictHost = new NOXDynamicEngineAdapterHost({ cortex: conflictCortex, registry: conflictRegistry });
 const conflictAdapter = new NOXDynamicEngineAdapter({
   id: "custom-conflicting",
+  when: context => context.useCustom === true,
   instance: {},
   process: input => input,
   capabilities: ["custom-output"],
