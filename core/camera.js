@@ -1330,7 +1330,7 @@ export function initCamera() {
         if (makeup?.state !== "rendered") {
           throw new Error(makeup?.reason || "رفض محرك المكياج القناع الحالي.");
         }
-        return { vision, makeup };
+        return { vision, makeup, capturedRoll };
       },
       onResult: ({ sequence, capturedAt, ageMs, result }) => {
         if (!liveMakeupCompositor.accept({
