@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "node-appwrite": "^17.0.0"
+  },
+  "scripts": {
+    "test": "node --test"
   }
 }
