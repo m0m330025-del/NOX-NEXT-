@@ -302,7 +302,7 @@
 .nox-camera-v2-actions button{min-width:46px;min-height:46px}
 .nox-camera-v2-stage #nox-camera-exit{min-width:46px;min-height:46px}
 @media(max-width:760px){
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs{display:flex!important}
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs:not(.nox-hidden):not(.nox-disabled){display:flex!important}
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tabs{
     position:fixed;z-index:1004;left:50%;bottom:calc(378px + env(safe-area-inset-bottom));
     transform:translateX(-50%);width:min(calc(100vw - 36px),360px);margin:0;
@@ -436,13 +436,13 @@
 
 /* Swipe selector: keep both family tabs and rectangular lens rail visible in live mobile mode. */
 @media(max-width:760px){
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs{
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs:not(.nox-hidden):not(.nox-disabled){
     display:flex!important;position:fixed!important;z-index:1004!important;
     left:50%!important;right:auto!important;bottom:calc(218px + env(safe-area-inset-bottom))!important;
     transform:translateX(-50%)!important;width:min(92vw,360px)!important;
     margin:0!important;box-sizing:border-box;
   }
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-lens-selector{
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>#nox-lens-orbit.nox-lens-selector{
     display:flex!important;position:fixed!important;z-index:1003!important;
     left:50%!important;right:auto!important;bottom:calc(108px + env(safe-area-inset-bottom))!important;
     transform:translateX(-50%)!important;width:min(94vw,390px)!important;
@@ -456,7 +456,7 @@
   }
 }
 @media(max-width:380px){
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-lens-selector{
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>#nox-lens-orbit.nox-lens-selector{
     width:96vw!important;min-height:88px!important;padding:7px 4px!important;
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-selector .nox-lens-v2{
