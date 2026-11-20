@@ -60,6 +60,10 @@ export class NOXEngineOrchestrationPlanner {
         return { usable: false, reason: "capability-confidence-below-gate", confidence: sample.confidence };
       }
       for (const dependency of normalizeList(dependencies[capability])) {
+        const dependencyProviders = engines.filter(engine => engine.capabilities.includes(dependency) && engine.enabled !== false);
+        if (!dependencyProviders.length) {
+          return { usable: false, reason: "dependency-engine-unregistered:" + dependency, confidence: sample.confidence };
+        }
         const dependencyState = capabilityState(dependency);
         if (!dependencyState.usable) {
           return { usable: false, reason: "dependency-unavailable:" + dependency, confidence: Math.min(sample.confidence, dependencyState.confidence) };
