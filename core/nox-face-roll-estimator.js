@@ -24,7 +24,10 @@ export function estimateNOXFaceRoll(landmarksAnalysis) {
   if (landmarksAnalysis?.source !== "mediapipe-face-landmarker-478" ||
       !Number.isInteger(landmarksAnalysis.width) || landmarksAnalysis.width < 1 ||
       !Number.isInteger(landmarksAnalysis.height) || landmarksAnalysis.height < 1 ||
-      !Number.isInteger(landmarksAnalysis.landmarkCount) || landmarksAnalysis.landmarkCount < 468) {
+      !Number.isInteger(landmarksAnalysis.landmarkCount) || landmarksAnalysis.landmarkCount < 468 ||
+      !(typeof landmarksAnalysis.frameId === "string" && landmarksAnalysis.frameId.length > 0) ||
+      !Number.isFinite(landmarksAnalysis.timestamp) ||
+      landmarksAnalysis.coordinateSpace !== "source-unmirrored-normalized") {
     return { state: "unavailable", angleRadians: null, reason: "invalid-landmark-frame" };
   }
   const left = centerOf(landmarksAnalysis.regions?.leftEye, landmarksAnalysis.landmarkCount);
@@ -41,6 +44,12 @@ export function estimateNOXFaceRoll(landmarksAnalysis) {
     state: "estimated",
     angleRadians: Math.atan2(dy, dx),
     source: "mediapipe-eye-region-centroids",
-    frame: { width: landmarksAnalysis.width, height: landmarksAnalysis.height }
+    frame: {
+      id: landmarksAnalysis.frameId,
+      timestamp: landmarksAnalysis.timestamp,
+      width: landmarksAnalysis.width,
+      height: landmarksAnalysis.height,
+      coordinateSpace: landmarksAnalysis.coordinateSpace
+    }
   };
 }
