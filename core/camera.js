@@ -13,7 +13,6 @@ import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
-import { NOXFaceLandmarkTemporalTracker } from "./nox-face-landmark-temporal-tracker.js";
 import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
@@ -561,7 +560,6 @@ export function initCamera() {
   let beautyVisionProvider = null;
   let faceLandmarkerProvider = null;
   const faceLandmarksEngine = new NOXFaceLandmarksEngine();
-  const faceLandmarkTemporalTracker = new NOXFaceLandmarkTemporalTracker({ smoothing: 0.58, maxMissedFrames: 2 });
   const facialMaskBuilder = new NOXFacialMaskBuilder();
   let latestFacialMaskPreview = null;
   let faceLandmarksState = "متوقف";
@@ -590,7 +588,6 @@ export function initCamera() {
   noxEngineRegistry.register({ id: "face-tracking", name: "Face Tracking", category: "vision", instance: faceTrackingEngine, capabilities: ["face-track-continuity"] });
   noxEngineRegistry.register({ id: "face-region", name: "Face Region", category: "vision", instance: faceRegionEngine, capabilities: ["face-region-geometry"] });
   noxEngineRegistry.register({ id: "face-landmarks", name: "Face Landmarks", category: "vision", instance: faceLandmarksEngine, capabilities: ["landmark-analysis"] });
-  noxEngineRegistry.register({ id: "face-landmark-temporal-tracker", name: "Face Landmark Temporal Tracker", category: "vision", instance: faceLandmarkTemporalTracker, capabilities: ["live-landmark-smoothing", "short-loss-coasting"] });
   noxEngineRegistry.register({ id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision", instance: facialMaskBuilder, capabilities: ["geometric-face-masks"] });
   noxEngineRegistry.register({ id: "skin-segmentation", name: "Skin Segmentation", category: "vision", instance: beautySkinEngine, capabilities: ["skin-region-segmentation"] });
   const dynamicEngineHost = new NOXDynamicEngineAdapterHost({ cortex, registry: noxEngineRegistry });
@@ -648,13 +645,13 @@ export function initCamera() {
     }),
     new NOXDynamicEngineAdapter({
       id: "face-landmark-temporal-tracker", name: "Face Landmark Temporal Tracker", category: "vision",
-      instance: faceLandmarkTemporalTracker, cost: 1, priority: 96,
+      instance: faceTrackingEngine, cost: 1, priority: 96,
       requires: ["face-landmarks"], requiresCapabilities: ["landmark-analysis"],
       capabilities: ["live-landmark-smoothing", "short-loss-coasting"],
       when: context => context.liveFaceTracking === true,
       process: input => ({
         ...input,
-        tracking: faceLandmarkTemporalTracker.update(input?.detected)
+        tracking: faceTrackingEngine.updateLandmarks(input?.detected)
       })
     }),
     new NOXDynamicEngineAdapter({
@@ -1021,7 +1018,7 @@ export function initCamera() {
       if (session !== faceLandmarksSession || !faceLandmarksLiveEnabled) return;
       faceLandmarksState = "خطأ في التتبع";
       faceLandmarksStatus.textContent = "تعذر تحديث نقاط الوجه: " + String(error?.message || error).slice(0, 150);
-      faceLandmarkTemporalTracker.reset();
+      faceTrackingEngine.resetLandmarks();
       latestFaceLandmarksAnalysis = null;
       faceDigitalTwinButton.disabled = true;
       clearFaceLandmarksPreview();
@@ -1038,7 +1035,7 @@ export function initCamera() {
     if (faceLandmarksLiveEnabled) {
       faceLandmarksSession += 1;
       faceLandmarksLiveEnabled = false;
-      faceLandmarkTemporalTracker.reset();
+      faceTrackingEngine.resetLandmarks();
       faceLandmarksLastAt = 0;
       latestFaceLandmarksAnalysis = null;
       latestFacialMaskPreview = null;
@@ -1067,7 +1064,7 @@ export function initCamera() {
         if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
       }
       if (session !== faceLandmarksSession || !stream) return;
-      faceLandmarkTemporalTracker.reset();
+      faceTrackingEngine.resetLandmarks();
       faceLandmarksLastAt = 0;
       faceLandmarkAverageCost = 0;
       faceLandmarksLiveEnabled = true;
@@ -1123,7 +1120,7 @@ export function initCamera() {
     faceLandmarksProcessing = false;
     faceLandmarksLastAt = 0;
     faceLandmarkAverageCost = 0;
-    faceLandmarkTemporalTracker.reset();
+    faceTrackingEngine.resetLandmarks();
     clearFaceLandmarksPreview();
     if (faceLandmarkerProvider) {
       try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort cleanup */ }
