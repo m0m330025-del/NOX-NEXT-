@@ -156,6 +156,7 @@ jobs:
           node --check /tmp/face-landmarks-engine.mjs
           node --check /tmp/face-roll-estimator.mjs
           node tests/nox-face-roll-estimator.test.mjs
+          node tests/nox-face-landmarks-provenance.test.mjs
           node --check /tmp/face-roll-delta.mjs
           node tests/nox-face-roll-delta.test.mjs
           node --check /tmp/face-landmark-temporal-tracker.mjs
