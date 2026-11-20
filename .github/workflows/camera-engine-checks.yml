@@ -30,7 +30,9 @@ on:
       - "core/nox-neural-camera-orchestrator.js"
       - "tests/nox-neural-camera-orchestrator.test.mjs"
       - "core/nox-predictive-camera-intelligence.js"
+      - "core/nox-scene-intelligence-engine.js"
       - "tests/nox-predictive-camera-intelligence.test.mjs"
+      - "tests/nox-scene-intelligence-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -103,6 +105,7 @@ jobs:
           cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs
           cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
           cp core/nox-predictive-camera-intelligence.js /tmp/predictive-camera-intelligence.mjs
+          cp core/nox-scene-intelligence-engine.js /tmp/scene-intelligence-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -121,6 +124,7 @@ jobs:
           node --check /tmp/multi-engine-intelligence-brain.mjs
           node --check /tmp/neural-camera-orchestrator.mjs
           node --check /tmp/predictive-camera-intelligence.mjs
+          node --check /tmp/scene-intelligence-engine.mjs
           node tests/nox-original-filter-library.test.mjs
           node tests/nox-hybrid-fx-engine.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
@@ -132,6 +136,7 @@ jobs:
           node tests/nox-multi-engine-intelligence-brain.test.mjs
           node tests/nox-neural-camera-orchestrator.test.mjs
           node tests/nox-predictive-camera-intelligence.test.mjs
+          node tests/nox-scene-intelligence-engine.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
