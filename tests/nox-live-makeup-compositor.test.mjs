@@ -81,5 +81,20 @@ assert.equal(crisp.accept({ sequence: 1, capturedAt: 500, vision: crispMask,
 const edgeAlpha = crisp.canvas.image.data[(1 * 3 + 1) * 4 + 3];
 assert.equal(edgeAlpha, 64, "isolated boundary pixel must be softened");
 assert.equal(crisp.canvas.image.data[3], 0, "feathering must never create alpha outside the mask");
+
+const unanchored = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+assert.equal(unanchored.accept({ sequence: 1, capturedAt: 900,
+  vision: { frame: { width: 2, height: 2 }, regionMasks: {
+    lips: { width: 2, height: 2, data: new Float32Array([0,1,0,0]), confidence: 0.95 }
+  } }, look: { lips: { color: [200,20,60], opacity: 0.4 } } }), true);
+assert.equal(unanchored.draw(makeCanvas(), { now: 910 }), false,
+  "a semantic mask without a trusted faceBox must never be rendered unanchored");
+assert.equal(unanchored.canvas, null, "unanchored overlays must be discarded");
+assert.equal(unanchored.sequence, 1, "clearing an invalid overlay must preserve monotonic sequence protection");
+assert.equal(unanchored.accept({ sequence: 1, capturedAt: 920, vision: alignmentVision,
+  look: { lips: { color: [200,20,60], opacity: 0.4 } } }), false,
+  "clearing an overlay must not allow replay of an old sequence");
+assert.equal(unanchored.accept({ sequence: 2, capturedAt: 930, vision: alignmentVision,
+  look: { lips: { color: [200,20,60], opacity: 0.4 } } }), true);
 assert.throws(() => new NOXLiveMakeupCompositor({ edgeSoftness: 0.9 }), /invalid-live-makeup-compositor-options/);
 console.log("NOX Live Makeup Compositor tests passed");
