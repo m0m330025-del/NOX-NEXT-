@@ -11,7 +11,7 @@ export class NOXAdaptiveTemporalFusionEngine {
     minMotionConfidence = 0.14,
     minBackgroundRatio = 0.55,
     ageDecay = 0.24,
-    minLayerWeight = 0.12,
+    minLayerWeight = 0.008,
     maxLayerAge = 4
   } = {}) {
     this.options = {
