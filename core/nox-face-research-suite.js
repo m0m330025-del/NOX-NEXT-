@@ -6,7 +6,7 @@
  * All outputs describe supplied observations only. No hidden anatomy, missing
  * landmarks, calibrated confidence, or compositor authorization is fabricated.
  */
-const finitePoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+const finitePoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
 const clamp01 = value => Math.max(0, Math.min(1, value));
 const unavailable = (reason, extra = {}) => ({ state:"unavailable", reason, ...extra });
 
