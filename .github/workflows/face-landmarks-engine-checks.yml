@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "core/nox-face-landmarks-engine.js"
+      - "core/nox-bisenet-face-parsing-provider.js"\n      - "tests/nox-bisenet-face-parsing-provider.test.mjs"\n      - "core/nox-face-landmarks-engine.js"
       - "core/nox-face-landmark-temporal-tracker.js"
       - "tests/nox-face-landmark-temporal-tracker.test.mjs"
       - "core/nox-mediapipe-face-landmarker-provider.js"
@@ -27,7 +27,7 @@ on:
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
-      - "core/nox-face-landmarks-engine.js"
+      - "core/nox-bisenet-face-parsing-provider.js"\n      - "tests/nox-bisenet-face-parsing-provider.test.mjs"\n      - "core/nox-face-landmarks-engine.js"
       - "core/nox-face-landmark-temporal-tracker.js"
       - "tests/nox-face-landmark-temporal-tracker.test.mjs"
       - "core/nox-mediapipe-face-landmarker-provider.js"
@@ -60,7 +60,7 @@ jobs:
           node-version: "22"
       - name: Prepare ESM source copies
         run: |
-          cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
+          cp core/nox-bisenet-face-parsing-provider.js core/nox-bisenet-face-parsing-provider.mjs\n          cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
           cp core/nox-face-landmark-temporal-tracker.js core/nox-face-landmark-temporal-tracker.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js core/nox-mediapipe-face-landmarker-provider.mjs
           cp core/nox-facial-mask-builder.js core/nox-facial-mask-builder.mjs
@@ -68,7 +68,7 @@ jobs:
           cp core/nox-face-research-suite.js core/nox-face-research-suite.mjs
       - name: Check syntax
         run: |
-          node --check core/nox-face-landmarks-engine.mjs
+          node --check core/nox-bisenet-face-parsing-provider.mjs\n          node --check core/nox-face-landmarks-engine.mjs
           node --check core/nox-face-landmark-temporal-tracker.mjs
           node --check core/nox-mediapipe-face-landmarker-provider.mjs
           node --check core/nox-facial-mask-builder.mjs
@@ -77,7 +77,7 @@ jobs:
           node --experimental-default-type=module --check core/nox-face-digital-twin-diagnostics.js
           node --experimental-default-type=module --check core/camera.js
           node --experimental-default-type=module --check core/nox-cortex.js
-      - name: Run landmark region tests
+      - name: Run BiSeNet face parsing provider tests\n        run: node tests/nox-bisenet-face-parsing-provider.test.mjs\n      - name: Run landmark region tests
         run: node tests/nox-face-landmarks-engine.test.mjs
       - name: Run live landmark temporal tracking tests
         run: node tests/nox-face-landmark-temporal-tracker.test.mjs
