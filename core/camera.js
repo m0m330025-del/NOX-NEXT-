@@ -925,6 +925,7 @@ export function initCamera() {
     if (!force && now - faceLandmarksLastAt < interval) return;
     faceLandmarksLastAt = now;
     faceLandmarksProcessing = true;
+    const session = faceLandmarksSession;
     const processingStartedAt = performance.now();
     try {
       const plan = cortex.plan(
@@ -936,7 +937,7 @@ export function initCamera() {
         stopOnError: true,
         context: { lowPower, liveFaceTracking: true }
       });
-      if (!faceLandmarksLiveEnabled || !stream) return;
+      if (session !== faceLandmarksSession || !faceLandmarksLiveEnabled || !stream) return;
       if (execution.state !== "completed" || !execution.output?.tracking) {
         const failed = execution.results.find(item => item.status === "failed");
         throw new Error(failed?.reason || "تعذر تنفيذ مسار التتبع عبر NOX CORTEX");
@@ -968,7 +969,7 @@ export function initCamera() {
         (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
         ". التحديث كل " + interval + " مللي ثانية تقريبًا عبر NOX CORTEX.";
     } catch (error) {
-      if (!faceLandmarksLiveEnabled) return;
+      if (session !== faceLandmarksSession || !faceLandmarksLiveEnabled) return;
       faceLandmarksState = "خطأ في التتبع";
       faceLandmarksStatus.textContent = "تعذر تحديث نقاط الوجه: " + String(error?.message || error).slice(0, 150);
       faceLandmarkTemporalTracker.reset();
@@ -986,6 +987,7 @@ export function initCamera() {
 
   async function runFaceLandmarksPreview() {
     if (faceLandmarksLiveEnabled) {
+      faceLandmarksSession += 1;
       faceLandmarksLiveEnabled = false;
       faceLandmarkTemporalTracker.reset();
       faceLandmarksLastAt = 0;
