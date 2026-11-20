@@ -27,6 +27,8 @@ on:
       - "tests/nox-adaptive-temporal-fusion-engine.test.mjs"
       - "core/nox-multi-engine-intelligence-brain.js"
       - "core/nox-engine-registry.js"
+      - "core/nox-engine-orchestration-planner.js"
+      - "tests/nox-engine-orchestration-planner.test.mjs"
       - "tests/nox-engine-registry.test.mjs"
       - "tests/nox-multi-engine-intelligence-brain.test.mjs"
       - "core/nox-neural-camera-orchestrator.js"
@@ -57,6 +59,8 @@ on:
       - "tests/nox-adaptive-temporal-fusion-engine.test.mjs"
       - "core/nox-multi-engine-intelligence-brain.js"
       - "core/nox-engine-registry.js"
+      - "core/nox-engine-orchestration-planner.js"
+      - "tests/nox-engine-orchestration-planner.test.mjs"
       - "tests/nox-engine-registry.test.mjs"
       - "tests/nox-multi-engine-intelligence-brain.test.mjs"
       - "core/nox-neural-camera-orchestrator.js"
@@ -111,6 +115,7 @@ jobs:
           cp core/nox-predictive-camera-intelligence.js /tmp/predictive-camera-intelligence.mjs
           cp core/nox-scene-intelligence-engine.js /tmp/scene-intelligence-engine.mjs
           cp core/nox-engine-registry.js /tmp/engine-registry.mjs
+          cp core/nox-engine-orchestration-planner.js /tmp/engine-orchestration-planner.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -131,6 +136,7 @@ jobs:
           node --check /tmp/predictive-camera-intelligence.mjs
           node --check /tmp/scene-intelligence-engine.mjs
           node --check /tmp/engine-registry.mjs
+          node --check /tmp/engine-orchestration-planner.mjs
           node tests/nox-original-filter-library.test.mjs
           node tests/nox-hybrid-fx-engine.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
@@ -144,6 +150,7 @@ jobs:
           node tests/nox-predictive-camera-intelligence.test.mjs
           node tests/nox-scene-intelligence-engine.test.mjs
           node tests/nox-engine-registry.test.mjs
+          node tests/nox-engine-orchestration-planner.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
