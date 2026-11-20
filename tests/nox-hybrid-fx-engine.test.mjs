@@ -26,3 +26,12 @@ assert.equal(bounded.mask, 2);
 assert.equal(bounded.weights[0], NOX_HYBRID_FILTERS[0].mix);
 assert.equal(bounded.weights[1], 0.85);
 assert.equal(bounded.weights[2], 0);
+
+import { createNOXChaosRecipe, validateNOXChaosRecipe, NOX_CHAOS_MODES } from "../core/nox-hybrid-fx-engine.js";
+assert.equal(NOX_CHAOS_MODES.length, 4);
+const recipe = createNOXChaosRecipe("My Fusion", ["chroma-tide", "aurora-relic"], [0.2,0.3,0.4,0.5,0.6,0.7], "phase-collision");
+assert.deepEqual(recipe.ids, ["chroma-tide", "aurora-relic"]);
+assert.equal(recipe.mode, "phase-collision");
+assert.equal(validateNOXChaosRecipe(recipe).ids.length, 2);
+assert.equal(validateNOXChaosRecipe({ version: 9 }), null);
+assert.throws(() => createNOXChaosRecipe("", ["chroma-tide"], []));
