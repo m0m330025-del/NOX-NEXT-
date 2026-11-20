@@ -7,6 +7,7 @@ import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
+import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -405,6 +406,7 @@ export function initCamera() {
   let faceLandmarkerProvider = null;
   const faceLandmarksEngine = new NOXFaceLandmarksEngine();
   let faceLandmarksState = "متوقف";
+  let latestFaceLandmarksAnalysis = null;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
@@ -444,6 +446,17 @@ export function initCamera() {
   faceLandmarksStatus.setAttribute("role", "status");
   faceLandmarksStatus.textContent = "يحدد الشفاه والعينين والحواجب من نقاط MediaPipe الفعلية، دون إنشاء أقنعة تجميل وهمية.";
   beautyPanel.append(faceLandmarksButton, faceLandmarksStatus);
+  const faceDigitalTwinButton = document.createElement("button");
+  faceDigitalTwinButton.type = "button";
+  faceDigitalTwinButton.textContent = "تشغيل تقرير NOX Face Digital Twin";
+  faceDigitalTwinButton.disabled = true;
+  const faceDigitalTwinStatus = document.createElement("small");
+  faceDigitalTwinStatus.setAttribute("role", "status");
+  faceDigitalTwinStatus.textContent = "تقرير بحثي منفصل؛ ينتظر تحليل نقاط الوجه.";
+  const faceDigitalTwinReport = document.createElement("small");
+  faceDigitalTwinReport.setAttribute("aria-live", "polite");
+  faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية بعد.";
+  beautyPanel.append(faceDigitalTwinButton, faceDigitalTwinStatus, faceDigitalTwinReport);
   const faceLandmarksOverlay = document.createElement("canvas");
   faceLandmarksOverlay.id = "nox-face-landmarks-preview";
   faceLandmarksOverlay.hidden = true;
@@ -556,10 +569,13 @@ export function initCamera() {
       const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
       if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
       const analysis = faceLandmarksEngine.analyze(detected);
+      latestFaceLandmarksAnalysis = analysis;
       if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
         throw new Error("تعذر استخراج نقاط المناطق");
       }
       faceLandmarksState = "نشط — " + analysis.landmarkCount + " نقطة";
+      faceDigitalTwinButton.disabled = false;
+      faceDigitalTwinStatus.textContent = "النقاط جاهزة. التقرير سيعرض الأدلة والبيانات المجهولة دون إنشاء أقنعة تجميل.";
       faceLandmarksStatus.textContent =
         "تم تحديد " + Object.keys(analysis.regions).join("، ") +
         (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
@@ -567,6 +583,10 @@ export function initCamera() {
       faceLandmarksButton.textContent = "إعادة تحليل ملامح الوجه";
     } catch (error) {
       faceLandmarksState = "غير متاح";
+      latestFaceLandmarksAnalysis = null;
+      faceDigitalTwinButton.disabled = true;
+      faceDigitalTwinStatus.textContent = "التشخيص غير متاح حتى نجاح تحليل نقاط الوجه.";
+      faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
       clearFaceLandmarksPreview();
       faceLandmarksStatus.textContent = "تعذر التحليل: " + String(error?.message || error).slice(0, 180);
       faceLandmarksButton.textContent = "إعادة محاولة تحميل نقاط الوجه";
@@ -577,12 +597,45 @@ export function initCamera() {
   }
   faceLandmarksButton.addEventListener("click", runFaceLandmarksPreview);
 
+  function runFaceDigitalTwinDiagnostic() {
+    if (!latestFaceLandmarksAnalysis) {
+      faceDigitalTwinStatus.textContent = "حلّل نقاط الوجه أولًا.";
+      return;
+    }
+    try {
+      const report = buildNOXFaceDigitalTwinDiagnostic(latestFaceLandmarksAnalysis);
+      if (report.state !== "research-report") throw new Error(report.reason || "تعذر بناء التقرير");
+      const regionRows = Object.entries(report.uncertainty.regions || {}).map(([name, item]) =>
+        name + ": " + item.state +
+        (item.unknownEvidence.length ? " — غير محسوم: " + item.unknownEvidence.join("، ") : "")
+      );
+      const topologyRows = Object.entries(report.topology.regions || {}).map(([name, item]) =>
+        name + ": " + item.state +
+        (item.metrics ? " — مثلثات: " + item.metrics.triangleCount : " — " + item.reason)
+      );
+      faceDigitalTwinStatus.textContent = "اكتمل التقرير البحثي — لا توجد صلاحية لاستخدامه في محرك المكياج.";
+      faceDigitalTwinReport.textContent =
+        "Topology: " + topologyRows.join(" | ") +
+        " • Evidence: " + regionRows.join(" | ") +
+        " • Compositor Eligible: false";
+    } catch (error) {
+      faceDigitalTwinStatus.textContent = "تعذر التقرير: " + String(error?.message || error).slice(0, 140);
+      faceDigitalTwinReport.textContent = "لم يتم إنشاء تقرير قابل للاستخدام.";
+    }
+    updateDiagnostics();
+  }
+  faceDigitalTwinButton.addEventListener("click", runFaceDigitalTwinDiagnostic);
+
   async function releaseFaceLandmarker() {
     clearFaceLandmarksPreview();
     if (faceLandmarkerProvider) {
       try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort cleanup */ }
     }
     faceLandmarkerProvider = null;
+    latestFaceLandmarksAnalysis = null;
+    faceDigitalTwinButton.disabled = true;
+    faceDigitalTwinStatus.textContent = "تم إيقاف محرك نقاط الوجه وتحرير موارده.";
+    faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
     faceLandmarksState = "متوقف";
     faceLandmarksButton.textContent = "تحميل محرك نقاط الوجه (478 نقطة)";
     faceLandmarksButton.disabled = true;
