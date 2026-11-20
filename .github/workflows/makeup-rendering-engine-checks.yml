@@ -54,6 +54,7 @@ jobs:
       - name: Run live makeup compositor tests
         run: |
           cp core/nox-live-makeup-compositor.js core/nox-live-makeup-compositor.mjs
+          cp core/nox-makeup-rendering-engine.js core/nox-makeup-rendering-engine.mjs
           node tests/nox-live-makeup-compositor.test.mjs
       - name: Run makeup mask tests
         run: |
