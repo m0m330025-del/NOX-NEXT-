@@ -10,15 +10,13 @@ The first NOX KISS backend phase uses a dedicated Appwrite project for game data
 - **Dedicated game project:** `6affebd1000a6e0f1c49` (`NOX GAME SERVER`)
 - **Endpoint:** `https://fra.cloud.appwrite.io/v1`
 - **Game database:** `NOX_GAME_DB`, database ID `nox_game_db`, type `TablesDB`
-- **Database status:** created and verified. The `players` table exists with a required `userId` string column; Appwrite also provides its system columns.
+- **Database status:** created. Seven game tables have now been created in the Appwrite Console; see the schema inventory below. No sample rows exist.
 
 A second Appwrite account/project is an organizational separation, not extra compute capacity. It does not automatically increase free-tier quotas or create a continuously running game-server process.
 
 ## GitHub integration status
 
-A schema provisioner is present at `services/nox-game-server/scripts/provision-schema.mjs` on this branch. It is intended to create the game TablesDB tables and columns using a server-side Appwrite API key supplied through environment variables. It has been committed but has **not** been run or verified against Appwrite yet.
-
-This repository content does **not** mean Appwrite has been connected to GitHub as a deployment integration, and it does not deploy the game backend. No API key or server secret belongs in Git.
+The Appwrite database was configured manually in the Console. GitHub contains the project documentation only; this does **not** mean Appwrite has been connected to GitHub as a deployment integration, and it does not deploy the game backend. No API key or server secret belongs in Git.
 
 ## Important runtime boundary
 
@@ -51,7 +49,7 @@ Because NOX GAME is a separate Appwrite project/account:
 ## Next implementation phases
 
 1. Verify the client configuration from the NOX app without exposing server credentials.
-2. Run and verify the TablesDB schema provisioner for players, rooms, room members, rounds, chat, music queue, and friendships; then add indexes and permissions.
+2. Verify the table IDs and security settings, then add the required indexes and narrowly scoped permissions.
 3. Design and test the cross-project identity verification flow.
 4. Implement room actions with server-side validation and persistence.
 5. Add Realtime subscriptions for accepted state changes.
@@ -60,9 +58,17 @@ Because NOX GAME is a separate Appwrite project/account:
 
 ## Current status
 
-- The dedicated Appwrite project and its TablesDB database have been created and verified.
-- The `players` table exists with required `userId` plus Appwrite system columns.
-- The schema provisioner has been committed to `feature/nox-appwrite-game-backend`, but has not yet been executed.
+- The dedicated Appwrite project and its TablesDB database have been created.
+- Seven tables exist: `players`, `rooms`, Room Members, `rounds`, `chat_messages`, `friendships`, and `song_queue`.
+- `players` columns: `userId`, `noxId` (string, 32), `displayName` (string, 100), `avatarUrl` (string, 2048), `createdAt` (datetime), `lastSeenAt` (datetime), plus Appwrite system columns.
+- `rooms` columns: `ownerId` (string, 128), `name` (string), `isPrivate` (boolean), `status` (string, 24), `createdAt`, `lastActivityAt`, `expiresAt` (datetime), `maxPlayers` (integer, min 1/max 15). The UI did not set a default value; application code must set 15 when creating rooms.
+- Room Members table ID shown by Appwrite: `6afffa0a0010c9327b14`; columns: `roomId` (string, 36), `playerId` (string, 128), `seatNumber` (integer, 1–15), `role` (string, 24), `joinedAt` (datetime), `isOnline` (boolean).
+- `rounds`: `roomId` (string, 36), `status` (string, 24), `roundNumber` (integer), `startedAt`, `endedAt` (datetime, optional), `resultSummary` (long text, optional).
+- `chat_messages`: `roomId` (string, 36), `senderId` (string, 128), `messageType` (string, 24), `text` (long text), `createdAt` (datetime).
+- `friendships`: `requesterId` and `addresseeId` (string, 128), `status` (string, 24), `createdAt` (datetime).
+- `song_queue`: `roomId` (string, 36), `playerId` and `trackId` (string, 128), `trackName` and `artistName` (string, 255), `position` (integer), `queuedAt` (datetime).
+- Row-level security is confirmed enabled with no permissions on `rooms`, Room Members, `rounds`, `chat_messages`, `friendships`, and `song_queue`. The `players` security setting still needs verification.
+- The Room Members table was created with an Appwrite-generated ID rather than the requested stable ID `room_members`; code must use the actual ID above until this is reconciled.
 - No game functions or server deployments have been created.
 - The main branch has not been changed or merged.
 - The Oracle architecture branch and earlier draft PR remain untouched.
