@@ -49,9 +49,11 @@ export class NOXMultiModelFaceFusionProvider {
     this.ownsLandmarkProvider = Boolean(ownsLandmarkProvider);
     this.state = "idle";
     this.sequence = 0;
+    this.lifecycleGeneration = 0;
   }
 
   async initialize() {
+    const generation = this.lifecycleGeneration;
     this.state = "loading";
     const [segmentation, landmarks] = await Promise.allSettled([
       this.segmentationProvider.initialize?.() ?? { available: true },
@@ -59,6 +61,9 @@ export class NOXMultiModelFaceFusionProvider {
     ]);
     const segmentationReady = segmentation.status === "fulfilled" && segmentation.value?.available !== false;
     const landmarksReady = landmarks.status === "fulfilled" && landmarks.value?.available !== false;
+    if (generation !== this.lifecycleGeneration) {
+      return { available: false, state: "idle", reason: "initialization-superseded" };
+    }
     this.state = segmentationReady && (landmarksReady || !this.requireLandmarks) ? "ready" : "unavailable";
     return {
       available: this.state === "ready",
@@ -128,6 +133,7 @@ export class NOXMultiModelFaceFusionProvider {
   }
 
   async dispose() {
+    this.lifecycleGeneration += 1;
     this.sequence += 1;
     this.state = "idle";
     const cleanup = [this.segmentationProvider.dispose?.()];
