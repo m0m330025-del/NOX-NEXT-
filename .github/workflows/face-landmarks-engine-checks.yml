@@ -25,6 +25,8 @@ on:
       - "tests/nox-face-landmarks-engine.test.mjs"
       - "tests/nox-facial-mask-builder.test.mjs"
       - "tests/nox-face-topology-intelligence.test.mjs"
+      - "core/nox-face-research-suite.js"
+      - "tests/nox-face-research-suite.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
 
 permissions:
