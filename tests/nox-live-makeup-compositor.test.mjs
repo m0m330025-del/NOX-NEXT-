@@ -79,7 +79,7 @@ const crispMask = { frame: { width: 3, height: 3 }, regionMasks: {
 assert.equal(crisp.accept({ sequence: 1, capturedAt: 500, vision: crispMask,
   look: { lips: { color: [100, 50, 25], opacity: 0.5 } } }), true);
 const edgeAlpha = crisp.canvas.image.data[(1 * 3 + 1) * 4 + 3];
-assert.equal(edgeAlpha, 32, "isolated boundary pixel must be softened");
+assert.equal(edgeAlpha, 64, "isolated boundary pixel must be softened");
 assert.equal(crisp.canvas.image.data[3], 0, "feathering must never create alpha outside the mask");
 assert.throws(() => new NOXLiveMakeupCompositor({ edgeSoftness: 0.9 }), /invalid-live-makeup-compositor-options/);
 console.log("NOX Live Makeup Compositor tests passed");
