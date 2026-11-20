@@ -106,6 +106,28 @@ assert.ok(conflictPlan.rejected.some(item =>
 ));
 conflictHost.clear();
 
+
+const legacyCortex = new NOXCortex();
+const legacyRegistry = new NOXEngineRegistry();
+const legacyInstance = { getStatus: () => ({ enabled: true, legacy: true }) };
+legacyRegistry.register({
+  id: "optical-flow", name: "Legacy Optical Flow", category: "motion",
+  instance: legacyInstance, capabilities: ["legacy-flow"]
+});
+const previousCortexDescriptor = legacyCortex.engines.get("optical-flow");
+const replacement = new NOXDynamicEngineAdapter({
+  id: "optical-flow", name: "Adapted Optical Flow", category: "motion",
+  instance: {}, process: input => input, capabilities: ["sparse-motion-vectors"]
+});
+replacement.attach({ cortex: legacyCortex, registry: legacyRegistry });
+assert.notEqual(legacyCortex.engines.get("optical-flow"), previousCortexDescriptor);
+assert.equal(legacyRegistry.entries.get("optical-flow").instance, replacement.instance);
+assert.equal(legacyRegistry.snapshot()[0].name, "Adapted Optical Flow");
+replacement.detach();
+assert.equal(legacyCortex.engines.get("optical-flow").name, previousCortexDescriptor.name);
+assert.equal(legacyRegistry.entries.get("optical-flow").instance, legacyInstance);
+assert.equal(legacyRegistry.snapshot()[0].name, "Legacy Optical Flow");
+
 assert.throws(() => new NOXDynamicEngineAdapter({ id: "missing-process", instance: {} }), /process-required/);
 assert.throws(() => new NOXDynamicEngineAdapter({ id: "bad id", instance: {}, process: () => ({}) }), /invalid-engine-adapter-id/);
 console.log("NOX Dynamic Engine Adapter contract tests passed");
