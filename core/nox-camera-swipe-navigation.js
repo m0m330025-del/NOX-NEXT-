@@ -64,7 +64,7 @@ export function initCameraSwipeNavigation() {
     const dy = touch.clientY - startPoint.y;
     startPoint = null;
     if (Math.max(Math.abs(dx), Math.abs(dy)) < 34 || Math.abs(dx) === Math.abs(dy)) return;
-    if (event.target.closest("button.nox-lens-v2") && Math.abs(dx) < Math.abs(dy)) return;
+    
     event.preventDefault();
     suppressClickUntil = Date.now() + 360;
     if (Math.abs(dy) > Math.abs(dx)) stepLens(dy < 0 ? 1 : -1);
