@@ -76,6 +76,8 @@ export class NOXDynamicEngineAdapter {
     this.lastError = null;
     this.detachRegistry = null;
     this.cortex = null;
+    this.previousCortexEngine = null;
+    this.cortexEngineDescriptor = null;
   }
 
   getStatus() {
@@ -146,7 +148,7 @@ export class NOXDynamicEngineAdapter {
     }
     if (!registry || typeof registry.register !== "function") throw new TypeError("compatible-engine-registry-required");
 
-    cortex.registerEngine({
+    const cortexDescriptor = {
       id: this.id,
       group: this.category,
       cost: this.cost,
@@ -156,9 +158,13 @@ export class NOXDynamicEngineAdapter {
       conflictsWith: this.conflictsWith,
       enabled: this.enabled,
       when: this.when
-    });
+    };
+    this.previousCortexEngine = typeof cortex.replaceEngine === "function"
+      ? cortex.replaceEngine(cortexDescriptor)
+      : (cortex.registerEngine(cortexDescriptor), null);
+    this.cortexEngineDescriptor = cortex.engines?.get(this.id) || null;
     try {
-      this.detachRegistry = registry.register({
+      const registryDescriptor = {
         id: this.id,
         name: this.name,
         category: this.category,
@@ -170,11 +176,18 @@ export class NOXDynamicEngineAdapter {
         priority: this.priority,
         getStatus: () => this.getStatus(),
         isEnabled: () => this.enabled
-      });
+      };
+      this.detachRegistry = typeof registry.replace === "function"
+        ? registry.replace(registryDescriptor)
+        : registry.register(registryDescriptor);
       this.cortex = cortex;
     } catch (error) {
-      if (typeof cortex.unregisterEngine === "function") cortex.unregisterEngine(this.id);
-      else cortex.engines?.delete(this.id);
+      if (this.cortexEngineDescriptor && cortex.engines?.get(this.id) === this.cortexEngineDescriptor) {
+        cortex.unregisterEngine(this.id);
+        if (this.previousCortexEngine) cortex.registerEngine(this.previousCortexEngine);
+      }
+      this.previousCortexEngine = null;
+      this.cortexEngineDescriptor = null;
       throw error;
     }
     return this;
@@ -184,9 +197,13 @@ export class NOXDynamicEngineAdapter {
     if (!this.cortex && !this.detachRegistry) return false;
     this.detachRegistry?.();
     this.detachRegistry = null;
-    if (this.cortex && typeof this.cortex.unregisterEngine === "function") this.cortex.unregisterEngine(this.id);
-    else this.cortex?.engines?.delete(this.id);
+    if (this.cortex && this.cortex.engines?.get(this.id) === this.cortexEngineDescriptor) {
+      this.cortex.unregisterEngine(this.id);
+      if (this.previousCortexEngine) this.cortex.registerEngine(this.previousCortexEngine);
+    }
     this.cortex = null;
+    this.previousCortexEngine = null;
+    this.cortexEngineDescriptor = null;
     this.state = "idle";
     return true;
   }
