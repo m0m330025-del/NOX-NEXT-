@@ -2714,7 +2714,8 @@ export function initCamera() {
     } catch {
       // A failed flow sample is discarded; the last valid motion state remains intact.
     } finally {
-      opticalFlowProcessing = false;
+      // A stale inference must not release the lock owned by a newer session.
+      if (session === opticalFlowSession) opticalFlowProcessing = false;
     }
   }
 
