@@ -60,6 +60,7 @@ assert.deepEqual(drawArguments, [0, 1, 4, 2], "landscape frame must be centered 
 assert.equal(letterboxedResult.skin.data.length, 8 * 4, "skin mask must map back to original frame dimensions");
 assert.equal(letterboxedResult.regions.lips.data.length, 8 * 4, "lip mask must map back to original frame dimensions");
 assert.equal(letterboxedResult.regions.brows.data.length, 8 * 4, "brow mask must map back to original frame dimensions");
+assert.ok(letterboxedResult.regions.lips.data.some(value => value > 0.01 && value < 0.99), "bilinear mask restoration must preserve soft semantic boundaries");
 await letterboxProvider.dispose();
 
 // Verify the real parsing output passes through the shared vision adapter and
