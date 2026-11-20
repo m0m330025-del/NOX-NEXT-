@@ -1,3 +1,4 @@
+import { calculateNOXFaceRollDelta } from "./nox-face-roll-delta.js";
 /**
  * NOX Live Makeup Compositor.
  * Builds a transparent semantic-color layer and composites it over each fresh
@@ -6,8 +7,10 @@
 const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
 export class NOXLiveMakeupCompositor {
-  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
+  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, maxRollAgeMs = 220, maxRollDeltaRadians = 0.35, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
     if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
+        !Number.isFinite(maxRollAgeMs) || maxRollAgeMs < 1 ||
+        !Number.isFinite(maxRollDeltaRadians) || maxRollDeltaRadians <= 0 || maxRollDeltaRadians > Math.PI / 2 ||
         !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8 ||
         !Number.isFinite(maxCenterDrift) || maxCenterDrift <= 0 || maxCenterDrift > 0.25 ||
         !Number.isFinite(minScaleRatio) || minScaleRatio <= 0 || minScaleRatio >= 1 ||
@@ -16,6 +19,8 @@ export class NOXLiveMakeupCompositor {
     }
     this.canvasFactory = canvasFactory;
     this.maxAgeMs = maxAgeMs;
+    this.maxRollAgeMs = maxRollAgeMs;
+    this.maxRollDeltaRadians = maxRollDeltaRadians;
     this.edgeSoftness = edgeSoftness;
     this.maxCenterDrift = maxCenterDrift;
     this.minScaleRatio = minScaleRatio;
@@ -27,7 +32,7 @@ export class NOXLiveMakeupCompositor {
     this.height = 0;
   }
 
-  accept({ sequence, capturedAt, vision, look } = {}) {
+  accept({ sequence, capturedAt, vision, look, capturedRoll = null } = {}) {
     if (!Number.isInteger(sequence) || sequence <= this.sequence ||
         !Number.isFinite(capturedAt) || !vision?.frame ||
         !Number.isInteger(vision.frame.width) || !Number.isInteger(vision.frame.height) ||
@@ -99,6 +104,11 @@ export class NOXLiveMakeupCompositor {
     this.width = width;
     this.height = height;
     this.faceBox = { ...vision.faceBox };
+    this.capturedRoll = capturedRoll?.state === "estimated" &&
+      capturedRoll.frame?.id === vision.frame.id &&
+      capturedRoll.frame?.capturedAtMonotonicMs === vision.frame.capturedAtMonotonicMs &&
+      capturedRoll.frame?.width === width && capturedRoll.frame?.height === height
+      ? capturedRoll : null;
     this.frame = {
       id: vision.frame.id,
       timestamp: vision.frame.timestamp,
@@ -109,7 +119,7 @@ export class NOXLiveMakeupCompositor {
     return true;
   }
 
-  draw(targetCanvas, { now, mirrored = false, currentFaceBox = null } = {}) {
+  draw(targetCanvas, { now, nowMonotonicMs = now, mirrored = false, currentFaceBox = null, currentRoll = null } = {}) {
     if (!this.canvas || !targetCanvas || !Number.isFinite(now) ||
         now < this.capturedAt || now - this.capturedAt > this.maxAgeMs) {
       this.clear();
@@ -148,6 +158,15 @@ export class NOXLiveMakeupCompositor {
       }
       alignment = { previousCenterX, previousCenterY, currentCenterX, currentCenterY, scaleX, scaleY };
     }
+    const rollDelta = this.capturedRoll && currentRoll
+      ? calculateNOXFaceRollDelta({
+          capturedRoll: this.capturedRoll,
+          currentRoll,
+          nowMonotonicMs,
+          maxAgeMs: this.maxRollAgeMs,
+          maxDeltaRadians: this.maxRollDeltaRadians
+        })
+      : null;
     const context = targetCanvas.getContext("2d");
     if (!context) return false;
     context.save();
@@ -159,6 +178,13 @@ export class NOXLiveMakeupCompositor {
       context.translate(alignment.currentCenterX * targetCanvas.width, alignment.currentCenterY * targetCanvas.height);
       context.scale(alignment.scaleX, alignment.scaleY);
       context.translate(-alignment.previousCenterX * targetCanvas.width, -alignment.previousCenterY * targetCanvas.height);
+      if (rollDelta?.state === "accepted") {
+        const centerX = alignment.previousCenterX * targetCanvas.width;
+        const centerY = alignment.previousCenterY * targetCanvas.height;
+        context.translate(centerX, centerY);
+        context.rotate(rollDelta.deltaRadians);
+        context.translate(-centerX, -centerY);
+      }
     }
     context.drawImage(this.canvas, 0, 0, targetCanvas.width, targetCanvas.height);
     context.restore();
@@ -172,5 +198,6 @@ export class NOXLiveMakeupCompositor {
     this.height = 0;
     this.faceBox = null;
     this.frame = null;
+    this.capturedRoll = null;
   }
 }
