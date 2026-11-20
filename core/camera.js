@@ -1,6 +1,6 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
 import { listNOXFilters } from "./nox-original-filter-library.js";
-import { NOX_HYBRID_FILTERS, getNOXHybridFilter } from "./nox-hybrid-fx-engine.js";
+import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection } from "./nox-hybrid-fx-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
@@ -54,6 +54,7 @@ uniform float u_science;
 uniform float u_signature;
 uniform float u_hybrid;
 uniform float u_hybridMix;
+uniform float u_hybridWeights[6];
 uniform vec2 u_texel;
 void main() {
   vec2 uv = v_texCoord;
@@ -310,66 +311,62 @@ void main() {
     c = mix(c, c * vec3(0.62, 1.08, 1.22) + vec3(0.02, 0.12, 0.18), 0.10 + scan * 0.035);
     c += vec3(0.08, 0.62, 0.95) * sweep * 0.22;
   }
-  // NOX HYBRID FX: combine independent optical engines with a distinct blend operator.
-  if (u_hybrid > 0.5) {
-    float h = u_hybrid;
-    float mixPower = clamp(u_hybridMix, 0.08, 0.72);
-    float lum = dot(c, vec3(0.299, 0.587, 0.114));
-    vec2 centered = uv - vec2(0.5);
-    float radius = length(centered);
-    float angle = atan(centered.y, centered.x);
-    vec3 hybridColor = c;
-    if (h < 1.5) {
-      // CHROMA TIDE: spectral split + fluid interference + edge-lit caustics.
-      float tide = sin(uv.x * 18.0 + sin(uv.y * 11.0 + u_time * 0.7) * 2.2 + u_time);
-      vec2 bend = vec2(cos(tide * 2.4), sin(tide * 2.1)) * u_texel * 5.0;
-      vec3 refracted = texture2D(u_image, clamp(uv + bend, 0.0, 1.0)).rgb;
-      float edge = length(texture2D(u_image, uv + u_texel * 2.0).rgb - texture2D(u_image, uv - u_texel * 2.0).rgb);
-      hybridColor = mix(c, refracted.bgr, 0.22 + 0.18 * abs(tide));
-      hybridColor += vec3(0.08, 0.42, 0.58) * smoothstep(0.025, 0.18, edge) * (0.35 + 0.25 * tide);
-    } else if (h < 2.5) {
-      // PRISM FORGE: radial dispersion + contour engraving + spectral light.
-      float bands = sin(angle * 7.0 + radius * 46.0 - u_time * 1.3);
-      vec3 redTap = texture2D(u_image, clamp(uv + centered * 0.018, 0.0, 1.0)).rgb;
-      vec3 blueTap = texture2D(u_image, clamp(uv - centered * 0.018, 0.0, 1.0)).rgb;
-      float edge = length(redTap - blueTap);
-      hybridColor = vec3(redTap.r, c.g, blueTap.b);
-      hybridColor = mix(hybridColor, vec3(0.18, 0.88, 1.0), smoothstep(0.04, 0.24, edge) * 0.42);
-      hybridColor += vec3(0.52, 0.18, 0.78) * max(0.0, bands) * 0.10;
-    } else if (h < 3.5) {
-      // QUANTUM BLOOM: particle lattice + soft optical bloom + phase-locked pulse.
-      vec2 cell = floor(uv * vec2(31.0, 23.0));
-      float particle = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
-      float pulse = 0.5 + 0.5 * sin(u_time * 1.8 + particle * 6.28318 + radius * 18.0);
-      float bloom = exp(-radius * radius * 9.0) * pulse;
-      float spark = smoothstep(0.965, 1.0, particle) * pulse;
-      hybridColor = mix(c, c * vec3(0.72, 0.88, 1.18) + vec3(0.16, 0.30, 0.58) * bloom, 0.28);
-      hybridColor += vec3(0.38, 0.78, 1.0) * spark * 0.55;
-    } else if (h < 4.5) {
-      // TOPOGRAPHIC DREAM: relief contours + halftone cells + chromatic ink.
-      float field = sin(uv.x * 22.0 + sin(uv.y * 13.0) * 3.0) + cos(uv.y * 19.0 - u_time * 0.25);
-      float contour = 1.0 - smoothstep(0.02, 0.16, abs(fract(field * 0.32 + lum * 0.8) - 0.5));
-      float dotGrid = step(0.42, fract(sin(dot(floor(uv * vec2(48.0, 32.0)), vec2(12.9898,78.233))) * 43758.5453));
-      vec3 ink = mix(vec3(0.06,0.10,0.22), vec3(0.20,0.92,0.78), contour);
-      hybridColor = mix(c, ink * (0.42 + lum * 0.82), 0.18 + contour * 0.24);
-      hybridColor += vec3(0.32,0.16,0.62) * dotGrid * contour * 0.10;
-    } else if (h < 5.5) {
-      // ECHO MATTER: optical-flow-like directional echoes with prismatic residue.
-      vec2 drift = vec2(sin(u_time * 0.7 + uv.y * 8.0), cos(u_time * 0.55 + uv.x * 7.0)) * u_texel * 4.0;
-      vec3 echoA = texture2D(u_image, clamp(uv + drift, 0.0, 1.0)).rgb;
-      vec3 echoB = texture2D(u_image, clamp(uv - drift * 1.7, 0.0, 1.0)).rgb;
-      float motionMask = smoothstep(0.025, 0.22, length(echoA - echoB));
-      hybridColor = mix(c, mix(echoA, echoB.bgr, 0.48), 0.16 + motionMask * 0.38);
-      hybridColor += vec3(0.10,0.42,0.78) * motionMask * 0.14;
-    } else {
-      // AURORA RELIC: interference veil + thin-film color + animated light sculpture.
-      float aurora = sin(uv.y * 26.0 + sin(uv.x * 9.0 + u_time * 0.4) * 3.0);
-      float film = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + aurora * 2.4 + radius * 13.0);
-      float arc = exp(-pow((radius - (0.22 + 0.035 * sin(angle * 3.0 + u_time))) * 34.0, 2.0));
-      hybridColor = mix(c, c * (0.62 + film * 0.72), 0.22);
-      hybridColor += vec3(0.12,0.58,0.72) * max(0.0, aurora) * 0.12 + vec3(0.52,0.18,0.82) * arc * 0.20;
-    }
-    c = mix(c, hybridColor, mixPower);
+  // NOX HYBRID MIXER: independent bit-masked layers with individual weights.
+  vec2 centered = uv - vec2(0.5);
+  float radius = length(centered);
+  float angle = atan(centered.y, centered.x);
+  float lum = dot(c, vec3(0.299, 0.587, 0.114));
+  vec3 hybridColor = c;
+  if (mod(floor(u_hybrid / 1.0), 2.0) > 0.5) {
+    float tide = sin(uv.x * 18.0 + sin(uv.y * 11.0 + u_time * 0.7) * 2.2 + u_time);
+    vec2 bend = vec2(cos(tide * 2.4), sin(tide * 2.1)) * u_texel * 5.0;
+    vec3 refracted = texture2D(u_image, clamp(uv + bend, 0.0, 1.0)).rgb;
+    float edge = length(texture2D(u_image, uv + u_texel * 2.0).rgb - texture2D(u_image, uv - u_texel * 2.0).rgb);
+    hybridColor = mix(c, refracted.bgr, 0.22 + 0.18 * abs(tide));
+    hybridColor += vec3(0.08, 0.42, 0.58) * smoothstep(0.025, 0.18, edge) * (0.35 + 0.25 * tide);
+    c = mix(c, hybridColor, clamp(u_hybridWeights[0], 0.0, 0.85));
+  }
+  if (mod(floor(u_hybrid / 2.0), 2.0) > 0.5) {
+    float bands = sin(angle * 7.0 + radius * 46.0 - u_time * 1.3);
+    vec3 redTap = texture2D(u_image, clamp(uv + centered * 0.018, 0.0, 1.0)).rgb;
+    vec3 blueTap = texture2D(u_image, clamp(uv - centered * 0.018, 0.0, 1.0)).rgb;
+    float edge = length(redTap - blueTap);
+    hybridColor = vec3(redTap.r, c.g, blueTap.b);
+    hybridColor = mix(hybridColor, vec3(0.18, 0.88, 1.0), smoothstep(0.04, 0.24, edge) * 0.42);
+    hybridColor += vec3(0.52, 0.18, 0.78) * max(0.0, bands) * 0.10;
+    c = mix(c, hybridColor, clamp(u_hybridWeights[1], 0.0, 0.85));
+  }
+  if (mod(floor(u_hybrid / 4.0), 2.0) > 0.5) {
+    vec2 cell = floor(uv * vec2(31.0, 23.0));
+    float particle = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
+    float pulse = 0.5 + 0.5 * sin(u_time * 1.8 + particle * 6.28318 + radius * 18.0);
+    float bloom = exp(-radius * radius * 9.0) * pulse;
+    float spark = smoothstep(0.965, 1.0, particle) * pulse;
+    hybridColor = c * vec3(0.72, 0.88, 1.18) + vec3(0.16, 0.30, 0.58) * bloom + vec3(0.38, 0.78, 1.0) * spark * 0.55;
+    c = mix(c, hybridColor, clamp(u_hybridWeights[2], 0.0, 0.85));
+  }
+  if (mod(floor(u_hybrid / 8.0), 2.0) > 0.5) {
+    float field = sin(uv.x * 22.0 + sin(uv.y * 13.0) * 3.0) + cos(uv.y * 19.0 - u_time * 0.25);
+    float contour = 1.0 - smoothstep(0.02, 0.16, abs(fract(field * 0.32 + lum * 0.8) - 0.5));
+    float dotGrid = step(0.42, fract(sin(dot(floor(uv * vec2(48.0, 32.0)), vec2(12.9898,78.233))) * 43758.5453));
+    vec3 ink = mix(vec3(0.06,0.10,0.22), vec3(0.20,0.92,0.78), contour);
+    hybridColor = mix(c, ink * (0.42 + lum * 0.82), 0.18 + contour * 0.24) + vec3(0.32,0.16,0.62) * dotGrid * contour * 0.10;
+    c = mix(c, hybridColor, clamp(u_hybridWeights[3], 0.0, 0.85));
+  }
+  if (mod(floor(u_hybrid / 16.0), 2.0) > 0.5) {
+    vec2 drift = vec2(sin(u_time * 0.7 + uv.y * 8.0), cos(u_time * 0.55 + uv.x * 7.0)) * u_texel * 4.0;
+    vec3 echoA = texture2D(u_image, clamp(uv + drift, 0.0, 1.0)).rgb;
+    vec3 echoB = texture2D(u_image, clamp(uv - drift * 1.7, 0.0, 1.0)).rgb;
+    float motionMask = smoothstep(0.025, 0.22, length(echoA - echoB));
+    hybridColor = mix(c, mix(echoA, echoB.bgr, 0.48), 0.16 + motionMask * 0.38) + vec3(0.10,0.42,0.78) * motionMask * 0.14;
+    c = mix(c, hybridColor, clamp(u_hybridWeights[4], 0.0, 0.85));
+  }
+  if (mod(floor(u_hybrid / 32.0), 2.0) > 0.5) {
+    float aurora = sin(uv.y * 26.0 + sin(uv.x * 9.0 + u_time * 0.4) * 3.0);
+    vec3 film = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + aurora * 2.4 + radius * 13.0);
+    float arc = exp(-pow((radius - (0.22 + 0.035 * sin(angle * 3.0 + u_time))) * 34.0, 2.0));
+    hybridColor = c * (0.62 + film * 0.72) + vec3(0.12,0.58,0.72) * max(0.0, aurora) * 0.12 + vec3(0.52,0.18,0.82) * arc * 0.20;
+    c = mix(c, hybridColor, clamp(u_hybridWeights[5], 0.0, 0.85));
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -407,6 +404,8 @@ export function initCamera() {
   let selectedFilter = null;
   let selectedOriginalFilter = null;
   let selectedHybridFilter = null;
+  let selectedHybridMask = 0;
+  let selectedHybridWeights = [0.48, 0.52, 0.44, 0.46, 0.40, 0.50];
   let recorder = null;
   let recordingStream = null;
   let chunks = [];
@@ -1126,6 +1125,7 @@ export function initCamera() {
       signature: gl.getUniformLocation(program, "u_signature"),
       hybrid: gl.getUniformLocation(program, "u_hybrid"),
       hybridMix: gl.getUniformLocation(program, "u_hybridMix"),
+      hybridWeights: gl.getUniformLocation(program, "u_hybridWeights[0]"),
       texel: gl.getUniformLocation(program, "u_texel")
     };
   }
@@ -2617,7 +2617,8 @@ export function initCamera() {
         gl.uniform1f(renderer.science, Math.max(0, scienceModes.indexOf(scienceMode) + 1));
         const signatureModes = ["aurora", "prism", "quantum", "liquid", "holo"];
         gl.uniform1f(renderer.signature, Math.max(0, signatureModes.indexOf(signatureMode) + 1));
-        gl.uniform1f(renderer.hybrid, selectedHybridFilter ? selectedHybridFilter.shaderMode : 0);
+        gl.uniform1f(renderer.hybrid, selectedHybridMask);
+        gl.uniform1fv(renderer.hybridWeights, selectedHybridWeights);
         gl.uniform1f(renderer.hybridMix, selectedHybridFilter ? selectedHybridFilter.mix : 0.42);
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
         gl.drawArrays(gl.TRIANGLES, 0, 6);
