@@ -1,52 +1,34 @@
 # NOX Beauty Vision — implementation status
 
-## Implemented
+## Live makeup path
 
-- The camera page has an opt-in **NOX BEAUTY VISION — REAL AI** panel.
-- The user must start the camera and press the panel button; model loading is not automatic.
-- `NOXMediaPipeSelfieProvider` uses MediaPipe Tasks Vision `1.2.3` and Google's `selfie_multiclass_256x256` Image Segmenter model.
-- The input frame is downscaled with its aspect ratio preserved so its largest dimension is at most 256 pixels.
-- Inference uses the CPU delegate for compatibility; it processes one still camera frame per button press, not every preview frame.
-- Only the model's face-skin class (class index 3) is accepted. The largest connected face-skin component is retained, and its mask is shown as a translucent overlay.
-- The model and WASM runtime are fetched from their official CDNs when the user first requests the feature. The loaded model is disposed when the camera stops.
-- The image frame is processed locally in the browser. MediaPipe's documented privacy notice says input images are processed on-device, while usage/diagnostic metrics may be sent to Google.
+- The camera page exposes an opt-in **NOX BEAUTY VISION — REAL AI** panel. The user starts the camera and explicitly requests model loading; inference does not start automatically.
+- \`NOXBiSeNetFaceParsingProvider\` uses the BiSeNet ResNet-18 ONNX face-parsing model with ONNX Runtime Web. The current camera configuration bounds the largest input dimension to 256 pixels.
+- \`NOXBeautyVisionProvider\` validates frame metadata, mask dimensions, mask values, confidence, and frame freshness before exposing semantic masks.
+- The currently supported semantic makeup masks are lips and brows. The model does not provide dedicated cheek or eyelid classes; those looks are unavailable rather than guessed.
+- \`NOXMakeupRenderingEngine\` validates the selected look and applies color only inside the accepted semantic masks.
+- \`NOXLiveMakeupController\` serializes inference so only one frame is processed at a time. The configured interval is 180ms; results older than 220ms are rejected.
+- \`NOXLiveMakeupCompositor\` builds a transparent color layer from the accepted masks and draws it over each fresh base render. It does not paint onto a previous composed frame, avoiding a feedback loop.
+- The compositor is called from the camera \`renderFrame()\` path on the shared \`renderCanvas\`. Photo capture copies that canvas, and video recording uses its \`captureStream()\`, so a fresh accepted makeup layer is included in both outputs.
+- If a makeup result expires, it is not drawn. A capture taken without a fresh result may therefore contain no makeup rather than a stale mask.
+- Inference runs locally in the browser after the ONNX runtime and model are downloaded. Offline model caching is not implemented.
 
-## Model classes
+## Face landmarks are a separate capability
 
-The multiclass model identifies six classes:
-
-| Index | Class | NOX use |
-|---:|---|---|
-| 0 | Background | Not used |
-| 1 | Hair | Not used in this provider |
-| 2 | Body skin | Not used in this provider |
-| 3 | Face skin | Accepted for face-skin preview |
-| 4 | Clothes | Not used |
-| 5 | Others / accessories | Not used |
+- \`NOXMediaPipeFaceLandmarkerProvider\` uses MediaPipe Tasks Vision to produce face landmarks for tracking and diagnostics.
+- Landmark tracking is separate from BiSeNet semantic makeup masks. The landmark points are not substituted for missing cheek or eyelid segmentation.
 
 ## Explicit limitations
 
-- This model does not return separate lip, eyelid, eyebrow, or cheek masks.
-- It does not identify cosmetic shades, skin tone suitability, or beauty preferences.
-- This MediaPipe model does not return separate lip, eyelid, eyebrow, or cheek masks and does not apply makeup. Its face-skin preview remains a user-triggered diagnostic.
-- A separate BiSeNet ResNet-18 provider supplies semantic lip and brow masks. The NOX live makeup controller sends bounded frames through that provider and the makeup renderer.
-- Accepted makeup is composited into the shared `renderCanvas`, so the same fresh layer can appear in preview, captured photos, and recorded video. Results older than 220ms are dropped; expired results are not drawn.
-- The BiSeNet masks do not include dedicated cheek or eyelid classes. Those looks remain unavailable rather than being approximated from unrelated regions.
-- The MediaPipe result's displayed probability is the mean of model probabilities for selected face-skin pixels. It is not a calibrated accuracy percentage.
-- Continuous BiSeNet inference is opt-in and runs serially at a bounded interval. Results are freshness-gated, but fast head motion can still cause temporary misalignment; no dense motion-warp compensation is claimed.
-- The provider requires an internet connection for its first CDN/WASM/model load. Offline caching has not been implemented.
-- Performance, heat, memory usage, and visual quality have not been tested on a physical Galaxy M12. Do not assume real-time performance on that device.
-
-## Sources
-
-- [MediaPipe Image Segmenter guide](https://developers.google.com/edge/mediapipe/solutions/vision/image_segmenter)
-- [MediaPipe Tasks Vision JavaScript API](https://developers.google.com/edge/api/mediapipe/js/tasks-vision)
-- [MediaPipe multiclass segmentation model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20Multiclass%20Segmentation.pdf)
-- [MediaPipe Tasks Vision privacy notice and package documentation](https://www.npmjs.com/package/@mediapipe/tasks-vision)
+- The current makeup model supports lips and brows only; cheek and eyelid makeup are not implemented.
+- The 220ms freshness limit reduces stale overlays but does not guarantee perfect alignment during fast head movement. Dense motion-warp compensation is not claimed.
+- The controller uses a bounded low-resolution inference path. Sustained frame rate, heat, memory usage, and visual quality have not been measured on physical Android/iOS devices.
+- The model/runtime require an internet connection for first load. Offline caching has not been implemented.
+- CI tests use synthetic masks and fake provider sessions; they verify contracts and composition logic, not the real model's visual accuracy on a live face.
 
 ## Status
 
-**Code and CI:** the MediaPipe face-skin diagnostic, BiSeNet semantic masks, makeup renderer, live controller, and shared-canvas compositor are implemented; relevant GitHub Actions checks pass.
+**Code and CI:** BiSeNet semantic masks, makeup rendering, live frame control, and shared-canvas compositing are implemented. Relevant GitHub Actions checks pass.
 
 **Physical-device verification:** not performed on Android/iOS or low-power phones.
 
