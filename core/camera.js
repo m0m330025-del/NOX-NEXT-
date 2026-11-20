@@ -16,7 +16,7 @@ import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
 import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
 import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-engine.js";
 import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
-import { NOXMultiEngineIntelligenceBrain } from "./nox-multi-engine-intelligence-brain.js";
+import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -380,7 +380,7 @@ export function initCamera() {
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
   const adaptiveTemporalFusionEngine = new NOXAdaptiveTemporalFusionEngine();
-  const multiEngineIntelligenceBrain = new NOXMultiEngineIntelligenceBrain();
+  const noxNeuralCameraOrchestrator = new NOXNeuralCameraOrchestrator();
   let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
@@ -2595,6 +2595,7 @@ export function initCamera() {
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
+    noxNeuralCameraOrchestrator.observeFrame({ frameCostMs: renderCost, targetFrameMs: frameInterval });
     lastRenderedAt = performance.now();
     fpsWindowFrames += 1;
     if (!fpsWindowStart) fpsWindowStart = lastRenderedAt;
@@ -2658,7 +2659,7 @@ export function initCamera() {
       panel.innerHTML = "<summary>تشخيص توافق الجهاز</summary><dl></dl>";
       page.querySelector(".nox-camera-v2-tools")?.append(panel);
     }
-    const intelligencePlan = multiEngineIntelligenceBrain.evaluate({
+    const intelligencePlan = noxNeuralCameraOrchestrator.evaluate({
       lowPower,
       targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
       frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
@@ -2676,6 +2677,7 @@ export function initCamera() {
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
+      ["ذاكرة التكيف قصيرة المدى", intelligencePlan.adaptiveMemory.action + " — " + intelligencePlan.adaptiveMemory.reason + " — " + intelligencePlan.adaptiveMemory.sampleCount + "/" + intelligencePlan.adaptiveMemory.historyLimit + " إطار"],
       ["HTTPS", supported.secure ? "متاح" : "غير آمن — يلزم HTTPS"],
       ["getUserMedia", supported.getUserMedia ? "متاح" : "غير مدعوم"],
       ["MediaRecorder", supported.mediaRecorder ? "متاح" : "غير مدعوم"],
