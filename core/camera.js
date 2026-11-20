@@ -431,6 +431,8 @@ export function initCamera() {
   if (!video || !stage || !renderCanvas || !startButton) return;
 
   let stream = null;
+  let cameraStartGeneration = 0;
+  let cameraStartAbortController = null;
   let captureHoldTimer = 0;
   let capturePointerActive = false;
   let captureHoldTriggered = false;
@@ -3305,12 +3307,33 @@ export function initCamera() {
     if (scheduleNext && stream && !disposed) animationFrame = requestAnimationFrame(() => renderFrame(true));
   }
 
-  async function waitForVideo() {
+  async function waitForVideo({ signal } = {}) {
+    if (signal?.aborted) throw new DOMException("تم إلغاء تشغيل الكاميرا", "AbortError");
     if (video.readyState >= 2 && video.videoWidth) return;
     await new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error("انتهت مهلة انتظار صورة الكاميرا")), 9000);
-      video.addEventListener("loadeddata", () => { clearTimeout(timeout); resolve(); }, { once: true });
-      video.addEventListener("error", () => { clearTimeout(timeout); reject(new Error("تعذر قراءة بث الكاميرا")); }, { once: true });
+      let settled = false;
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        video.removeEventListener("loadeddata", onLoaded);
+        video.removeEventListener("error", onError);
+        signal?.removeEventListener("abort", onAbort);
+      };
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        error ? reject(error) : resolve();
+      };
+      const onLoaded = () => video.videoWidth > 0
+        ? finish()
+        : finish(new Error("وصلت بيانات الفيديو دون أبعاد صالحة"));
+      const onError = () => finish(new Error("تعذر قراءة بث الكاميرا"));
+      const onAbort = () => finish(new DOMException("تم إلغاء تشغيل الكاميرا", "AbortError"));
+      const timeout = window.setTimeout(() => finish(new Error("انتهت مهلة انتظار صورة الكاميرا")), 9000);
+      video.addEventListener("loadeddata", onLoaded);
+      video.addEventListener("error", onError);
+      signal?.addEventListener("abort", onAbort, { once: true });
+      if (signal?.aborted) onAbort();
     });
   }
 
@@ -3480,6 +3503,9 @@ export function initCamera() {
   }
 
   async function stopCamera() {
+    cameraStartGeneration += 1;
+    cameraStartAbortController?.abort();
+    cameraStartAbortController = null;
     recording = false;
     cancelMotionFreezeCapture(null);
     if (recorder && recorder.state !== "inactive") {
@@ -3536,6 +3562,10 @@ export function initCamera() {
     announce("اسمح للمتصفح باستخدام الكاميرا عند ظهور نافذة الإذن.", false);
     try {
       if (stream) await stopCamera();
+      const generation = ++cameraStartGeneration;
+      const abortController = new AbortController();
+      cameraStartAbortController = abortController;
+      const isCurrentStart = () => generation === cameraStartGeneration && !abortController.signal.aborted && !disposed;
       const memory = Number(navigator.deviceMemory || 4);
       lowPower = memory <= 3 || (navigator.hardwareConcurrency || 4) <= 4;
       qualityTier = lowPower ? 1 : 0;
@@ -3564,12 +3594,19 @@ export function initCamera() {
         if (firstError.name === "NotAllowedError" || firstError.name === "NotFoundError") throw firstError;
         nextStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: facing } });
       }
+      if (!isCurrentStart()) {
+        stopTracks(nextStream);
+        return;
+      }
       stream = nextStream;
       video.srcObject = stream;
       video.muted = true;
       await video.play();
-      await waitForVideo();
+      if (!isCurrentStart()) return;
+      await waitForVideo({ signal: abortController.signal });
+      if (!isCurrentStart()) return;
       const faceSupport = await faceDetectionEngine.initialize();
+      if (!isCurrentStart()) return;
       faceDetectionState = faceSupport.available ? "ready" : "unsupported";
       try { renderer = renderer || createRenderer(); } catch { renderer = null; }
       renderMode = renderer ? "WebGL" : "Canvas 2D";
@@ -3578,6 +3615,7 @@ export function initCamera() {
       announce(facing === "user" ? "الكاميرا الأمامية تعمل" : "الكاميرا الخلفية تعمل");
       updateDiagnostics();
     } catch (error) {
+      if (cameraStartAbortController?.signal.aborted || disposed) return;
       stopTracks(stream);
       stream = null;
       setReady(false);
@@ -3590,8 +3628,13 @@ export function initCamera() {
       announce(messages[error?.name] || ("تعذر تشغيل الكاميرا: " + (error?.message || "خطأ غير معروف")), false);
       updateDiagnostics();
     } finally {
-      startButton.disabled = false;
-      startButton.textContent = "تشغيل الكاميرا";
+      if (cameraStartAbortController?.signal.aborted || disposed) {
+        if (cameraStartAbortController?.signal.aborted) cameraStartAbortController = null;
+      } else {
+        cameraStartAbortController = null;
+        startButton.disabled = false;
+        startButton.textContent = "تشغيل الكاميرا";
+      }
     }
   }
 
