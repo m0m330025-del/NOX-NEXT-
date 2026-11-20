@@ -33,6 +33,8 @@ on:
       - "core/nox-face-research-suite.js"
       - "core/nox-face-digital-twin-diagnostics.js"
       - "core/camera.js"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
       - "tests/nox-face-research-suite.test.mjs"
       - "tests/nox-face-digital-twin-diagnostics.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
