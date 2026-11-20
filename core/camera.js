@@ -3201,6 +3201,10 @@ export function initCamera() {
     selectedFilter = null;
     selectedOriginalFilter = null;
     selectedHybridFilter = null;
+    selectedHybridMask = 0;
+    selectedHybridWeights = [0.48, 0.52, 0.44, 0.46, 0.40, 0.50];
+    const hybridPanel = page.querySelector(".nox-hybrid-mixer");
+    if (hybridPanel) hybridPanel.hidden = true;
     if (filterSelect) filterSelect.value = "";
     const buttons = [...page.querySelectorAll(".nox-lens-v2")];
     buttons.forEach((button, buttonIndex) => {
