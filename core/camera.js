@@ -1262,7 +1262,8 @@ export function initCamera() {
         return {
           source: beautyInputCanvas, width, height,
           frameId: "nox-live-makeup-" + sequence,
-          timestamp: beautyLastTimestamp
+          timestamp: beautyLastTimestamp,
+          capturedAtMonotonicMs: capturedAt
         };
       },
       processFrame: async (frame) => {
@@ -1282,6 +1283,7 @@ export function initCamera() {
             ...rawVision.frame,
             id: frame.frameId,
             timestamp: frame.timestamp,
+            capturedAtMonotonicMs: frame.capturedAtMonotonicMs,
             coordinateSpace: "source-unmirrored-normalized"
           }
         };
