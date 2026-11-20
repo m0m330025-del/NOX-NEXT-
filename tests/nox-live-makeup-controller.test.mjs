@@ -54,4 +54,34 @@ stopped.stop();
 resolveAfterStop({ output: "after-stop" });
 await stoppedPending;
 assert.equal(stoppedAccepted.length, 0);
+
+let resolveOldSession;
+const restarted = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 200, clock: () => now, schedule, cancel });
+const restartedAccepted = [];
+restarted.start({
+  captureFrame: async () => ({ id: "old-session" }),
+  // Deliberately ignores AbortSignal to model inference that cannot be cancelled mid-call.
+  processFrame: () => new Promise(resolve => { resolveOldSession = resolve; }),
+  onResult: value => restartedAccepted.push({ session: "old", value })
+});
+const oldPending = runNext();
+await flush();
+assert.equal(typeof resolveOldSession, "function");
+restarted.stop();
+assert.equal(restarted.getStatus().inFlight, false, "stopping releases the old session lock");
+restarted.start({
+  captureFrame: async () => ({ id: "new-session" }),
+  processFrame: async frame => ({ output: frame.id }),
+  onResult: value => restartedAccepted.push({ session: "new", value })
+});
+await runNext();
+assert.equal(restartedAccepted.length, 1, "new session must not wait for unabortable old inference");
+assert.equal(restartedAccepted[0].session, "new");
+assert.equal(restartedAccepted[0].value.result.output, "new-session");
+resolveOldSession({ output: "stale-old-session" });
+await oldPending;
+assert.equal(restartedAccepted.length, 1, "old session must not publish after restart");
+assert.equal(restarted.getStatus().inFlight, false, "old finally block must not clear new session state");
+restarted.stop();
+
 console.log("NOX Live Makeup Controller tests passed");
