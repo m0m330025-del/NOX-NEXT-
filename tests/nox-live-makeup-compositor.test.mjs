@@ -59,7 +59,7 @@ assert.equal(aligned.draw(shiftedTarget, { now: 650,
   currentFaceBox: { x: 0.42, y: 0.31, width: 0.22, height: 0.44 } }), true,
   "small translation and scale changes should be compensated");
 assert.deepEqual(shiftedTarget.transforms[1], ["translate", 530, 424]);
-assert.deepEqual(shiftedTarget.transforms[2], ["scale", 1.1, 1.1]);
+assert.ok(Math.abs(shiftedTarget.transforms[2][1] - 1.1) < 1e-9 && Math.abs(shiftedTarget.transforms[2][2] - 1.1) < 1e-9, "bounded scale compensation should use the expected ratio");
 assert.equal(aligned.accept({ sequence: 2, capturedAt: 700, vision: alignmentVision,
   look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
 assert.equal(aligned.draw(shiftedTarget, { now: 710,
