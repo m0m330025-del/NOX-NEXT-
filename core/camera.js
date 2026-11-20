@@ -26,6 +26,7 @@ import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 import { NOXEngineRegistry } from "./nox-engine-registry.js";
 import { NOXEngineOrchestrationPlanner } from "./nox-engine-orchestration-planner.js";
 import { NOXAdaptiveRuntimeScheduler } from "./nox-adaptive-runtime-scheduler.js";
+import { NOXOpticalFlowRecoveryGate } from "./nox-optical-flow-recovery-gate.js";
 import { NOXDynamicEngineAdapter, NOXDynamicEngineAdapterHost } from "./nox-dynamic-engine-adapter.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -471,6 +472,7 @@ export function initCamera() {
   const noxEngineRegistry = new NOXEngineRegistry();
   const noxEngineOrchestrationPlanner = new NOXEngineOrchestrationPlanner();
   const noxAdaptiveRuntimeScheduler = new NOXAdaptiveRuntimeScheduler();
+  const opticalFlowRecoveryGate = new NOXOpticalFlowRecoveryGate({ requiredConsecutive: 3 });
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
@@ -2380,6 +2382,7 @@ export function initCamera() {
     opticalFlowLastAt = 0;
     opticalFlowLastSampleAt = 0;
     opticalFlowRuntimeGate = "warmup-required";
+    opticalFlowRecoveryGate.reset();
     opticalFlowVectors = [];
     opticalFlowConfidence = 0;
     opticalFlowSequence = 0;
@@ -2454,6 +2457,7 @@ export function initCamera() {
         Number.isFinite(flowRuntime.measuredP95Ms));
       if (warmupComplete) {
         if (!Number.isFinite(averageFrameCost) || averageFrameCost <= 0) {
+          opticalFlowRecoveryGate.evaluate(false);
           opticalFlowRuntimeGate = "held-frame-cost-unavailable";
           opticalFlowPrevious = gray;
           return;
@@ -2466,11 +2470,18 @@ export function initCamera() {
           lowPower
         });
         if (!gate.eligibleEngineIds.includes("optical-flow")) {
+          opticalFlowRecoveryGate.evaluate(false);
           opticalFlowRuntimeGate = gate.steps.find(step => step.id === "optical-flow")?.reason || "held-no-safe-schedule";
           opticalFlowPrevious = gray;
           return;
         }
-        opticalFlowRuntimeGate = "scheduled-measured-p95";
+        const recovery = opticalFlowRecoveryGate.evaluate(true);
+        if (!recovery.allowed) {
+          opticalFlowRuntimeGate = "recovering-" + recovery.healthyStreak + "-of-" + recovery.requiredConsecutive;
+          opticalFlowPrevious = gray;
+          return;
+        }
+        opticalFlowRuntimeGate = recovery.recovering ? "recovered-measured-p95" : "scheduled-measured-p95";
       } else {
         opticalFlowRuntimeGate = "warmup-sample-" + (flowRuntime?.samples || 0) + "-of-3";
       }
@@ -3218,7 +3229,7 @@ export function initCamera() {
       ["أهلية خطة العقل", recommendedEngineCount + " محرك موصى به من " + engineOrchestrationPlan.decisions.length + " — توصية قدرات وأدلة، وليست تشغيلًا تلقائيًا"],
       ["قياسات المحولات", adapterRuntimeSnapshot.map(engine => engine.id + ": " + engine.lastExecutionStatus + " / p95 " + (engine.measuredP95Ms === null ? "غير مقاس" : engine.measuredP95Ms.toFixed(2) + "ms") + " / إخفاقات تراكمية " + engine.failureCount).join(" | ")],
       ["NOX Adaptive Runtime Scheduling", adaptiveRuntimeSchedule.state + " — مؤهل " + adaptiveRuntimeSchedule.eligibleCount + " / مؤجل " + adaptiveRuntimeSchedule.heldCount + " — تكلفة p95 " + adaptiveRuntimeSchedule.estimatedTotalMs.toFixed(2) + "/" + (adaptiveRuntimeSchedule.availableBudgetMs === null ? "ميزانية غير متاحة" : adaptiveRuntimeSchedule.availableBudgetMs.toFixed(2) + "ms") + " — توصية للمحركات الأخرى"],
-      ["Optical Flow Runtime Gate", opticalFlowRuntimeGate + " — warm-up 3 عينات ثم تحكم بقياس p95 وميزانية الإطار"],
+      ["Optical Flow Runtime Gate", opticalFlowRuntimeGate + " — warm-up 3 عينات، ثم 3 تقييمات سليمة متتالية لاستعادة التشغيل بعد التأجيل"]
       ["قرارات جدولة CORTEX", adaptiveRuntimeSchedule.steps.map(step => step.id + ": " + (step.eligible ? "مؤهل" : "مؤجل (" + step.reason + ")") + (step.brainRecommended ? " — أوصى به العقل" : "")).join(" | ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
