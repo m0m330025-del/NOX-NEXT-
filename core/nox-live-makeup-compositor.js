@@ -6,12 +6,12 @@
 const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
 export class NOXLiveMakeupCompositor {
-  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220 } = {}) {
-    if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1) {
+  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35 } = {}) {
+    if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||\n        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8) {
       throw new TypeError("invalid-live-makeup-compositor-options");
     }
     this.canvasFactory = canvasFactory;
-    this.maxAgeMs = maxAgeMs;
+    this.maxAgeMs = maxAgeMs;\n    this.edgeSoftness = edgeSoftness;
     this.canvas = null;
     this.sequence = 0;
     this.capturedAt = 0;
@@ -48,7 +48,23 @@ export class NOXLiveMakeupCompositor {
       for (let i = 0; i < mask.data.length; i += 1) {
         const probability = Number(mask.data[i]);
         if (!Number.isFinite(probability) || probability < 0 || probability > 1) return false;
-        const alpha = Math.round(probability * opacity * 255);
+        if (!probability) continue;
+        // Feather only pixels already inside the semantic mask. Neighbor
+        // occupancy softens the contour without expanding color into the background.
+        const x = i % width, y = Math.floor(i / width);
+        let neighbors = 0, neighborSlots = 0;
+        for (let oy = -1; oy <= 1; oy += 1) {
+          for (let ox = -1; ox <= 1; ox += 1) {
+            if (!ox && !oy) continue;
+            const nx = x + ox, ny = y + oy;
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+            neighborSlots += 1;
+            if (Number(mask.data[ny * width + nx]) > 0) neighbors += 1;
+          }
+        }
+        const neighborRatio = neighborSlots ? neighbors / neighborSlots : 1;
+        const boundaryFactor = 1 - this.edgeSoftness * (1 - neighborRatio);
+        const alpha = Math.round(probability * opacity * boundaryFactor * 255);
         if (!alpha) continue;
         const offset = i * 4;
         image.data[offset] = color[0];
