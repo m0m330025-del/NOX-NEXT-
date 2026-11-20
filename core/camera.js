@@ -684,6 +684,13 @@ export function initCamera() {
       }
     }),
     new NOXDynamicEngineAdapter({
+      id: "makeup-rendering", name: "Semantic Makeup Rendering", category: "vision",
+      instance: beautyMakeupEngine, cost: 2, priority: 55,
+      capabilities: ["semantic-makeup-rendering"],
+      when: context => context.makeupRequested === true,
+      process: input => beautyMakeupEngine.render(input.image, input.regionMasks, input.looks)
+    }),
+    new NOXDynamicEngineAdapter({
       id: "temporal-memory", name: "Temporal Memory", category: "temporal",
       instance: temporalMemoryEngine, cost: 2, priority: 60,
       capabilities: ["frame-history"],
@@ -1130,6 +1137,9 @@ export function initCamera() {
     }
     beautyProcessing = true;
     beautyButton.disabled = true;
+    beautyLipsButton.disabled = true;
+    beautyBrowsButton.disabled = true;
+    beautyClearLookButton.disabled = true;
     beautyState = "جارٍ تحميل النموذج أو تحليل إطار";
     beautyStatus.textContent = beautyState + " — قد يستغرق التحميل الأول وقتًا بسبب حجم النموذج.";
     try {
@@ -1213,18 +1223,36 @@ export function initCamera() {
     }
   }
 
-  function applyBeautyLook(look) {
+  async function applyBeautyLook(look) {
     if (!latestBeautyVision || !latestBeautyImage) {
       beautyStatus.textContent = "حلّل إطارًا أولًا قبل تجربة التأثير.";
       return;
     }
-    const result = beautyMakeupEngine.render(latestBeautyImage, latestBeautyVision.regionMasks, look);
-    if (result.state !== "rendered" || !drawBeautyMakeupPreview(result)) {
-      beautyStatus.textContent = "لم يُطبّق التأثير: " + (result.reason || "تعذر رسم النتيجة");
-      return;
+    beautyLipsButton.disabled = true;
+    beautyBrowsButton.disabled = true;
+    try {
+      const plan = cortex.plan(
+        { makeupRequested: true },
+        { requested: ["makeup-rendering"], mode: lowPower ? "lite" : "balanced" }
+      );
+      const execution = await cortex.execute(
+        plan,
+        { image: latestBeautyImage, regionMasks: latestBeautyVision.regionMasks, looks: look },
+        dynamicEngineHost.getHandlers(),
+        { timeoutMs: 3000, stopOnError: true, context: { lowPower } }
+      );
+      const result = execution.state === "completed" ? execution.output : null;
+      if (result?.state !== "rendered" || !drawBeautyMakeupPreview(result)) {
+        throw new Error(result?.reason || "تعذر تنفيذ محرك المكياج عبر NOX CORTEX");
+      }
+      beautyClearLookButton.disabled = false;
+      beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي فقط.";
+    } catch (error) {
+      beautyStatus.textContent = "لم يُطبّق التأثير: " + String(error?.message || error).slice(0, 140);
+    } finally {
+      beautyLipsButton.disabled = !latestBeautyVision?.regionMasks?.lips;
+      beautyBrowsButton.disabled = !latestBeautyVision?.regionMasks?.brows;
     }
-    beautyClearLookButton.disabled = false;
-    beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي فقط.";
   }
 
   beautyLipsButton.addEventListener("click", () => applyBeautyLook({
