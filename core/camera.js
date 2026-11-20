@@ -3822,6 +3822,50 @@ export function initCamera() {
     ctx.restore();
   }
 
+  // Permanent NOX brand mark is composited into the exported still image,
+  // not merely shown as a preview overlay, so it remains in the saved JPEG.
+  function drawNOXPhotoWatermark(context, width, height) {
+    if (!context || width < 1 || height < 1) return;
+    const scale = Math.max(0.72, Math.min(1.6, width / 1080));
+    const pad = Math.round(Math.min(width, height) * 0.028);
+    const fontSize = Math.max(13, Math.round(22 * scale));
+    const markSize = Math.max(25, Math.round(36 * scale));
+    const gap = Math.max(7, Math.round(10 * scale));
+    const textWidth = fontSize * 2.5;
+    const boxWidth = pad * 1.45 + markSize + gap + textWidth;
+    const boxHeight = Math.max(markSize, fontSize) + pad * 0.72;
+    const x = width - pad - boxWidth;
+    const y = height - pad - boxHeight;
+    context.save();
+    context.globalAlpha = 0.92;
+    context.fillStyle = "rgba(10, 8, 22, 0.58)";
+    context.strokeStyle = "rgba(255, 222, 150, 0.82)";
+    context.lineWidth = Math.max(1, scale);
+    const radius = Math.round(boxHeight * 0.34);
+    context.beginPath();
+    context.roundRect(x, y, boxWidth, boxHeight, radius);
+    context.fill();
+    context.stroke();
+    const markX = x + pad * 0.55;
+    const markY = y + (boxHeight - markSize) / 2;
+    const markRadius = Math.round(markSize * 0.27);
+    context.fillStyle = "rgba(255, 225, 160, 0.98)";
+    context.beginPath();
+    context.roundRect(markX, markY, markSize, markSize, markRadius);
+    context.fill();
+    context.fillStyle = "#241533";
+    context.font = "900 " + Math.round(markSize * 0.72) + "px Cairo, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("N", markX + markSize / 2, markY + markSize / 2 + 1);
+    context.fillStyle = "#fff4d9";
+    context.font = "900 " + fontSize + "px Cairo, sans-serif";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.fillText("NOX", markX + markSize + gap, y + boxHeight / 2 + 1);
+    context.restore();
+  }
+
   function createOutputCanvas() {
     const canvas = document.createElement("canvas");
     const stage = renderCanvas.closest(".nox-camera-v2-stage");
@@ -3842,6 +3886,7 @@ export function initCamera() {
       0, 0, canvas.width, canvas.height
     );
     drawCaption(ctx, canvas.width, canvas.height);
+    drawNOXPhotoWatermark(ctx, canvas.width, canvas.height);
     return canvas;
   }
 
