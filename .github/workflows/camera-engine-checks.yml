@@ -28,6 +28,10 @@ on:
       - "core/nox-multi-engine-intelligence-brain.js"
       - "core/nox-engine-registry.js"
       - "core/nox-engine-orchestration-planner.js"
+      - "core/nox-dynamic-engine-adapter.js"
+      - "tests/nox-dynamic-engine-adapter.test.mjs"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
       - "tests/nox-engine-orchestration-planner.test.mjs"
       - "tests/nox-engine-registry.test.mjs"
       - "tests/nox-multi-engine-intelligence-brain.test.mjs"
@@ -60,6 +64,10 @@ on:
       - "core/nox-multi-engine-intelligence-brain.js"
       - "core/nox-engine-registry.js"
       - "core/nox-engine-orchestration-planner.js"
+      - "core/nox-dynamic-engine-adapter.js"
+      - "tests/nox-dynamic-engine-adapter.test.mjs"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
       - "tests/nox-engine-orchestration-planner.test.mjs"
       - "tests/nox-engine-registry.test.mjs"
       - "tests/nox-multi-engine-intelligence-brain.test.mjs"
@@ -116,6 +124,8 @@ jobs:
           cp core/nox-scene-intelligence-engine.js /tmp/scene-intelligence-engine.mjs
           cp core/nox-engine-registry.js /tmp/engine-registry.mjs
           cp core/nox-engine-orchestration-planner.js /tmp/engine-orchestration-planner.mjs
+          cp core/nox-dynamic-engine-adapter.js /tmp/dynamic-engine-adapter.mjs
+          cp core/nox-cortex.js /tmp/nox-cortex.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -137,6 +147,8 @@ jobs:
           node --check /tmp/scene-intelligence-engine.mjs
           node --check /tmp/engine-registry.mjs
           node --check /tmp/engine-orchestration-planner.mjs
+          node --check /tmp/dynamic-engine-adapter.mjs
+          node --check /tmp/nox-cortex.mjs
           node tests/nox-original-filter-library.test.mjs
           node tests/nox-hybrid-fx-engine.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
@@ -151,6 +163,8 @@ jobs:
           node tests/nox-scene-intelligence-engine.test.mjs
           node tests/nox-engine-registry.test.mjs
           node tests/nox-engine-orchestration-planner.test.mjs
+          node tests/nox-dynamic-engine-adapter.test.mjs
+          node tests/nox-cortex.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
