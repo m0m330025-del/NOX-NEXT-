@@ -15,9 +15,10 @@ export class NOXTemporalAlignmentEngine {
     minVectorCount = 4,
     maxStep = 0.065,
     maxAccumulated = 0.12,
-    maxDispersion = 0.018
+    maxDispersion = 0.018,
+    minSpatialSpan = 0.25
   } = {}) {
-    this.options = { minConfidence, minVectorCount, maxStep, maxAccumulated, maxDispersion };
+    this.options = { minConfidence, minVectorCount, maxStep, maxAccumulated, maxDispersion, minSpatialSpan };
     this.reset();
   }
 
@@ -46,13 +47,21 @@ export class NOXTemporalAlignmentEngine {
     }
     this.lastSequence = sequence;
     const usable = vectors.filter(vector =>
-      vector && Number.isFinite(vector.dx) && Number.isFinite(vector.dy) &&
+      vector && Number.isFinite(vector.x) && Number.isFinite(vector.y) &&
+      vector.x >= 0 && vector.x <= 1 && vector.y >= 0 && vector.y <= 1 &&
+      Number.isFinite(vector.dx) && Number.isFinite(vector.dy) &&
       Number.isFinite(vector.confidence) && vector.confidence >= this.options.minConfidence &&
       Math.abs(vector.dx) <= 0.25 && Math.abs(vector.dy) <= 0.25
     );
     if (usable.length < this.options.minVectorCount) {
       this.invalidateAll();
       return { accepted: false, reason: "insufficient-confident-vectors", vectorCount: usable.length };
+    }
+    const spanX = Math.max(...usable.map(vector => vector.x)) - Math.min(...usable.map(vector => vector.x));
+    const spanY = Math.max(...usable.map(vector => vector.y)) - Math.min(...usable.map(vector => vector.y));
+    if (spanX < this.options.minSpatialSpan || spanY < this.options.minSpatialSpan) {
+      this.invalidateAll();
+      return { accepted: false, reason: "localized-motion-vectors", vectorCount: usable.length, spanX, spanY };
     }
     const dx = median(usable.map(vector => vector.dx));
     const dy = median(usable.map(vector => vector.dy));
