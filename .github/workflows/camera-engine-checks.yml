@@ -12,13 +12,12 @@ on:
       - "tests/nox-optical-flow-engine.test.mjs"
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "tests/nox-temporal-alignment-integration.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
       - "core/nox-beauty-vision-provider.js"
       - "core/nox-skin-segmentation-engine.js"
-      - "core/nox-mediapipe-face-landmarker-provider.js"
-      - "core/nox-face-landmarks-engine.js"
       - "app.js"
       - "index.html"
       - "camera.css"
@@ -83,6 +82,7 @@ jobs:
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
           node tests/nox-temporal-alignment-engine.test.mjs
+          node tests/nox-temporal-alignment-integration.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
