@@ -88,8 +88,19 @@ assert.ok(rotateIndex > 0, "fresh compatible roll should add a rotation transfor
 assert.ok(Math.abs(rollTarget.transforms[rotateIndex][1] - 0.1) < 1e-9, "rotation must use current minus captured roll");
 assert.ok(rollTarget.transforms[1][0] === "translate" && rollTarget.transforms[2][0] === "scale", "mirror transform must be applied exactly once before alignment/rotation");
 const staleTarget = makeCanvas(); staleTarget.width = 1000; staleTarget.height = 800;
-assert.equal(rollAware.draw(staleTarget, { now: 1060, nowMonotonicMs: 1300, mirrored: false, currentFaceBox: alignmentVision.faceBox, currentRoll }), true, "stale roll should not disable otherwise valid makeup overlay");
+const staleCurrentRoll = { ...currentRoll, frame: { ...currentRoll.frame, capturedAtMonotonicMs: 700 } };
+assert.equal(rollAware.draw(staleTarget, { now: 1060, nowMonotonicMs: 1060, mirrored: false, currentFaceBox: alignmentVision.faceBox, currentRoll: staleCurrentRoll }), true, "stale roll should not disable otherwise valid makeup overlay");
 assert.equal(staleTarget.transforms.some(item => Array.isArray(item) && item[0] === "rotate"), false, "stale roll must skip rotation compensation");
+const wrongProvenance = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+const mismatchedCapturedRoll = { ...capturedRoll, frame: { ...capturedRoll.frame, timestamp: 101 } };
+assert.equal(wrongProvenance.accept({ sequence: 1, capturedAt: 1000, vision: rollVision, capturedRoll: mismatchedCapturedRoll, look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+assert.equal(wrongProvenance.capturedRoll, null, "captured roll with mismatched timestamp must not be stored");
+const nonMirroredTarget = makeCanvas(); nonMirroredTarget.width = 1000; nonMirroredTarget.height = 800;
+const nonMirrored = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+assert.equal(nonMirrored.accept({ sequence: 1, capturedAt: 1000, vision: rollVision, capturedRoll, look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+assert.equal(nonMirrored.draw(nonMirroredTarget, { now: 1060, nowMonotonicMs: 1060, mirrored: false, currentFaceBox: alignmentVision.faceBox, currentRoll }), true);
+assert.equal(nonMirroredTarget.transforms.some(item => Array.isArray(item) && item[0] === "rotate"), true, "non-mirrored source should receive the same source-space roll delta");
+assert.equal(nonMirroredTarget.transforms.some(item => Array.isArray(item) && item[0] === "scale" && item[1] === -1), false, "non-mirrored output must not receive a mirror transform");
 assert.equal(aligned.accept({ sequence: 3, capturedAt: 800, vision: alignmentVision,
   look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
 assert.equal(aligned.draw(shiftedTarget, { now: 810,
