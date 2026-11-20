@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { NOXSparseOpticalFlowEngine } from "../core/nox-optical-flow-engine.js";
 
 const engine = new NOXSparseOpticalFlowEngine();
+const defensiveEngine = new NOXSparseOpticalFlowEngine({ maxDimension: NaN, minConfidence: NaN });
+assert.equal(defensiveEngine.maxDimension, 128, "invalid constructor dimensions use a safe default");
+assert.equal(defensiveEngine.minConfidence, 0.06, "invalid confidence thresholds use a safe default");
+const cappedEngine = new NOXSparseOpticalFlowEngine({ maxDimension: 10000, minConfidence: 4 });
+assert.equal(cappedEngine.maxDimension, 256, "configured dimensions remain computationally bounded");
+assert.equal(cappedEngine.minConfidence, 1, "confidence threshold is clamped to its valid range");
 const width = 64;
 const height = 48;
 const previous = new Uint8Array(width * height);
@@ -32,6 +38,11 @@ assert.ok(flow.vectors.every(vector =>
 const averageDx = flow.vectors.reduce((sum, vector) => sum + vector.dx, 0) / flow.vectors.length;
 assert.ok(averageDx > 0, "rightward frame motion must produce rightward flow vectors");
 
+const safeOptionsFlow = engine.process(current, previous, width, height, {
+  cellStep: NaN, patchRadius: NaN, searchRadius: NaN
+});
+assert.ok(safeOptionsFlow.sampleCount > 0, "invalid tuning values fall back to safe defaults");
+
 const blank = new Uint8Array(width * height);
 const still = engine.process(previous, previous, width, height);
 assert.ok(still.sampleCount > 0, "textured still frames should provide zero-motion confidence samples");
@@ -43,6 +54,7 @@ assert.equal(blankStill.sampleCount, 0, "textureless frames should not claim a m
 assert.equal(blankStill.confidence, 0);
 assert.throws(() => engine.process(new Uint8Array(2), blank, width, height), /invalid-optical-flow-frame/);
 assert.throws(() => engine.process(blank, blank, 512, 512), /invalid-optical-flow-frame/);
+assert.throws(() => cappedEngine.process(new Uint8Array(257 * 257), new Uint8Array(257 * 257), 257, 257), /invalid-optical-flow-frame/);
 engine.reset();
 assert.equal(engine.lastResult, null);
 console.log("NOX sparse optical flow engine tests passed");
