@@ -67,6 +67,15 @@ const third = await cortex.execute(plan, { value: 1 }, host.getHandlers());
 assert.equal(third.output.value, 2);
 assert.equal(adapter.getStatus().samples, 2, "adapter history remains bounded");
 assert.equal(adapter.getStatus().failures, 0);
+const runtimeAfterSuccess = host.getRuntimeSnapshot()[0];
+assert.equal(runtimeAfterSuccess.connected, true);
+assert.equal(runtimeAfterSuccess.enabled, true);
+assert.equal(runtimeAfterSuccess.planned, true);
+assert.equal(runtimeAfterSuccess.executed, true);
+assert.equal(runtimeAfterSuccess.failed, false);
+assert.equal(runtimeAfterSuccess.lastExecutionStatus, "success");
+assert.equal(runtimeAfterSuccess.samples, 2);
+assert.equal(runtimeAfterSuccess.measuredP95Ms, 3);
 
 host.setEnabled(adapter.id, false);
 assert.equal(cortex.plan({ useCustomScene: true }).engines.length, 0);
@@ -78,6 +87,11 @@ assert.equal(invalidInputRun.state, "completed-with-errors");
 assert.equal(invalidInputRun.results[0].status, "failed");
 assert.equal(adapter.getStatus().failures, 1);
 assert.equal(adapter.getStatus().state, "failed");
+const runtimeAfterFailure = host.getRuntimeSnapshot()[0];
+assert.equal(runtimeAfterFailure.failed, true);
+assert.equal(runtimeAfterFailure.executed, false);
+assert.equal(runtimeAfterFailure.lastExecutionStatus, "failed");
+assert.equal(runtimeAfterFailure.failureCount, 1);
 
 assert.throws(() => host.register(adapter), /duplicate-adapter-id/);
 assert.equal(unregister(), true);
