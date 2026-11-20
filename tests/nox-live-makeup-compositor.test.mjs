@@ -78,7 +78,7 @@ assert.equal(aligned.draw(shiftedTarget, { now: 710,
 assert.equal(aligned.canvas, null);
 const rollAware = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, maxRollAgeMs: 220 });
 const rollVision = { ...alignmentVision, frame: { ...alignmentVision.frame, id: "roll-mask", capturedAtMonotonicMs: 1000 } };
-const capturedRoll = { state: "estimated", angleRadians: 0.1, frame: { id: "roll-mask", capturedAtMonotonicMs: 1000, width: 2, height: 2, coordinateSpace: "source-unmirrored-normalized" } };
+const capturedRoll = { state: "estimated", angleRadians: 0.1, frame: { id: "roll-mask", timestamp: 100, capturedAtMonotonicMs: 1000, width: 2, height: 2, coordinateSpace: "source-unmirrored-normalized" } };
 assert.equal(rollAware.accept({ sequence: 1, capturedAt: 1000, vision: rollVision, capturedRoll, look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
 const rollTarget = makeCanvas(); rollTarget.width = 1000; rollTarget.height = 800;
 const currentRoll = { state: "estimated", angleRadians: 0.2, frame: { id: "roll-current", capturedAtMonotonicMs: 1050, width: 256, height: 256, coordinateSpace: "source-unmirrored-normalized" } };
