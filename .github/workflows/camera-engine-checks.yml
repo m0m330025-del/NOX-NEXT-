@@ -22,6 +22,8 @@ on:
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
+      - "core/nox-temporal-memory-engine.js"
+      - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/camera.js"
       - "core/nox-filter-engine.js"
       - "core/nox-mediapipe-selfie-provider.js"
