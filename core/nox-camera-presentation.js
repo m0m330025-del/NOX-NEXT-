@@ -43,7 +43,7 @@ export function initCameraPresentation() {
   if (title) title.querySelector("b")?.replaceChildren(document.createTextNode("العدسات والفلاتر"));
   if (title) {
     const hint = title.querySelector("small");
-    if (hint) hint.textContent = "اختر عدسة دائرية أو افتح مكتبة الفلاتر";
+    if (hint) hint.textContent = "اسحب رأسيًا لتغيير العدسة وأفقيًا لتغيير المجموعة";
   }
 
   if (filterLibrary) {
