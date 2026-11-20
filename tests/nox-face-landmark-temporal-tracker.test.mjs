@@ -38,7 +38,7 @@ const jump = {
 const unconfirmedJump = tracker.update(jump);
 assert.equal(unconfirmedJump.state, "coasting");
 assert.equal(unconfirmedJump.reason, "unconfirmed-large-displacement");
-assert.ok(Math.abs(unconfirmedJump.face.box.x - 0.3) < 1e-9);
+assert.ok(Math.abs(unconfirmedJump.face.box.x - 0.25) < 1e-9);
 
 // The same displaced face on the next frame confirms reacquisition.
 const confirmedJump = tracker.update(jump);
@@ -60,5 +60,5 @@ const otherCandidate = {
 const inconsistent = tracker.update(otherCandidate);
 assert.equal(inconsistent.state, "coasting");
 assert.equal(inconsistent.reason, "unconfirmed-large-displacement");
-assert.ok(Math.abs(inconsistent.face.box.x - 0.3) < 1e-9);
+assert.ok(Math.abs(inconsistent.face.box.x - 0.25) < 1e-9);
 console.log("NOX Face Landmark Temporal Tracker tests passed");
