@@ -73,7 +73,7 @@ assert.equal(aligned.draw(shiftedTarget, { now: 810,
   "invalid face geometry must never be used for alignment");
 assert.equal(aligned.canvas, null);
 const crisp = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, edgeSoftness: 0.5 });
-const crispMask = { frame: { width: 3, height: 3 }, regionMasks: {
+const crispMask = { frame: { width: 3, height: 3 }, faceBox: { x: 0.3, y: 0.2, width: 0.4, height: 0.5 }, regionMasks: {
   lips: { width: 3, height: 3, data: new Float32Array([0,0,0,0,1,0,0,0,0]), confidence: 0.99 }
 } };
 assert.equal(crisp.accept({ sequence: 1, capturedAt: 500, vision: crispMask,
@@ -86,15 +86,15 @@ const unanchored = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
 assert.equal(unanchored.accept({ sequence: 1, capturedAt: 900,
   vision: { frame: { width: 2, height: 2 }, regionMasks: {
     lips: { width: 2, height: 2, data: new Float32Array([0,1,0,0]), confidence: 0.95 }
-  } }, look: { lips: { color: [200,20,60], opacity: 0.4 } } }), true);
-assert.equal(unanchored.draw(makeCanvas(), { now: 910 }), false,
-  "a semantic mask without a trusted faceBox must never be rendered unanchored");
-assert.equal(unanchored.canvas, null, "unanchored overlays must be discarded");
-assert.equal(unanchored.sequence, 1, "clearing an invalid overlay must preserve monotonic sequence protection");
-assert.equal(unanchored.accept({ sequence: 1, capturedAt: 920, vision: alignmentVision,
+  } }, look: { lips: { color: [200,20,60], opacity: 0.4 } } }), false,
+  "semantic masks without a trusted faceBox must be rejected at acceptance");
+assert.equal(unanchored.canvas, null, "unanchored overlays must never be stored");
+assert.equal(unanchored.sequence, 0, "rejected unanchored masks must not advance the sequence");
+assert.equal(unanchored.accept({ sequence: 1, capturedAt: 920,
+  vision: { ...alignmentVision, faceBox: { x: -0.1, y: 0.3, width: 0.2, height: 0.4 } },
   look: { lips: { color: [200,20,60], opacity: 0.4 } } }), false,
-  "clearing an overlay must not allow replay of an old sequence");
-assert.equal(unanchored.accept({ sequence: 2, capturedAt: 930, vision: alignmentVision,
+  "face anchors outside normalized frame bounds must be rejected");
+assert.equal(unanchored.accept({ sequence: 1, capturedAt: 930, vision: alignmentVision,
   look: { lips: { color: [200,20,60], opacity: 0.4 } } }), true);
 assert.throws(() => new NOXLiveMakeupCompositor({ edgeSoftness: 0.9 }), /invalid-live-makeup-compositor-options/);
 console.log("NOX Live Makeup Compositor tests passed");
