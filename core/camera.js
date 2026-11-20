@@ -7,6 +7,7 @@ import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
+import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
 
@@ -408,6 +409,8 @@ export function initCamera() {
   let beautyVisionProvider = null;
   let faceLandmarkerProvider = null;
   const faceLandmarksEngine = new NOXFaceLandmarksEngine();
+  const facialMaskBuilder = new NOXFacialMaskBuilder();
+  let latestFacialMaskPreview = null;
   let faceLandmarksState = "متوقف";
   let latestFaceLandmarksAnalysis = null;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
@@ -557,8 +560,8 @@ export function initCamera() {
     faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
     try {
       const plan = cortex.plan(
-        { faceRequested: true, landmarksRequested: true },
-        { requested: ["face-landmarks"], mode: lowPower ? "lite" : "balanced" }
+        { faceRequested: true, landmarksRequested: true, maskRequested: true },
+        { requested: ["face-landmarks", "facial-mask-builder"], mode: lowPower ? "lite" : "balanced" }
       );
       const execution = await cortex.execute(plan, video, {
         "face-landmarks": async source => {
@@ -577,14 +580,22 @@ export function initCamera() {
           beautyInputContext.drawImage(source, 0, 0, width, height);
           const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
           if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
-          return faceLandmarksEngine.analyze(detected);
-        }
+          return { detected, analysis: faceLandmarksEngine.analyze(detected) };
+        },
+        "facial-mask-builder": input => ({
+          ...input,
+          maskPreview: facialMaskBuilder.build(input.detected, {
+            width: input.detected.width,
+            height: input.detected.height
+          })
+        })
       }, { timeoutMs: 15000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced" } });
-      if (execution.state !== "completed" || !execution.output) {
+      if (execution.state !== "completed" || !execution.output?.analysis) {
         const failed = execution.results.find(item => item.status === "failed");
-        throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تحليل الوجه" : "تعذر تنفيذ مسار نقاط الوجه عبر NOX CORTEX");
+        throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تحليل الوجه" : "تعذر تنفيذ مسار الوجه والأقنعة عبر NOX CORTEX");
       }
-      const analysis = execution.output;
+      const analysis = execution.output.analysis;
+      latestFacialMaskPreview = execution.output.maskPreview;
       latestFaceLandmarksAnalysis = analysis;
       if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
         throw new Error("تعذر استخراج نقاط المناطق");
@@ -592,10 +603,12 @@ export function initCamera() {
       faceLandmarksState = "نشط — " + analysis.landmarkCount + " نقطة";
       faceDigitalTwinButton.disabled = false;
       faceDigitalTwinStatus.textContent = "النقاط جاهزة. التقرير سيعرض الأدلة والبيانات المجهولة دون إنشاء أقنعة تجميل.";
+      const lipMask = latestFacialMaskPreview?.masks?.lips;
       faceLandmarksStatus.textContent =
         "تم تحديد " + Object.keys(analysis.regions).join("، ") +
         (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
-        ". هذه خطوط نقاط مرجعية وليست أقنعة مكياج بكسلية بعد.";
+        (lipMask ? " — قناع هندسي أولي للشفاه: " + lipMask.pixelCount + " بكسل، دون درجة ثقة." : " — قناع الشفاه غير متاح: " + (latestFacialMaskPreview?.reason || "لا توجد هندسة صالحة")) +
+        ". القناع للمعاينة الهندسية فقط ولا يُقبل كمصدر مكياج.";
       faceLandmarksButton.textContent = "إعادة تحليل ملامح الوجه";
     } catch (error) {
       faceLandmarksState = "غير متاح";
@@ -649,6 +662,7 @@ export function initCamera() {
     }
     faceLandmarkerProvider = null;
     latestFaceLandmarksAnalysis = null;
+    latestFacialMaskPreview = null;
     faceDigitalTwinButton.disabled = true;
     faceDigitalTwinStatus.textContent = "تم إيقاف محرك نقاط الوجه وتحرير موارده.";
     faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
