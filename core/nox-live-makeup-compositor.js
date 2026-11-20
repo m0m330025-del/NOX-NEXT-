@@ -65,14 +65,28 @@ export class NOXLiveMakeupCompositor {
     this.capturedAt = capturedAt;
     this.width = width;
     this.height = height;
+    this.faceBox = vision.faceBox && [vision.faceBox.x, vision.faceBox.y, vision.faceBox.width, vision.faceBox.height].every(Number.isFinite)
+      ? { ...vision.faceBox } : null;
     return true;
   }
 
-  draw(targetCanvas, { now, mirrored = false } = {}) {
+  draw(targetCanvas, { now, mirrored = false, currentFaceBox = null } = {}) {
     if (!this.canvas || !targetCanvas || !Number.isFinite(now) ||
         now < this.capturedAt || now - this.capturedAt > this.maxAgeMs) {
       this.clear();
       return false;
+    }
+    if (this.faceBox && currentFaceBox &&
+        [currentFaceBox.x, currentFaceBox.y, currentFaceBox.width, currentFaceBox.height].every(Number.isFinite)) {
+      const previousCenterX = this.faceBox.x + this.faceBox.width / 2;
+      const previousCenterY = this.faceBox.y + this.faceBox.height / 2;
+      const currentCenterX = currentFaceBox.x + currentFaceBox.width / 2;
+      const currentCenterY = currentFaceBox.y + currentFaceBox.height / 2;
+      const centerDrift = Math.hypot(currentCenterX - previousCenterX, currentCenterY - previousCenterY);
+      if (centerDrift > 0.08) {
+        this.clear();
+        return false;
+      }
     }
     const context = targetCanvas.getContext("2d");
     if (!context) return false;
@@ -91,5 +105,6 @@ export class NOXLiveMakeupCompositor {
     this.capturedAt = 0;
     this.width = 0;
     this.height = 0;
+    this.faceBox = null;
   }
 }
