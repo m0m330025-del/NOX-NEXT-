@@ -29,6 +29,26 @@ assert.ok(result.masks.lips);
 assert.ok(result.masks.lips.pixelCount > 0);
 assert.equal(result.masks.lips.confidence, null);
 assert.match(result.masks.lips.usage, /not trusted/);
+
+// A smaller contour outside the outer lip boundary must never produce a mask.
+const outsideInner = builder.build({
+  ...input,
+  landmarks: input.landmarks.map((p, index) => index === 4 ? point(0.92,0.92) :
+    index === 5 ? point(0.96,0.92) : index === 6 ? point(0.96,0.96) :
+    index === 7 ? point(0.92,0.96) : p)
+});
+assert.equal(outsideInner.state, "unavailable");
+assert.equal(outsideInner.reason, "invalid-or-nonnested-lip-contours");
+
+// A self-crossing outer contour is rejected rather than rasterized.
+const crossingOuter = builder.build({
+  ...input,
+  landmarks: input.landmarks.map((p, index) => index === 0 ? point(0.1,0.1) :
+    index === 1 ? point(0.9,0.9) : index === 2 ? point(0.9,0.1) :
+    index === 3 ? point(0.1,0.9) : p)
+});
+assert.equal(crossingOuter.state, "unavailable");
+assert.equal(crossingOuter.reason, "invalid-or-nonnested-lip-contours");
 assert.ok(result.unavailable.includes("leftEyelid"));
 const mask = result.masks.lips.data;
 assert.equal(mask[20 * 40 + 20], 0, "inner mouth opening must remain unpainted");
