@@ -72,6 +72,7 @@ export class NOXDynamicEngineAdapter {
     this.minSamplesForMeasuredCost = Number.isInteger(minSamplesForMeasuredCost)
       ? Math.max(1, Math.min(this.historyLimit, minSamplesForMeasuredCost)) : 3;
     this.history = [];
+    this.runSequence = 0;
     this.failures = 0;
     this.state = "idle";
     this.lastDurationMs = null;
@@ -110,6 +111,7 @@ export class NOXDynamicEngineAdapter {
     if (!this.enabled) throw new Error("engine-disabled");
     if (context.signal?.aborted) throw new Error("engine-aborted");
 
+    const runId = ++this.runSequence;
     const started = this.clock();
     this.state = "running";
     this.lastError = null;
@@ -122,8 +124,10 @@ export class NOXDynamicEngineAdapter {
         previousResults: Array.isArray(context.previousResults) ? context.previousResults.slice() : [],
         signal: context.signal
       });
+      if (context.signal?.aborted) throw new Error("engine-aborted");
+      if (runId !== this.runSequence) throw new Error("engine-superseded");
       if (output === undefined) throw new Error("engine-returned-undefined");
-      if (this.validateOutput && this.validateOutput(output) === false) throw new TypeError("engine-output-rejected");
+      if (this.validateOutput && this.validateOutput(output) === false) throw new Error("engine-output-rejected");
       const ended = this.clock();
       const duration = Number.isFinite(started) && Number.isFinite(ended) ? Math.max(0, ended - started) : null;
       if (duration !== null) {
@@ -134,11 +138,21 @@ export class NOXDynamicEngineAdapter {
       this.state = "ready";
       return output;
     } catch (error) {
-      this.failures += 1;
-      this.state = "failed";
-      this.lastError = typeof error?.message === "string" ? error.message.slice(0, 120) : "engine-error";
-      const ended = this.clock();
-      if (Number.isFinite(started) && Number.isFinite(ended)) this.lastDurationMs = Math.max(0, ended - started);
+      // A timed-out or superseded asynchronous task may settle after a newer run.
+      // It must not overwrite the newer run's status or count as a real engine failure.
+      if (runId === this.runSequence) {
+        const cancelled = context.signal?.aborted || error?.message === "engine-superseded";
+        if (cancelled) {
+          this.state = "cancelled";
+          this.lastError = "engine-aborted";
+        } else {
+          this.failures += 1;
+          this.state = "failed";
+          this.lastError = typeof error?.message === "string" ? error.message.slice(0, 120) : "engine-error";
+        }
+        const ended = this.clock();
+        if (Number.isFinite(started) && Number.isFinite(ended)) this.lastDurationMs = Math.max(0, ended - started);
+      }
       throw error;
     }
   }
