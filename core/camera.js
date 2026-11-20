@@ -3618,7 +3618,7 @@ export function initCamera() {
       announce(facing === "user" ? "الكاميرا الأمامية تعمل" : "الكاميرا الخلفية تعمل");
       updateDiagnostics();
     } catch (error) {
-      if (cameraStartAbortController?.signal.aborted || disposed) return;
+      if (generation !== cameraStartGeneration || disposed) return;
       stopTracks(stream);
       stream = null;
       setReady(false);
