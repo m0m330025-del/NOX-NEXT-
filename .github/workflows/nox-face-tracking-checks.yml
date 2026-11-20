@@ -81,6 +81,36 @@ jobs:
           assert.equal(tracker.updateLandmarks(frame).state, 'acquired');
           console.log('Unified face and landmark tracking tests passed');
           NODE
+      - name: Test expression-aware local landmark response
+        run: |
+          cp core/nox-face-tracking-engine.js /tmp/nox-face-tracking-engine.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const { NOXFaceTrackingEngine } = await import('file:///tmp/nox-face-tracking-engine.mjs');
+          const tracker = new NOXFaceTrackingEngine({ smoothing: 0.5, expressionResponse: 1.5 });
+          const oval = Array.from({ length: 8 }, (_, i) => ({ start: i, end: (i + 1) % 8 }));
+          const points = Array.from({ length: 478 }, (_, i) => ({
+            x: i < 8 ? [0.3,0.7,0.75,0.7,0.3,0.25,0.4,0.6][i] : 0.5,
+            y: i < 8 ? [0.2,0.2,0.5,0.8,0.8,0.5,0.25,0.25][i] : 0.5,
+            z: 0
+          }));
+          const frame = { detected: true, source: 'mediapipe-face-landmarker-478',
+            width: 256, height: 192, landmarks: points, connections: { faceOval: oval } };
+          tracker.updateLandmarks(frame);
+          const expressive = { ...frame, landmarks: points.map((point, i) => ({
+            ...point, y: point.y + (i >= 300 && i < 330 ? 0.08 : 0.02)
+          })) };
+          const result = tracker.updateLandmarks(expressive);
+          const stablePointDelta = result.face.landmarks[40].y - points[40].y;
+          const expressivePointDelta = result.face.landmarks[310].y - points[310].y;
+          assert.ok(Math.abs(stablePointDelta - 0.01) < 1e-9,
+            'uniform head motion should retain baseline smoothing');
+          assert.ok(expressivePointDelta > 0.04,
+            'local non-rigid motion should respond faster than baseline smoothing');
+          assert.ok(expressivePointDelta < 0.08,
+            'adaptive response must remain bounded and smoothed');
+          console.log('Expression-aware local landmark response tests passed');
+          NODE
       - name: Test large-jump confirmation and face-switch rejection
         run: |
           cp core/nox-face-tracking-engine.js /tmp/nox-face-tracking-engine.mjs
