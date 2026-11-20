@@ -30,15 +30,15 @@ export class NOXLiveMakeupController {
     const sessionController = this.controller;
     const sequence = ++this.sequence, capturedAt = this.clock();
     try {
-      const frame = await this.captureFrame({ sequence, capturedAt, signal: this.controller.signal });
+      const frame = await this.captureFrame({ sequence, capturedAt, signal: sessionController.signal });
       if (!this.running || sessionController.signal.aborted) return;
       if (!frame || typeof frame !== "object") throw new TypeError("live-makeup-frame-required");
-      const result = await this.processFrame(frame, { sequence, capturedAt, signal: this.controller.signal });
+      const result = await this.processFrame(frame, { sequence, capturedAt, signal: sessionController.signal });
       const ageMs = Math.max(0, this.clock() - capturedAt);
-      if (!this.running || this.controller.signal.aborted || sequence !== this.sequence || ageMs > this.maxResultAgeMs || !result) return;
+      if (!this.running || sessionController.signal.aborted || sequence !== this.sequence || ageMs > this.maxResultAgeMs || !result) return;
       this.lastAcceptedSequence = sequence; this.onResult({ sequence, capturedAt, ageMs, frame, result });
     } catch (error) {
-      if (this.running && !this.controller.signal.aborted) this.onError(error, { sequence, capturedAt });
+      if (this.running && !sessionController.signal.aborted) this.onError(error, { sequence, capturedAt });
     } finally {
       this.inFlight = false;
       if (this.running) this.scheduleNext(Math.max(0, this.intervalMs - Math.max(0, this.clock() - capturedAt)));
