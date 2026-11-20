@@ -1025,8 +1025,9 @@ export function initCamera() {
         : "تتبع حي — " + analysis.landmarkCount + " نقطة";
       faceDigitalTwinButton.disabled = false;
       faceDigitalTwinStatus.textContent = "النقاط الحية متاحة للتقرير البحثي؛ لا تُستخدم كأقنعة مكياج.";
-      const rollFresh = latestFaceRollEstimate?.state === "estimated" &&
-        performance.now() - latestFaceRollEstimate.frame.capturedAtMonotonicMs <= 220;
+      const rollAgeMs = latestFaceRollEstimate?.state === "estimated"
+        ? performance.now() - latestFaceRollEstimate.frame.capturedAtMonotonicMs : Infinity;
+      const rollFresh = Number.isFinite(rollAgeMs) && rollAgeMs >= 0 && rollAgeMs <= 220;
       faceLandmarksStatus.textContent =
         (tracking.state === "coasting" ? "فقد مؤقت — الاحتفاظ بآخر نقاط موثوقة. " : "تتبع حي نشط. ") +
         "الحالة: " + tracking.state + " — المناطق: " + Object.keys(analysis.regions).join("، ") +
