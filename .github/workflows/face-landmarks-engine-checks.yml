@@ -7,7 +7,6 @@ on:
       - "core/nox-face-landmarks-engine.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-facial-mask-builder.js"
-      - "tests/nox-facial-mask-builder.test.mjs"
       - "tests/nox-face-landmarks-engine.test.mjs"
       - "tests/nox-mediapipe-face-landmarker-provider.test.mjs"
       - "tests/nox-facial-mask-builder.test.mjs"
@@ -17,7 +16,9 @@ on:
     paths:
       - "core/nox-face-landmarks-engine.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "core/nox-facial-mask-builder.js"
       - "tests/nox-face-landmarks-engine.test.mjs"
+      - "tests/nox-facial-mask-builder.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
 
 permissions:
