@@ -37,6 +37,14 @@ assert.equal(custom.recordOutcome("b", { durationMs: 8, success: true }), true);
 assert.equal(custom.getStatus().telemetry.b.averageDurationMs, 8);
 assert.equal(custom.recordOutcome("missing", { durationMs: 2 }), false);
 
+const cyclic = new NOXCortex({ engines: [
+  { id: "cycle-a", cost: 1, requires: ["cycle-b"], when: context => context.useCycle },
+  { id: "cycle-b", cost: 1, requires: ["cycle-a"], when: context => context.useCycle }
+] });
+const cyclePlan = cyclic.plan({ useCycle: true });
+assert.equal(cyclePlan.engines.length, 0);
+assert.ok(cyclePlan.rejected.some(item => item.reason === "dependency-cycle"));
+
 const budget = cortex.plan({ lowLight: true, detailRecovery: true, photonFusion: true, waveMatter: true }, { mode: "lite" });
 assert.ok(budget.totalCost <= 3);
 assert.ok(budget.engines.length <= 3);
