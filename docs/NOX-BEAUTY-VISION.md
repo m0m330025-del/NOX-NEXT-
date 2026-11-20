@@ -28,9 +28,12 @@ The multiclass model identifies six classes:
 
 - This model does not return separate lip, eyelid, eyebrow, or cheek masks.
 - It does not identify cosmetic shades, skin tone suitability, or beauty preferences.
-- It does not apply makeup. The current camera integration only previews the face-skin segmentation mask.
-- The result's displayed probability is the mean of model probabilities for selected face-skin pixels. It is not a calibrated accuracy percentage.
-- The current browser integration is a user-triggered still-frame test to avoid continuous CPU inference on low-power phones.
+- This MediaPipe model does not return separate lip, eyelid, eyebrow, or cheek masks and does not apply makeup. Its face-skin preview remains a user-triggered diagnostic.
+- A separate BiSeNet ResNet-18 provider supplies semantic lip and brow masks. The NOX live makeup controller sends bounded frames through that provider and the makeup renderer.
+- Accepted makeup is composited into the shared `renderCanvas`, so the same fresh layer can appear in preview, captured photos, and recorded video. Results older than 220ms are dropped; expired results are not drawn.
+- The BiSeNet masks do not include dedicated cheek or eyelid classes. Those looks remain unavailable rather than being approximated from unrelated regions.
+- The MediaPipe result's displayed probability is the mean of model probabilities for selected face-skin pixels. It is not a calibrated accuracy percentage.
+- Continuous BiSeNet inference is opt-in and runs serially at a bounded interval. Results are freshness-gated, but fast head motion can still cause temporary misalignment; no dense motion-warp compensation is claimed.
 - The provider requires an internet connection for its first CDN/WASM/model load. Offline caching has not been implemented.
 - Performance, heat, memory usage, and visual quality have not been tested on a physical Galaxy M12. Do not assume real-time performance on that device.
 
@@ -43,8 +46,8 @@ The multiclass model identifies six classes:
 
 ## Status
 
-**Code and CI:** implemented and verified on GitHub Actions.
+**Code and CI:** the MediaPipe face-skin diagnostic, BiSeNet semantic masks, makeup renderer, live controller, and shared-canvas compositor are implemented; relevant GitHub Actions checks pass.
 
-**Physical-device verification:** not performed.
+**Physical-device verification:** not performed on Android/iOS or low-power phones.
 
-**Makeup rendering from real facial subregion masks:** not implemented.
+**Visual alignment and sustained real-time performance:** require browser and physical-device testing.
