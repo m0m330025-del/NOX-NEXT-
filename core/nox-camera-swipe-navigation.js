@@ -71,6 +71,14 @@ export function initCameraSwipeNavigation() {
     else stepFamily(dx < 0 ? 1 : -1);
   }, { passive: false });
 
+  orbit.addEventListener("keydown", (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "ArrowUp") { event.preventDefault(); stepLens(-1); }
+    else if (event.key === "ArrowDown") { event.preventDefault(); stepLens(1); }
+    else if (event.key === "ArrowLeft") { event.preventDefault(); stepFamily(1); }
+    else if (event.key === "ArrowRight") { event.preventDefault(); stepFamily(-1); }
+  });
+
   orbit.addEventListener("click", (event) => {
     if (Date.now() < suppressClickUntil) {
       event.preventDefault();
