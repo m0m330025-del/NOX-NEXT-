@@ -183,6 +183,7 @@ export class NOXBiSeNetFaceParsingProvider {
     this.preprocessFrame = preprocessFrame; this.canvasFactory = canvasFactory;
     this.runtime = null; this.session = null; this.inputName = null; this.outputName = null;
     this.state = "idle"; this.sequence = 0; this.lifecycleGeneration = 0;
+    this.inFlightRuns = new Set();
   }
 
   async initialize() {
@@ -248,12 +249,28 @@ export class NOXBiSeNetFaceParsingProvider {
     if (this.state !== "ready" || !this.session || (!this.runtime?.Tensor && !this.sessionFactory)) throw new Error("bisenet-provider-not-ready");
     if (!validFrame({ source, width, height, timestamp }, this.maxInputDimension)) throw new Error("invalid-or-oversized-frame");
     const requestSequence = ++this.sequence;
+    const generation = this.lifecycleGeneration;
+    const session = this.session;
+    const runtime = this.runtime;
+    const inputName = this.inputName;
     const inputData = await this.preprocessFrame(source, width, height, this.modelInputSize, this.canvasFactory);
+    if (generation !== this.lifecycleGeneration || requestSequence !== this.sequence || this.state !== "ready" || session !== this.session) {
+      throw new Error("superseded-bisenet-frame");
+    }
     if (!(inputData instanceof Float32Array) || inputData.length !== 3 * this.modelInputSize * this.modelInputSize) throw new Error("invalid-bisenet-input-tensor");
     const dims = [1, 3, this.modelInputSize, this.modelInputSize];
-    const tensor = this.runtime?.Tensor ? new this.runtime.Tensor("float32", inputData, dims) : { data: inputData, dims };
-    const outputs = await this.session.run({ [this.inputName]: tensor });
-    if (requestSequence !== this.sequence) throw new Error("superseded-bisenet-frame");
+    const tensor = runtime?.Tensor ? new runtime.Tensor("float32", inputData, dims) : { data: inputData, dims };
+    const runPromise = Promise.resolve().then(() => session.run({ [inputName]: tensor }));
+    this.inFlightRuns.add(runPromise);
+    let outputs;
+    try {
+      outputs = await runPromise;
+    } finally {
+      this.inFlightRuns.delete(runPromise);
+    }
+    if (generation !== this.lifecycleGeneration || requestSequence !== this.sequence || this.state !== "ready" || session !== this.session) {
+      throw new Error("superseded-bisenet-frame");
+    }
     const output = outputs?.[this.outputName] || Object.values(outputs || {})[0];
     if (!output?.data || !Array.isArray(output.dims) || output.dims.length !== 4 ||
         output.dims[0] !== 1 || output.dims[1] !== DEFAULTS.classCount ||
@@ -300,6 +317,7 @@ export class NOXBiSeNetFaceParsingProvider {
     this.sequence += 1;
     const session = this.session; this.session = null; this.runtime = null;
     this.inputName = null; this.outputName = null; this.state = "idle";
+    await Promise.allSettled([...this.inFlightRuns]);
     try { await session?.release?.(); } catch { /* safe cleanup */ }
   }
 }
