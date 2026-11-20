@@ -1944,6 +1944,7 @@ export function initCamera() {
     opticalFlowEngine.reset();
     temporalAlignmentEngine.reset();
     motionSeparationEngine.reset();
+    adaptiveTemporalFusionEngine.reset();
     motionSeparationResult = motionSeparationEngine.getStatus();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
