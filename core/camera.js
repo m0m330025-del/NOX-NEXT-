@@ -1056,6 +1056,48 @@ export function initCamera() {
     };
   }
 
+  function drawSignatureOverlay(ctx, width, height) {
+    if (!ctx || signatureMode === "off") return;
+    const now = performance.now() / 1000;
+    ctx.save();
+    ctx.globalCompositeOperation = "screen";
+    if (signatureMode === "aurora") {
+      const gradient = ctx.createLinearGradient(0, height * (0.18 + Math.sin(now * 0.35) * 0.04), width, height * 0.62);
+      gradient.addColorStop(0, "rgba(35,245,204,0)");
+      gradient.addColorStop(0.48, "rgba(91,116,255,.20)");
+      gradient.addColorStop(1, "rgba(232,74,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    } else if (signatureMode === "prism" || signatureMode === "liquid") {
+      for (let i = 0; i < 5; i += 1) {
+        ctx.beginPath();
+        ctx.ellipse(width * 0.5, height * 0.46, width * (0.15 + i * 0.065), height * (0.08 + i * 0.038), Math.sin(now * 0.3 + i) * 0.12, 0, Math.PI * 2);
+        ctx.strokeStyle = signatureMode === "prism" ? ["rgba(255,80,190,.20)","rgba(80,230,255,.18)","rgba(255,220,100,.16)"][i % 3] : "rgba(100,220,255,.18)";
+        ctx.lineWidth = Math.max(1, width * 0.002);
+        ctx.stroke();
+      }
+    } else if (signatureMode === "quantum") {
+      for (let i = 0; i < 38; i += 1) {
+        const seed = i * 12.9898;
+        const x = (Math.sin(seed) * 0.5 + 0.5) * width;
+        const y = ((Math.cos(seed * 1.7) * 0.5 + 0.5) * height + now * (12 + i % 9)) % height;
+        ctx.fillStyle = "rgba(125,210,255," + (0.24 + 0.32 * (0.5 + 0.5 * Math.sin(now * 2 + i))) + ")";
+        ctx.beginPath();
+        ctx.arc(x, y, 1 + (i % 3) * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (signatureMode === "holo") {
+      const y = ((now * 0.22) % 1) * height;
+      const gradient = ctx.createLinearGradient(0, y - 24, 0, y + 24);
+      gradient.addColorStop(0, "rgba(45,210,255,0)");
+      gradient.addColorStop(0.5, "rgba(45,210,255,.22)");
+      gradient.addColorStop(1, "rgba(45,210,255,0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, y - 24, width, 48);
+    }
+    ctx.restore();
+  }
+
   function drawLivingMetal(ctx, width, height) {
     if (!livingMetalEnabled || !livingMetalRegion) return;
     livingMetalPhase = (livingMetalPhase + 0.035) % (Math.PI * 2);
@@ -2526,6 +2568,7 @@ export function initCamera() {
         outputContext.translate(-outWidth / 2, -outHeight / 2);
       }
       drawLivingMetal(outputContext, outWidth, outHeight);
+      if (!renderer) drawSignatureOverlay(outputContext, outWidth, outHeight);
       renderTemporalMemory(outputContext, outWidth, outHeight);
       drawOpticalFlow(outputContext, outWidth, outHeight);
       outputContext.restore();
