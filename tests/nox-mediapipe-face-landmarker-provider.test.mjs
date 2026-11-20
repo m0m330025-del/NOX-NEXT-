@@ -46,4 +46,48 @@ const broken=new NOXMediaPipeFaceLandmarkerProvider({visionLoader:async()=>{thro
 const failed=await broken.initialize();
 assert.equal(failed.available,false);
 assert.equal(failed.state,"unavailable");
+
+let loaderCalls = 0;
+let concurrentClosed = 0;
+let releaseLoader;
+const delayed = new Promise(resolve => { releaseLoader = resolve; });
+const sharedVision = {
+  FilesetResolver: { forVisionTasks: async () => ({}) },
+  FaceLandmarker: {
+    ...fakeVision.FaceLandmarker,
+    createFromOptions: async () => ({ detect: () => ({faceLandmarks:[points]}), close: () => { concurrentClosed += 1; } })
+  }
+};
+const shared = new NOXMediaPipeFaceLandmarkerProvider({
+  visionLoader: async () => { loaderCalls += 1; await delayed; return sharedVision; }
+});
+const firstInit = shared.initialize();
+const secondInit = shared.initialize();
+assert.equal(loaderCalls, 1, "concurrent consumers must share one model initialization");
+releaseLoader();
+assert.equal((await firstInit).available, true);
+assert.equal((await secondInit).available, true);
+assert.equal(loaderCalls, 1);
+await shared.dispose();
+assert.equal(concurrentClosed, 1, "shared model task must close exactly once");
+
+let releaseLateLoader;
+const lateLoader = new Promise(resolve => { releaseLateLoader = resolve; });
+let lateClosed = 0;
+const lateProvider = new NOXMediaPipeFaceLandmarkerProvider({
+  visionLoader: async () => { await lateLoader; return {
+    FilesetResolver: { forVisionTasks: async () => ({}) },
+    FaceLandmarker: { ...fakeVision.FaceLandmarker,
+      createFromOptions: async () => ({ detect: () => ({faceLandmarks:[points]}), close: () => { lateClosed += 1; } })
+    }
+  }; }
+});
+const pendingInit = lateProvider.initialize();
+const pendingDispose = lateProvider.dispose();
+releaseLateLoader();
+assert.equal((await pendingInit).available, false, "initialization finishing after disposal must be rejected");
+await pendingDispose;
+assert.equal(lateClosed, 1, "late-created task must be closed instead of leaked");
+assert.equal(lateProvider.state, "idle");
+
 console.log("NOX MediaPipe Face Landmarker Provider tests passed");
