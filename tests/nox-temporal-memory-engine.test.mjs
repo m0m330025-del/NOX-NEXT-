@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { NOXTemporalMemoryEngine } from "../core/nox-temporal-memory-engine.js";
 
 const engine = new NOXTemporalMemoryEngine();
@@ -30,3 +31,26 @@ engine.reset();
 assert.equal(engine.getStatus().configured, false);
 assert.equal(engine.getStatus().frameCount, 0);
 console.log("NOX temporal memory engine tests passed");
+
+
+const cameraSource = readFileSync(new URL("../core/camera.js", import.meta.url), "utf8");
+const renderStart = cameraSource.indexOf("function renderTemporalMemory(ctx, width, height)");
+const renderEnsure = cameraSource.indexOf("ensureTemporalMemory(width, height)", renderStart);
+const renderOffGuard = cameraSource.indexOf('if (temporalMode === "off" || !ctx || !width || !height) return;', renderStart);
+assert.ok(renderStart >= 0 && renderOffGuard > renderStart && renderEnsure > renderOffGuard,
+  "disabled Temporal Memory must return before allocating or configuring frame buffers");
+
+const temporalModeStart = cameraSource.indexOf("function setTemporalMode(mode)");
+const temporalModeEnd = cameraSource.indexOf("\n  function setLowLightMode", temporalModeStart);
+const temporalModeSource = cameraSource.slice(temporalModeStart, temporalModeEnd);
+assert.ok(temporalModeSource.indexOf("temporalMode =") >= 0 &&
+  temporalModeSource.indexOf("resetTemporalMemory()") > temporalModeSource.indexOf("temporalMode ="),
+  "switching Temporal Memory off must reset and release its existing buffers");
+
+const resetStart = cameraSource.indexOf("function resetTemporalMemory()");
+const resetEnd = cameraSource.indexOf("\n  }", resetStart);
+const resetSource = cameraSource.slice(resetStart, resetEnd);
+assert.ok(resetSource.includes("buffer.canvas.width = 1") &&
+  resetSource.includes("buffer.canvas.height = 1") &&
+  resetSource.includes("temporalBuffers = []"),
+  "Temporal Memory reset must release canvas backing stores and clear buffer references");
