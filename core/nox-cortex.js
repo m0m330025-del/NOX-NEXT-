@@ -63,6 +63,15 @@ export class NOXCortex {
     return normalized.id;
   }
 
+  replaceEngine(engine) {
+    const normalized = normalizeEngine(engine);
+    const previous = this.engines.get(normalized.id) || null;
+    this.engines.set(normalized.id, normalized);
+    this.telemetry.delete(normalized.id);
+    this.lastPlan = null;
+    return previous;
+  }
+
   unregisterEngine(id) {
     if (!this.engines.has(id)) return false;
     this.engines.delete(id);
