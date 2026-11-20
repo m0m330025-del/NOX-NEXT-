@@ -125,6 +125,11 @@ function makeRegionMask(probabilities, width, height, targetWidth, targetHeight)
   }
   if (activeCount < DEFAULTS.minRegionPixels) return null;
   const data = resizeBilinearFloat(probabilities, width, height, targetWidth, targetHeight);
+  // Suppress numerical softmax residue outside the semantic region while
+  // retaining genuine fractional probabilities along interpolated edges.
+  for (let i = 0; i < data.length; i += 1) {
+    if (data[i] < 0.05) data[i] = 0;
+  }
   return { data, confidence: confidenceSum / activeCount };
 }
 function combineClassProbabilities(probabilities, ids) {
