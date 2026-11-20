@@ -3056,10 +3056,23 @@ export function initCamera() {
         { capability: "short-term-performance-memory", available: memoryEvidence.sampleCount > 0, confidence: Math.min(1, memoryEvidence.sampleCount / 4), reason: memoryEvidence.sampleCount > 0 ? "measured-frame-history-present" : "frame-history-empty" }
       ]
     });
+    const adapterRuntimeSnapshot = dynamicEngineHost.getRuntimeSnapshot();
+    const adapterRuntimeCounts = adapterRuntimeSnapshot.reduce((counts, engine) => {
+      counts.connected += engine.connected ? 1 : 0;
+      counts.enabled += engine.enabled ? 1 : 0;
+      counts.planned += engine.planned ? 1 : 0;
+      counts.executed += engine.executed ? 1 : 0;
+      counts.failed += engine.failed ? 1 : 0;
+      return counts;
+    }, { connected: 0, enabled: 0, planned: 0, executed: 0, failed: 0 });
+    const recommendedEngineCount = engineOrchestrationPlan.decisions.filter(item => item.action === "recommend").length;
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["الاكتشاف التلقائي للمحركات", intelligencePlan.discoveredEngineCount + " محرك مسجل — " + intelligencePlan.engineInventory.map(engine => engine.name + (engine.statusAvailable ? " ✓" : " •")).join("، ")],
-      ["المحركات المتصلة بالعقد الموحد", dynamicEngineHost.getStatus().length + " محرك — " + dynamicEngineHost.getStatus().map(engine => engine.id + " (" + engine.state + ")").join("، ")],
+      ["المحركات المتصلة بالعقد الموحد", adapterRuntimeCounts.connected + " محرك — " + adapterRuntimeSnapshot.map(engine => engine.id + " (" + engine.state + ")").join("، ")],
+      ["حالة دورة حياة المحركات", "متصل " + adapterRuntimeCounts.connected + " / مفعّل " + adapterRuntimeCounts.enabled + " / مخطط CORTEX " + adapterRuntimeCounts.planned + " / نُفّذ بنجاح " + adapterRuntimeCounts.executed + " / فشل آخر تنفيذ " + adapterRuntimeCounts.failed],
+      ["أهلية خطة العقل", recommendedEngineCount + " محرك موصى به من " + engineOrchestrationPlan.decisions.length + " — توصية قدرات وأدلة، وليست تشغيلًا تلقائيًا"],
+      ["قياسات المحولات", adapterRuntimeSnapshot.map(engine => engine.id + ": " + engine.lastExecutionStatus + " / p95 " + (engine.measuredP95Ms === null ? "غير مقاس" : engine.measuredP95Ms.toFixed(2) + "ms") + " / إخفاقات تراكمية " + engine.failureCount).join(" | ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
       ["حالة مخطط التشغيل", engineOrchestrationPlan.status + " — " + engineOrchestrationPlan.mode + " — توصية فقط؛ لم يتم تشغيل أي محرك"],
