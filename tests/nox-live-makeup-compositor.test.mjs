@@ -35,8 +35,11 @@ target.width = 640; target.height = 480;
 assert.equal(compositor.draw(target, { now: 200, mirrored: true, currentFaceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 } }), true);
 assert.equal(target.draws.length, 1);
 assert.deepEqual(target.transforms[0], "save");
-assert.deepEqual(target.transforms[1], ["translate", 640, 0]);
-assert.deepEqual(target.transforms[2], ["scale", -1, 1]);
+assert.deepEqual(target.transforms[1], ["translate", 320, 240]);
+assert.deepEqual(target.transforms[2], ["scale", 1, 1]);
+assert.deepEqual(target.transforms[3], ["translate", -320, -240]);
+assert.deepEqual(target.transforms[4], ["translate", 640, 0]);
+assert.deepEqual(target.transforms[5], ["scale", -1, 1]);
 assert.equal(compositor.accept({ sequence: 1, capturedAt: 110, vision, look: { lips: { color: [1,2,3], opacity: 0.2 } } }), false);
 assert.equal(compositor.draw(target, { now: 321 }), false);
 assert.equal(compositor.canvas, null);
@@ -45,6 +48,30 @@ assert.equal(compositor.accept({ sequence: 2, capturedAt: 400, vision, look: { l
 assert.equal(compositor.draw(target, { now: 410, currentFaceBox: { x: 0.58, y: 0.3, width: 0.2, height: 0.4 } }), false, "large face-center drift must invalidate the old makeup mask");
 assert.equal(compositor.canvas, null);
 compositor.clear();
+const aligned = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, maxAgeMs: 220 });
+const alignmentVision = { frame: { width: 2, height: 2 }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 },
+  regionMasks: { lips: { width: 2, height: 2, data: new Float32Array([0,1,0.5,0]), confidence: 0.95 } } };
+assert.equal(aligned.accept({ sequence: 1, capturedAt: 600, vision: alignmentVision,
+  look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+const shiftedTarget = makeCanvas();
+shiftedTarget.width = 1000; shiftedTarget.height = 800;
+assert.equal(aligned.draw(shiftedTarget, { now: 650,
+  currentFaceBox: { x: 0.42, y: 0.31, width: 0.22, height: 0.44 } }), true,
+  "small translation and scale changes should be compensated");
+assert.deepEqual(shiftedTarget.transforms[1], ["translate", 530, 288]);
+assert.deepEqual(shiftedTarget.transforms[2], ["scale", 1.1, 1.1]);
+assert.equal(aligned.accept({ sequence: 2, capturedAt: 700, vision: alignmentVision,
+  look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+assert.equal(aligned.draw(shiftedTarget, { now: 710,
+  currentFaceBox: { x: 0.35, y: 0.3, width: 0.3, height: 0.6 } }), false,
+  "large face scale changes must invalidate stale masks");
+assert.equal(aligned.canvas, null);
+assert.equal(aligned.accept({ sequence: 3, capturedAt: 800, vision: alignmentVision,
+  look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+assert.equal(aligned.draw(shiftedTarget, { now: 810,
+  currentFaceBox: { x: 0.4, y: 0.3, width: 0, height: 0.4 } }), false,
+  "invalid face geometry must never be used for alignment");
+assert.equal(aligned.canvas, null);
 const crisp = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, edgeSoftness: 0.5 });
 const crispMask = { frame: { width: 3, height: 3 }, regionMasks: {
   lips: { width: 3, height: 3, data: new Float32Array([0,0,0,0,1,0,0,0,0]), confidence: 0.99 }
