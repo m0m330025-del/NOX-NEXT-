@@ -20,6 +20,7 @@ import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-
 import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js";
 import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelligence.js";
 import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
+import { NOXEngineRegistry } from "./nox-engine-registry.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -461,6 +462,7 @@ export function initCamera() {
   let livingMetalPhase = 0;
   let temporalMode = "off";
   let temporalBuffers = [];
+  const noxEngineRegistry = new NOXEngineRegistry();
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
@@ -552,6 +554,20 @@ export function initCamera() {
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
+  noxEngineRegistry.register({ id: "temporal-memory", name: "Temporal Memory", category: "temporal", instance: temporalMemoryEngine, capabilities: ["frame-history"] });
+  noxEngineRegistry.register({ id: "temporal-alignment", name: "Temporal Alignment", category: "temporal", instance: temporalAlignmentEngine, capabilities: ["global-translation-alignment"] });
+  noxEngineRegistry.register({ id: "smart-motion-separation", name: "Smart Motion Separation", category: "motion", instance: motionSeparationEngine, capabilities: ["global-motion-consensus", "local-motion-outliers"] });
+  noxEngineRegistry.register({ id: "adaptive-temporal-fusion", name: "Adaptive Temporal Fusion", category: "temporal", instance: adaptiveTemporalFusionEngine, capabilities: ["confidence-gated-frame-fusion"] });
+  noxEngineRegistry.register({ id: "neural-camera-orchestrator", name: "Neural Camera Orchestrator", category: "orchestration", instance: noxNeuralCameraOrchestrator, capabilities: ["short-term-performance-memory"] });
+  noxEngineRegistry.register({ id: "predictive-camera-intelligence", name: "Predictive Camera Intelligence", category: "prediction", instance: noxPredictiveCameraIntelligence, capabilities: ["short-horizon-motion-estimation"] });
+  noxEngineRegistry.register({ id: "scene-intelligence", name: "Scene Intelligence", category: "scene-analysis", instance: noxSceneIntelligenceEngine, capabilities: ["luminance", "contrast", "motion-state"] });
+  noxEngineRegistry.register({ id: "optical-flow", name: "Sparse Optical Flow", category: "motion", instance: opticalFlowEngine, capabilities: ["sparse-motion-vectors"] });
+  noxEngineRegistry.register({ id: "face-detection", name: "Face Detection", category: "vision", instance: faceDetectionEngine, capabilities: ["platform-face-detection"] });
+  noxEngineRegistry.register({ id: "face-tracking", name: "Face Tracking", category: "vision", instance: faceTrackingEngine, capabilities: ["face-track-continuity"] });
+  noxEngineRegistry.register({ id: "face-region", name: "Face Region", category: "vision", instance: faceRegionEngine, capabilities: ["face-region-geometry"] });
+  noxEngineRegistry.register({ id: "face-landmarks", name: "Face Landmarks", category: "vision", instance: faceLandmarksEngine, capabilities: ["landmark-analysis"] });
+  noxEngineRegistry.register({ id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision", instance: facialMaskBuilder, capabilities: ["geometric-face-masks"] });
+  noxEngineRegistry.register({ id: "skin-segmentation", name: "Skin Segmentation", category: "vision", instance: beautySkinEngine, capabilities: ["skin-region-segmentation"] });
   let beautyFrameCounter = 0;
   let beautyLastTimestamp = 0;
   let beautyProcessing = false;
@@ -2794,7 +2810,8 @@ export function initCamera() {
       },
       motion: motionSeparationResult,
       alignment: temporalAlignmentEngine.getStatus(),
-      temporal: { enabled: temporalMode !== "off" }
+      temporal: { enabled: temporalMode !== "off" },
+      registeredEngines: noxEngineRegistry.snapshot()
     });
     const predictivePlan = noxPredictiveCameraIntelligence.evaluate({
       nowMs: performance.now(),
@@ -2809,6 +2826,7 @@ export function initCamera() {
     });
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
+      ["الاكتشاف التلقائي للمحركات", intelligencePlan.discoveredEngineCount + " محرك مسجل — " + intelligencePlan.engineInventory.map(engine => engine.name + (engine.statusAvailable ? " ✓" : " •")).join("، ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["ذاكرة التكيف قصيرة المدى", intelligencePlan.adaptiveMemory.action + " — " + intelligencePlan.adaptiveMemory.reason + " — " + intelligencePlan.adaptiveMemory.sampleCount + "/" + intelligencePlan.adaptiveMemory.historyLimit + " إطار"],
