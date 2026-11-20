@@ -100,7 +100,7 @@ export class NOXEngineOrchestrationPlanner {
         dependencyDepth: supported.length ? Math.max(...supported.map(item => item.depth)) : -1,
         confidence: supported.length ? Math.min(...supported.map(item => item.confidence)) : 0
       };
-    }).sort((a, b) => b.dependencyDepth - a.dependencyDepth || b.priority - a.priority || a.id.localeCompare(b.id));
+    }).sort((a, b) => a.dependencyDepth - b.dependencyDepth || b.priority - a.priority || a.id.localeCompare(b.id));
 
     const selected = [];
     for (const candidate of candidates) {
