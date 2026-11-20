@@ -59,4 +59,26 @@ await required.initialize();
 await assert.rejects(()=>required.segment(frame),/required-landmark-fusion-unavailable/);
 
 await fusion.dispose();
+
+let borrowedLandmarkDisposed = 0;
+let segmentationDisposed = 0;
+const borrowed = new NOXMultiModelFaceFusionProvider({
+  segmentationProvider: {
+    initialize: async () => ({available:true}),
+    segment: async frame => ({width:frame.width,height:frame.height,frameId:frame.frameId,
+      timestamp:frame.timestamp,source:"bisenet-borrowed-test",faceBox}),
+    dispose: async () => { segmentationDisposed += 1; }
+  },
+  landmarkProvider: {
+    initialize: async () => ({available:true}),
+    detect: () => detected,
+    dispose: async () => { borrowedLandmarkDisposed += 1; }
+  },
+  ownsLandmarkProvider: false
+});
+await borrowed.initialize();
+await borrowed.dispose();
+assert.equal(segmentationDisposed, 1, "fusion must always release its owned segmentation model");
+assert.equal(borrowedLandmarkDisposed, 0, "fusion must not dispose a borrowed shared landmark task");
+
 console.log("NOX Multi-Model Face Fusion tests passed");
