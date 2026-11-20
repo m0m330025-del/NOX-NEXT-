@@ -428,6 +428,10 @@ export function initCamera() {
   if (!video || !stage || !renderCanvas || !startButton) return;
 
   let stream = null;
+  let captureHoldTimer = 0;
+  let capturePointerActive = false;
+  let captureHoldTriggered = false;
+  let suppressCaptureClick = false;
   let facing = "user";
   let selectedLens = 0;
   let selectedFilter = null;
@@ -3327,7 +3331,7 @@ export function initCamera() {
       ["أهلية خطة العقل", recommendedEngineCount + " محرك موصى به من " + engineOrchestrationPlan.decisions.length + " — توصية قدرات وأدلة، وليست تشغيلًا تلقائيًا"],
       ["قياسات المحولات", adapterRuntimeSnapshot.map(engine => engine.id + ": " + engine.lastExecutionStatus + " / p95 " + (engine.measuredP95Ms === null ? "غير مقاس" : engine.measuredP95Ms.toFixed(2) + "ms") + " / إخفاقات تراكمية " + engine.failureCount).join(" | ")],
       ["NOX Adaptive Runtime Scheduling", adaptiveRuntimeSchedule.state + " — مؤهل " + adaptiveRuntimeSchedule.eligibleCount + " / مؤجل " + adaptiveRuntimeSchedule.heldCount + " — تكلفة p95 " + adaptiveRuntimeSchedule.estimatedTotalMs.toFixed(2) + "/" + (adaptiveRuntimeSchedule.availableBudgetMs === null ? "ميزانية غير متاحة" : adaptiveRuntimeSchedule.availableBudgetMs.toFixed(2) + "ms") + " — توصية للمحركات الأخرى"],
-      ["Optical Flow Runtime Gate", opticalFlowRuntimeGate + " — warm-up 3 عينات، ثم 3 تقييمات سليمة متتالية لاستعادة التشغيل بعد التأجيل"]
+      ["Optical Flow Runtime Gate", opticalFlowRuntimeGate + " — warm-up 3 عينات، ثم 3 تقييمات سليمة متتالية لاستعادة التشغيل بعد التأجيل"],
       ["قرارات جدولة CORTEX", adaptiveRuntimeSchedule.steps.map(step => step.id + ": " + (step.eligible ? "مؤهل" : "مؤجل (" + step.reason + ")") + (step.brainRecommended ? " — أوصى به العقل" : "")).join(" | ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
@@ -3672,7 +3676,36 @@ export function initCamera() {
     updateDiagnostics();
   });
 
+  function finishCapturePointer(cancelled = false) {
+    if (!capturePointerActive) return;
+    capturePointerActive = false;
+    if (captureHoldTimer) window.clearTimeout(captureHoldTimer);
+    captureHoldTimer = 0;
+    if (captureHoldTriggered && recording) recordButton.click();
+    if (captureHoldTriggered && !cancelled) suppressCaptureClick = true;
+    captureHoldTriggered = false;
+  }
+
+  capture.addEventListener("pointerdown", (event) => {
+    if (!stream || capture.disabled || (event.pointerType === "mouse" && event.button !== 0)) return;
+    capturePointerActive = true;
+    captureHoldTriggered = false;
+    try { capture.setPointerCapture(event.pointerId); } catch {}
+    captureHoldTimer = window.setTimeout(() => {
+      if (!capturePointerActive || !stream || recording) return;
+      captureHoldTriggered = true;
+      recordButton.click();
+    }, 420);
+  });
+  capture.addEventListener("pointerup", () => finishCapturePointer(false));
+  capture.addEventListener("pointercancel", () => finishCapturePointer(true));
+  capture.addEventListener("lostpointercapture", () => finishCapturePointer(true));
+
   capture.addEventListener("click", () => {
+    if (suppressCaptureClick) {
+      suppressCaptureClick = false;
+      return;
+    }
     if (motionFreezeCapturePending) {
       cancelMotionFreezeCapture();
       return;
@@ -3993,7 +4026,7 @@ export function initCamera() {
     if (!stream) startCamera();
   });
   $("#nox-camera-back")?.addEventListener("click", () => { location.hash = "#home"; });
-  $("#nox-camera-exit")?.addEventListener("click", () => { location.hash = "#home"; });
+  $("#nox-camera-exit")?.addEventListener("click", async () => { await stopCamera(); location.hash = "#home"; });
   startButton.addEventListener("click", startCamera);
   stopButton.addEventListener("click", stopCamera);
   flip.addEventListener("click", switchCamera);
