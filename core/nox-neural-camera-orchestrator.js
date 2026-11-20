@@ -19,13 +19,15 @@ export class NOXNeuralCameraOrchestrator {
     historySize = 12,
     minSamples = 4,
     overloadRatio = 0.92,
-    recoveryRatio = 0.68
+    recoveryRatio = 0.68,
+    decisionCooldownFrames = 12
   } = {}) {
     this.options = {
       historySize: Number.isInteger(historySize) ? Math.max(6, Math.min(48, historySize)) : 12,
       minSamples: Number.isInteger(minSamples) ? Math.max(3, Math.min(12, minSamples)) : 4,
       overloadRatio: finite(overloadRatio) ? Math.max(0.5, Math.min(2, overloadRatio)) : 0.92,
-      recoveryRatio: finite(recoveryRatio) ? Math.max(0.2, Math.min(0.9, recoveryRatio)) : 0.68
+      recoveryRatio: finite(recoveryRatio) ? Math.max(0.2, Math.min(0.9, recoveryRatio)) : 0.68,
+      decisionCooldownFrames: Number.isInteger(decisionCooldownFrames) ? Math.max(1, Math.min(120, decisionCooldownFrames)) : 12
     };
     this.brain = new NOXMultiEngineIntelligenceBrain();
     this.reset();
@@ -39,6 +41,7 @@ export class NOXNeuralCameraOrchestrator {
     const ratio = frameCostMs / targetFrameMs;
     if (!finite(ratio)) return this.getMemoryStatus();
     this.history.push({ ratio, frameCostMs, targetFrameMs });
+    if (this.cooldownRemaining > 0) this.cooldownRemaining -= 1;
     if (this.history.length > this.options.historySize) this.history.shift();
     return this.getMemoryStatus();
   }
@@ -54,6 +57,7 @@ export class NOXNeuralCameraOrchestrator {
     const base = {
       sampleCount,
       historyLimit: this.options.historySize,
+      cooldownRemaining: this.cooldownRemaining,
       medianFrameRatio,
       overloadSamples,
       stableSamples,
@@ -63,6 +67,9 @@ export class NOXNeuralCameraOrchestrator {
     };
 
     if (sampleCount < this.options.minSamples) return base;
+    if (this.cooldownRemaining > 0) {
+      return { ...base, reason: "decision-cooldown-active" };
+    }
     if (overloadSamples >= 3) {
       return { ...base, action: "recommend-reduce-load", reason: "repeated-frame-budget-overload" };
     }
@@ -74,6 +81,14 @@ export class NOXNeuralCameraOrchestrator {
       return { ...base, action: "recommend-one-tier-recovery", reason: "sustained-frame-budget-headroom" };
     }
     return base;
+  }
+
+  commitAdaptiveDecision(action) {
+    if (action !== "recommend-reduce-load" && action !== "recommend-one-tier-recovery") {
+      return { accepted: false, reason: "unsupported-adaptive-decision" };
+    }
+    this.cooldownRemaining = this.options.decisionCooldownFrames;
+    return { accepted: true, cooldownRemaining: this.cooldownRemaining, action };
   }
 
   evaluate(input = {}) {
@@ -91,12 +106,14 @@ export class NOXNeuralCameraOrchestrator {
     return {
       sampleCount: this.history.length,
       historyLimit: this.options.historySize,
+      cooldownRemaining: this.cooldownRemaining,
       medianFrameRatio: median(this.history.map(sample => sample.ratio))
     };
   }
 
   reset() {
     this.history = [];
+    this.cooldownRemaining = 0;
     this.brain.reset();
   }
 }
