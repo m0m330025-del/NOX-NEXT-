@@ -16,6 +16,8 @@ on:
       - "tests/nox-temporal-alignment-integration.test.mjs"
       - "core/nox-smart-motion-separation-engine.js"
       - "tests/nox-smart-motion-separation-engine.test.mjs"
+      - "core/nox-adaptive-temporal-fusion-engine.js"
+      - "tests/nox-adaptive-temporal-fusion-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -74,6 +76,7 @@ jobs:
           cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
           cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
           cp core/nox-smart-motion-separation-engine.js /tmp/smart-motion-separation-engine.mjs
+          cp core/nox-adaptive-temporal-fusion-engine.js /tmp/adaptive-temporal-fusion-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -86,11 +89,13 @@ jobs:
           node --check /tmp/temporal-memory-engine.mjs
           node --check /tmp/temporal-alignment-engine.mjs
           node --check /tmp/smart-motion-separation-engine.mjs
+          node --check /tmp/adaptive-temporal-fusion-engine.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
           node tests/nox-temporal-alignment-engine.test.mjs
           node tests/nox-temporal-alignment-integration.test.mjs
           node tests/nox-smart-motion-separation-engine.test.mjs
+          node tests/nox-adaptive-temporal-fusion-engine.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -230,6 +235,14 @@ jobs:
             if (!js.includes(token)) throw new Error('Smart Motion Separation is not connected to the camera pipeline: ' + token);
           }
           console.log('NOX Smart Motion Separation global consensus and camera integration verified');
+          const adaptiveFusionSource = fs.readFileSync('core/nox-adaptive-temporal-fusion-engine.js', 'utf8');
+          for (const token of ['NOXAdaptiveTemporalFusionEngine', 'minAlignmentConfidence = 0.22', 'minMotionConfidence = 0.14', 'ageDecay = 0.24', 'global-motion-evidence-unavailable']) {
+            if (!adaptiveFusionSource.includes(token)) throw new Error('Adaptive temporal fusion evidence policy missing: ' + token);
+          }
+          for (const token of ['NOXAdaptiveTemporalFusionEngine', 'adaptiveTemporalFusionEngine.plan', 'fusion.layers', 'NOX Adaptive Temporal Fusion']) {
+            if (!js.includes(token)) throw new Error('Adaptive temporal fusion is not connected to the camera compositor: ' + token);
+          }
+          console.log('NOX Adaptive Temporal Fusion evidence gates and camera compositor integration verified');
           const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
           for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
             if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
