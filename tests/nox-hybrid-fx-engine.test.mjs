@@ -38,3 +38,20 @@ assert.deepEqual(deduplicated.ids, ["chroma-tide", "aurora-relic"]);
 assert.equal(validateNOXChaosRecipe({ ...recipe, ids: ["unknown"] }), null);
 assert.equal(validateNOXChaosRecipe({ version: 9 }), null);
 assert.throws(() => createNOXChaosRecipe("", ["chroma-tide"], []));
+
+
+import { getNOXChaosRecipeSignature, scoreNOXChaosRecipe, generateNOXChaosRecipe } from "../core/nox-hybrid-fx-engine.js";
+const signatureA = getNOXChaosRecipeSignature(recipe);
+const signatureB = getNOXChaosRecipeSignature({ ...recipe, name: "Renamed" });
+assert.equal(signatureA, signatureB, "names must not affect canonical recipe identity");
+assert.ok(signatureA.length > 10);
+assert.equal(getNOXChaosRecipeSignature({ version: 99 }), "");
+assert.ok(scoreNOXChaosRecipe(recipe, []) > 0);
+assert.ok(scoreNOXChaosRecipe(recipe, [recipe]) < 0.2);
+const evolvedA = generateNOXChaosRecipe([recipe], { seed: 12345 });
+const evolvedB = generateNOXChaosRecipe([recipe], { seed: 12345 });
+assert.ok(evolvedA && evolvedA.ids.length >= 1);
+assert.equal(evolvedA.signature, evolvedB.signature, "same seed and history must be deterministic");
+assert.notEqual(evolvedA.signature, signatureA, "evolution must avoid known recipes");
+assert.ok(evolvedA.score > 0);
+console.log("NOX evolutionary recipe tests passed");
