@@ -188,3 +188,14 @@ This branch replaces the previous camera controller with a standalone browser ca
 - This is a first migration wave, not a claim that every camera module has been converted. Temporal policy modules and diagnostic-only engines remain directly instantiated/registered because their interfaces are not all executable processing handlers.
 - Automated tests cover adapter adoption of a pre-existing engine ID and restoration of the original CORTEX/registry descriptors on detach. The camera workflow checks that the six migrated IDs are registered and that live execution uses the shared handler host.
 - The adapter is an execution bridge, not a permission to run all engines. Existing user-triggered and evidence-gated flows remain the activation points. No visual, thermal, battery, or frame-rate improvement is claimed before physical-device testing.
+
+## Second camera runtime migration — synchronous temporal and intelligence adapters
+
+- The Dynamic Engine Adapter v1 now supports an explicit synchronous processing path (`processSync` / `handleSync` / host `runSync`) for deterministic policies called inside the camera render loop. It rejects Promise-returning implementations on this path so asynchronous work cannot accidentally enter the synchronous frame compositor.
+- Six additional existing runtime IDs are adopted by adapters: `temporal-memory`, `temporal-alignment`, `smart-motion-separation`, `adaptive-temporal-fusion`, `predictive-camera-intelligence`, and `scene-intelligence`.
+- The camera now routes temporal profile configuration, capture decisions, buffer commits, composite plans, per-slot transforms, flow consensus, alignment ingestion, temporal fusion decisions, predictive observations/evaluation, scene evaluation, and their session resets through the synchronous adapter host.
+- The synchronous bridge preserves each specialist engine's original method and output. Canvas allocation, pixel capture, and Canvas drawing remain in `core/camera.js`; the adapters only invoke the existing policy methods and collect bounded call-duration/failure telemetry.
+- Runtime diagnostics now report the number and state of adapters connected to the shared host. This count is distinct from the total registry inventory.
+- The first six camera/vision adapters remain asynchronous-capable where required. Together, the two migration waves cover twelve existing engine IDs through the shared adapter host.
+- Deterministic contract tests cover synchronous output parity, bounded duration history, registry cost reporting, disabled state, cancellation, and rejection of asynchronous output from the synchronous path.
+- The adapter bridge does not make every registered engine automatically execute. Existing camera feature gates, explicit requests, CORTEX plans, and evidence checks remain in place. Device-level visual quality, frame timing, memory, thermal behavior, and battery impact remain untested on Galaxy M12.
