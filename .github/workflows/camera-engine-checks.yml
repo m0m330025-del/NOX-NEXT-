@@ -300,6 +300,8 @@ jobs:
             throw new Error('Every filter must provide a Canvas fallback style');
           }
           const cameraSource = fs.readFileSync('core/camera.js', 'utf8');
+          if (!cameraSource.includes('Boolean(selectedOriginalFilter) || Boolean(selectedHybridFilter)')) throw new Error('CORTEX diagnostics must recognize original and hybrid live filters');
+
           if (!cameraSource.includes('selectedFilter ? selectedFilter.groupIndex : -1') ||
               !cameraSource.includes('selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens]')) {
             throw new Error('Selected filter group or Canvas fallback is not wired to the renderer');
