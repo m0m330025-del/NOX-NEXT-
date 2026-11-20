@@ -56,3 +56,19 @@ The exported `applyNOXFilter` CPU pixel processor is a separate renderer-agnosti
 - Benchmark 720p and 1080p frames on supported mobile and desktop devices.
 - Verify live preview, photo capture, and recorded video use the same selected recipe.
 - Add WebGL parity only after the shader path is independently tested.
+
+
+## NOX HYBRID LAB — first integrated blend engines
+
+The original catalog remains accurately described as 10 procedural families × 100 parameterized variants; it is not 1,000 independent algorithms. A separate hybrid engine now defines six named compositions, each combining at least three distinct image-processing ideas with its own GPU composition operator:
+
+- CHROMA TIDE — spectral channel dispersion + fluid interference + edge caustics
+- PRISM FORGE — radial dispersion + contour engraving + spectral light
+- QUANTUM BLOOM — particle lattice + optical bloom + phase-locked pulse
+- TOPOGRAPHIC DREAM — relief contours + halftone cells + chromatic ink
+- ECHO MATTER — directional sampling + temporal phase + prismatic residue
+- AURORA RELIC — thin-film interference + aurora field + light sculpture
+
+These are full-frame procedural GPU effects, not face-aware AR. ECHO MATTER uses directional frame sampling and time modulation; it does not claim measured optical flow. The hybrid shader runs after the selected base lens/filter and is included in the WebGL-rendered canvas used by photo capture and video recording. The Canvas 2D fallback cannot reproduce the shader compositions and falls back to the existing family-level visual grade.
+
+Tests verify recipe identity, distinct blend operators, engine composition metadata, and bounded shader controls. Browser/device rendering and frame-rate performance still require real-device verification.
