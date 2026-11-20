@@ -131,6 +131,7 @@ jobs:
           cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs
           cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
           cp core/nox-predictive-camera-intelligence.js /tmp/predictive-camera-intelligence.mjs
+          cp core/nox-predictive-stabilization-assist.js /tmp/predictive-stabilization-assist.mjs
           cp core/nox-scene-intelligence-engine.js /tmp/scene-intelligence-engine.mjs
           cp core/nox-engine-registry.js /tmp/engine-registry.mjs
           cp core/nox-engine-orchestration-planner.js /tmp/engine-orchestration-planner.mjs
@@ -159,6 +160,7 @@ jobs:
           node --check /tmp/multi-engine-intelligence-brain.mjs
           node --check /tmp/neural-camera-orchestrator.mjs
           node --check /tmp/predictive-camera-intelligence.mjs
+          node --check /tmp/predictive-stabilization-assist.mjs
           node --check /tmp/scene-intelligence-engine.mjs
           node --check /tmp/engine-registry.mjs
           node --check /tmp/engine-orchestration-planner.mjs
@@ -175,6 +177,7 @@ jobs:
           node tests/nox-multi-engine-intelligence-brain.test.mjs
           node tests/nox-neural-camera-orchestrator.test.mjs
           node tests/nox-predictive-camera-intelligence.test.mjs
+          node tests/nox-predictive-stabilization-assist.test.mjs
           node tests/nox-scene-intelligence-engine.test.mjs
           node tests/nox-engine-registry.test.mjs
           node tests/nox-engine-orchestration-planner.test.mjs
@@ -448,10 +451,14 @@ jobs:
           for (const token of ['stableVectors.length < 4', 'maxOffset = 0.025', 'stabilizationTarget.x - correctionX', 'stabilizationOffset.x * 0.76', 'const zoom = cameraStabilizationEnabled ? 1.06 : 1']) {
             if (!js.includes(token)) throw new Error('Smart Stabilizer confidence, crop, or smoothing guard missing: ' + token);
           }
-          for (const token of ['noxPredictiveCameraIntelligence.evaluate', 'prediction.action === "report-short-horizon-estimate"', 'prediction.confidence >= 0.2', 'prediction.horizonMs <= 250', 'prediction.prediction.dx * 0.18', 'prediction.prediction.dy * 0.18']) {
-            if (!js.includes(token)) throw new Error('Predictive stabilization assist must be confidence-, freshness-, and horizon-gated: ' + token);
+          const stabilizationAssistSource = fs.readFileSync('core/nox-predictive-stabilization-assist.js', 'utf8');
+          for (const token of ['calculateNOXPredictiveStabilizationCorrection', 'predictionConfidence >= minPredictionConfidence', 'predictionHorizonMs <= maxPredictionHorizonMs', 'frameRatio < maxFrameRatio', 'maxCorrection', 'predictionUsed']) {
+            if (!stabilizationAssistSource.includes(token)) throw new Error('Predictive stabilization helper guard missing: ' + token);
           }
-          console.log('NOX Smart Stabilizer robust motion estimate, bounded crop, and predictive assist guards verified');
+          if (!js.includes('calculateNOXPredictiveStabilizationCorrection') || !js.includes('stabilizationCorrection.dx') || !js.includes('stabilizationCorrection.dy')) {
+            throw new Error('Predictive stabilization helper is not wired to the live camera path');
+          }
+          console.log('NOX Smart Stabilizer robust motion estimate, bounded crop, and independently testable predictive assist verified');
           for (const token of ['darkMask = 1.0 - smoothstep', 'u_lowLight > 1.5', 'smoothstep(0.025, 0.16, edge1)', 'lowLightMode === "strong"', 'u_texel']) {
             if (!js.includes(token)) throw new Error('Low-light adaptive shadow/noise treatment missing: ' + token);
           }
