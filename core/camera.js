@@ -1145,10 +1145,13 @@ export function initCamera() {
     faceLandmarkAverageCost = 0;
     faceTrackingEngine.resetLandmarks();
     clearFaceLandmarksPreview();
-    if (faceLandmarkerProvider) {
+    const borrowedByBeautyFusion = Boolean(
+      faceLandmarkerProvider && beautyVisionProvider?.landmarkProvider === faceLandmarkerProvider
+    );
+    if (faceLandmarkerProvider && !borrowedByBeautyFusion) {
       try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort cleanup */ }
+      faceLandmarkerProvider = null;
     }
-    faceLandmarkerProvider = null;
     latestFaceLandmarksAnalysis = null;
     latestFacialMaskPreview = null;
     faceDigitalTwinButton.disabled = true;
@@ -1178,13 +1181,18 @@ export function initCamera() {
           maxInputDimension: 256,
           executionProviders: ["webgpu", "wasm"]
         });
-        const fusionLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+        // Share one MediaPipe task between face tracking and beauty fusion.
+        // The fusion adapter borrows it; camera lifecycle code owns disposal.
+        if (!faceLandmarkerProvider) {
+          faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+        }
         beautyVisionProvider = new NOXMultiModelFaceFusionProvider({
           segmentationProvider,
-          landmarkProvider: fusionLandmarkerProvider,
+          landmarkProvider: faceLandmarkerProvider,
           landmarksEngine: faceLandmarksEngine,
           minFaceBoxIoU: 0.2,
-          requireLandmarks: false
+          requireLandmarks: false,
+          ownsLandmarkProvider: false
         });
         beautyVisionAdapter = new NOXBeautyVisionProvider({
           provider: beautyVisionProvider,
@@ -1400,6 +1408,11 @@ export function initCamera() {
     }
     beautyVisionAdapter = null;
     beautyVisionProvider = null;
+    // If face tracking is not using the shared task, this lifecycle now owns its release.
+    if (!faceLandmarksLiveEnabled && faceLandmarkerProvider) {
+      try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort shared-task cleanup */ }
+      faceLandmarkerProvider = null;
+    }
     beautyLastTimestamp = 0;
     beautySkinEngine.reset();
     beautyMakeupEngine.reset();
