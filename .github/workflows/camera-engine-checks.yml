@@ -389,10 +389,15 @@ jobs:
             }
           }
           if (!js.includes('المحركات المتصلة بالعقد الموحد') ||
-              !js.includes('dynamicEngineHost.getStatus()')) {
-            throw new Error('Dynamic adapter runtime diagnostics are missing');
+              !js.includes('dynamicEngineHost.getRuntimeSnapshot()') ||
+              !js.includes('حالة دورة حياة المحركات') ||
+              !js.includes('أهلية خطة العقل')) {
+            throw new Error('Dynamic adapter runtime lifecycle diagnostics are missing');
           }
           const adapterModule = await import('file:///tmp/dynamic-engine-adapter.mjs');
+          if (typeof adapterModule.NOXDynamicEngineAdapterHost.prototype.getRuntimeSnapshot !== 'function') {
+            throw new Error('Dynamic adapter runtime snapshot API is missing');
+          }
           if (typeof adapterModule.NOXDynamicEngineAdapter.prototype.handleSync !== 'function' ||
               typeof adapterModule.NOXDynamicEngineAdapterHost.prototype.runSync !== 'function') {
             throw new Error('Synchronous Dynamic Adapter execution API is missing');
