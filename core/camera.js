@@ -4158,39 +4158,23 @@ export function initCamera() {
     });
   }
 
-  function buildLensWheel() {
+  function buildLensSelector() {
     if (!orbit || !track) return;
     track.replaceChildren();
     LENSES.forEach((lens, index) => {
       const button = document.createElement("button");
+      const family = index <= 2 ? "beauty" : index <= 4 ? "color" : "classic";
       button.type = "button";
       button.className = "nox-lens-v2" + (index === 0 ? " active" : "");
       button.dataset.filter = String(lens.mode);
+      button.dataset.lensFamily = family;
       button.setAttribute("aria-pressed", String(index === 0));
       button.innerHTML = "<span></span><b></b>";
       button.querySelector("span").textContent = lens.icon;
       button.querySelector("b").textContent = lens.name;
-      const angle = index * 360 / LENSES.length;
-      button.style.setProperty("--lens-angle", angle + "deg");
-      button.style.setProperty("--lens-counter", -angle + "deg");
       button.addEventListener("click", () => selectLens(index));
       track.append(button);
     });
-    orbit.addEventListener("pointerdown", (event) => {
-      pointerStart = { x: event.clientX, y: event.clientY, index: selectedLens, id: event.pointerId };
-      orbit.setPointerCapture?.(event.pointerId);
-    });
-    orbit.addEventListener("pointerup", (event) => {
-      if (!pointerStart || pointerStart.id !== event.pointerId) return;
-      const dx = event.clientX - pointerStart.x;
-      const dy = event.clientY - pointerStart.y;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) > 22) {
-        const step = Math.max(1, Math.round(Math.hypot(dx, dy) / 52));
-        selectLens(pointerStart.index + (dx < 0 ? step : -step));
-      }
-      pointerStart = null;
-    });
-    orbit.addEventListener("pointercancel", () => { pointerStart = null; });
     selectLens(0);
   }
 
@@ -4240,7 +4224,7 @@ export function initCamera() {
     revokeOutput();
   });
 
-  buildLensWheel();
+  buildLensSelector();
   setReady(false);
   updateDiagnostics();
 }
