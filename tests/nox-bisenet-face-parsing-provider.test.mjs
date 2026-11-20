@@ -137,6 +137,31 @@ assert.equal(verifiedFetchOptions.credentials, "omit");
 assert.equal(verifiedFetchOptions.mode, "cors");
 await verifiedProvider.dispose();
 
+let finishPendingSession;
+let staleSessionReleased = 0;
+const pendingInitProvider = new NOXBiSeNetFaceParsingProvider({
+  modelInputSize: size,
+  sessionFactory: () => new Promise(resolve => { finishPendingSession = resolve; }),
+  preprocessFrame: async () => new Float32Array(3 * pixels),
+  maxInputDimension: 64
+});
+const staleInitialization = pendingInitProvider.initialize();
+await Promise.resolve();
+await pendingInitProvider.dispose();
+finishPendingSession({
+  session: {
+    inputNames: ["input"], outputNames: ["output"],
+    release: async () => { staleSessionReleased += 1; }
+  }
+});
+const staleInitializationResult = await staleInitialization;
+assert.equal(staleInitializationResult.available, false,
+  "BiSeNet initialization must not report ready after dispose");
+assert.equal(pendingInitProvider.state, "idle",
+  "stale BiSeNet initialization must not overwrite the disposed state");
+assert.equal(staleSessionReleased, 1,
+  "a session created after dispose must be released immediately");
+
 let runtimeCreatedOnMismatch = false;
 const mismatchProvider = new NOXBiSeNetFaceParsingProvider({
   modelUrl: "https://models.example.test/face.onnx",
