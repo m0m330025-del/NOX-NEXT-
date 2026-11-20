@@ -19,6 +19,8 @@ on:
       - "core/nox-beauty-vision-provider.js"
       - "core/nox-skin-segmentation-engine.js"
       - "core/nox-makeup-rendering-engine.js"
+      - "core/nox-bisenet-face-parsing-provider.js"
+      - "tests/nox-bisenet-face-parsing-provider.test.mjs"
       - "tests/nox-beauty-vision-pipeline.test.mjs"
       - ".github/workflows/beauty-vision-pipeline-checks.yml"
 
