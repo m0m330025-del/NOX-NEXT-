@@ -24,6 +24,7 @@ import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-en
 import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
 import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js";
 import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelligence.js";
+import { calculateNOXPredictiveStabilizationCorrection } from "./nox-predictive-stabilization-assist.js";
 import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 import { NOXEngineRegistry } from "./nox-engine-registry.js";
 import { NOXEngineOrchestrationPlanner } from "./nox-engine-orchestration-planner.js";
@@ -3051,14 +3052,18 @@ export function initCamera() {
       frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
       targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
     });
-    const predictionTrusted = prediction.action === "report-short-horizon-estimate" &&
-      prediction.prediction && prediction.confidence >= 0.2 &&
-      Number.isFinite(prediction.prediction.dx) && Number.isFinite(prediction.prediction.dy) &&
-      Number.isFinite(prediction.horizonMs) && prediction.horizonMs <= 250;
-    const predictiveMotionX = predictionTrusted ? prediction.prediction.dx * 0.18 : 0;
-    const predictiveMotionY = predictionTrusted ? prediction.prediction.dy * 0.18 : 0;
-    const correctionX = Math.max(-0.025, Math.min(0.025, motionX * 0.72 + predictiveMotionX));
-    const correctionY = Math.max(-0.025, Math.min(0.025, motionY * 0.72 + predictiveMotionY));
+    const stabilizationCorrection = calculateNOXPredictiveStabilizationCorrection({
+      measuredDx: motionX,
+      measuredDy: motionY,
+      prediction: prediction.prediction,
+      predictionAction: prediction.action,
+      predictionConfidence: prediction.confidence,
+      predictionHorizonMs: prediction.horizonMs,
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
+    });
+    const correctionX = stabilizationCorrection.dx;
+    const correctionY = stabilizationCorrection.dy;
     const maxOffset = 0.025;
     stabilizationTarget = {
       x: Math.max(-maxOffset, Math.min(maxOffset, stabilizationTarget.x - correctionX)),
