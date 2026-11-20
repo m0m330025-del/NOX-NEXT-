@@ -33,7 +33,7 @@ export class NOXLiveMakeupCompositor {
     this.height = 0;
   }
 
-  accept({ sequence, capturedAt, vision, look, capturedRoll = null } = {}) {
+  accept({ sequence, capturedAt, vision, look, makeup = null, capturedRoll = null } = {}) {
     if (!Number.isInteger(sequence) || sequence <= this.sequence ||
         !Number.isFinite(capturedAt) || !vision?.frame ||
         !Number.isInteger(vision.frame.width) || !Number.isInteger(vision.frame.height) ||
@@ -47,7 +47,7 @@ export class NOXLiveMakeupCompositor {
         vision.faceBox.width <= 0 || vision.faceBox.height <= 0 ||
         vision.faceBox.x + vision.faceBox.width > 1 ||
         vision.faceBox.y + vision.faceBox.height > 1 ||
-        !look || typeof look !== "object") return false;
+        (makeup === null && (!look || typeof look !== "object"))) return false;
 
     const width = vision.frame.width, height = vision.frame.height;
     const canvas = this.canvasFactory();
@@ -57,7 +57,24 @@ export class NOXLiveMakeupCompositor {
     const image = context.createImageData(width, height);
     let changed = 0;
 
-    for (const [region, style] of Object.entries(look)) {
+    if (makeup !== null) {
+      const frame = makeup?.frame;
+      const matchesFrame = frame &&
+        frame.id === vision.frame.id &&
+        frame.timestamp === vision.frame.timestamp &&
+        (frame.capturedAtMonotonicMs ?? null) === (vision.frame.capturedAtMonotonicMs ?? null) &&
+        frame.width === width && frame.height === height &&
+        frame.coordinateSpace === vision.frame.coordinateSpace;
+      const validPixels = value => value && ArrayBuffer.isView(value.data) &&
+        value.data.length === width * height * 4;
+      if (makeup?.state !== "rendered" || !matchesFrame ||
+          !validPixels(makeup.image) || !validPixels(makeup.overlay) ||
+          !Number.isInteger(makeup.changedPixels) || makeup.changedPixels <= 0 ||
+          !Array.isArray(makeup.regions) || !makeup.regions.length) return false;
+      image.data.set(makeup.overlay.data);
+      changed = makeup.changedPixels;
+    } else {
+      for (const [region, style] of Object.entries(look)) {
       if (!SUPPORTED_REGIONS.has(region)) return false;
       const mask = vision.regionMasks?.[region];
       const color = style?.color, opacity = Number(style?.opacity);
@@ -95,6 +112,7 @@ export class NOXLiveMakeupCompositor {
         image.data[offset + 2] = color[2];
         image.data[offset + 3] = alpha;
         changed += 1;
+      }
       }
     }
     if (!changed) return false;
