@@ -8,6 +8,7 @@ import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
+import { createNOXCortex } from "./nox-cortex.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -392,6 +393,7 @@ export function initCamera() {
   let photonGhostGuardReferenceIndex = -1;
   let photonGhostGuardTiles = new Set();
   let photonGhostGuardCounts = { blocked: 0, clear: 0 };
+  const cortex = createNOXCortex();
   const faceDetectionEngine = new NOXFaceDetectionEngine();
   const faceTrackingEngine = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 0.58 });
   const faceRegionEngine = new NOXFaceRegionEngine();
@@ -2435,6 +2437,21 @@ export function initCamera() {
   }
 
   function updateDiagnostics() {
+    const cortexMode = qualityTier >= 2 ? "lite" : qualityTier === 1 ? "balanced" : "quality";
+    const cortexPlan = cortex.plan({
+      faceRequested: Boolean(latestFaceLandmarksAnalysis),
+      landmarksRequested: Boolean(latestFaceLandmarksAnalysis),
+      motion: opticalFlowMode !== "off",
+      temporalRequested: temporalMode !== "off",
+      motionPrediction: motionPredictionEnabled,
+      stabilization: cameraStabilizationEnabled,
+      lowLight: lowLightMode !== "off",
+      detailRecovery: detailRecoveryMode !== "off",
+      waveMatter: waveMatterMode !== "off",
+      scienceOptics: scienceMode !== "off",
+      photonFusion: photonFusionCanvas !== null,
+      filterSelected: Boolean(selectedFilter) || selectedLens !== 0
+    }, { mode: cortexMode });
     let panel = $("#nox-camera-diagnostics");
     if (!panel) {
       panel = document.createElement("details");
@@ -2451,6 +2468,7 @@ export function initCamera() {
       ["WebGL", supported.webgl ? "متاح" : "غير مدعوم"],
       ["FaceDetector", supported.faceDetector ? "واجهة متاحة تجريبيًا؛ التتبع غير مفعّل" : "غير متاح؛ تتبع الوجه غير مفعّل"],
       ["مكتبة NOX", NOX_FILTERS.length + " إعدادًا ضمن 10 محركات مؤثرات"],
+      ["NOX CORTEX", cortexMode + " — " + cortexPlan.engines.map(engine => engine.id).join(" ← ") + " — تكلفة " + cortexPlan.totalCost + "/" + cortexPlan.budget.maxCost + (cortexPlan.rejected.length ? " — مستبعد " + cortexPlan.rejected.length : "")],
       ["الفلتر المختار", selectedFilter ? selectedFilter.name + " — " + selectedFilter.category : LENSES[selectedLens].name],
       ["تتبّع الأجسام", "غير مفعّل — لا يوجد تتبّع دلالي في هذه المرحلة"],
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalFrameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
