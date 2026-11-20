@@ -14,6 +14,7 @@ import { NOXMultiModelFaceFusionProvider } from "./nox-multi-model-face-fusion-p
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
 import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
+import { estimateNOXFaceRoll } from "./nox-face-roll-estimator.js";
 import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
@@ -575,6 +576,8 @@ export function initCamera() {
   let faceLandmarksSession = 0;
   let faceLandmarksProcessing = false;
   let faceLandmarkAverageCost = 0;
+  let faceLandmarkFrameSequence = 0;
+  let latestFaceRollEstimate = null;
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
@@ -645,7 +648,12 @@ export function initCamera() {
         faceLandmarkInputCanvas.width = width;
         faceLandmarkInputCanvas.height = height;
         faceLandmarkInputContext.drawImage(source, 0, 0, width, height);
-        const detected = faceLandmarkerProvider.detect(faceLandmarkInputCanvas);
+        const capturedAtMonotonicMs = performance.now();
+        const frameId = "nox-face-landmarks-" + (++faceLandmarkFrameSequence);
+        const timestamp = Date.now();
+        const detectedResult = faceLandmarkerProvider.detect(faceLandmarkInputCanvas);
+        const detected = { ...detectedResult, frameId, timestamp, capturedAtMonotonicMs,
+          coordinateSpace: "source-unmirrored-normalized" };
         return { detected, analysis: detected.detected ? faceLandmarksEngine.analyze(detected) : null };
       }
     }),
@@ -997,6 +1005,7 @@ export function initCamera() {
       const tracking = execution.output.tracking;
       if (tracking.state === "lost" || !tracking.result) {
         latestFaceLandmarksAnalysis = null;
+        latestFaceRollEstimate = null;
         latestFacialMaskPreview = null;
         faceLandmarksState = "بانتظار اكتشاف الوجه";
         faceDigitalTwinButton.disabled = true;
@@ -1009,6 +1018,7 @@ export function initCamera() {
         throw new Error("تعذر استخراج مناطق الوجه من نقاط التتبع");
       }
       latestFaceLandmarksAnalysis = analysis;
+      latestFaceRollEstimate = estimateNOXFaceRoll(analysis);
       latestFacialMaskPreview = null;
       faceLandmarksState = tracking.state === "coasting"
         ? "ثبات مؤقت — " + analysis.landmarkCount + " نقطة"
@@ -1026,6 +1036,7 @@ export function initCamera() {
       faceLandmarksStatus.textContent = "تعذر تحديث نقاط الوجه: " + String(error?.message || error).slice(0, 150);
       faceTrackingEngine.resetLandmarks();
       latestFaceLandmarksAnalysis = null;
+      latestFaceRollEstimate = null;
       faceDigitalTwinButton.disabled = true;
       clearFaceLandmarksPreview();
     } finally {
@@ -1258,6 +1269,7 @@ export function initCamera() {
         beautyInputCanvas.width = width;
         beautyInputCanvas.height = height;
         beautyInputContext.drawImage(video, 0, 0, width, height);
+        const capturedAt = performance.now();
         beautyLastTimestamp = Math.max(Date.now(), beautyLastTimestamp + 1);
         return {
           source: beautyInputCanvas, width, height,
