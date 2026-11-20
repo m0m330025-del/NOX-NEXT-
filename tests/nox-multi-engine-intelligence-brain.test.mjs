@@ -38,6 +38,18 @@ assert.equal(missingAlignment.decisions.find(x => x.engine === "temporal-alignme
 const disabled = brain.evaluate({ ...good, temporal: { enabled: false } });
 assert.equal(disabled.decisions.find(x => x.engine === "temporal-fusion").action, "inactive");
 
+const discovered = brain.evaluate({
+  ...good,
+  registeredEngines: [
+    { id: "optical-flow", name: "Sparse Optical Flow", category: "motion", registered: true, statusAvailable: true, enabled: true, capabilities: ["sparse-motion-vectors"], status: { vectorCount: 12 } },
+    { id: "late-added-engine", name: "Late Added Engine", category: "vision", registered: true, statusAvailable: false, capabilities: [], status: {} }
+  ]
+});
+assert.equal(discovered.discoveredEngineCount, 2);
+assert.equal(discovered.engineInventory[0].id, "optical-flow");
+assert.ok(discovered.decisions.some(item => item.engine === "discovery:late-added-engine" && item.action === "discovered"));
+assert.equal(discovered.decisions.find(item => item.engine === "discovery:late-added-engine").reason, "registered-engine-without-status-api");
+
 brain.reset();
 assert.equal(brain.getPlan().status, "no-evaluation");
 console.log("NOX Multi-Engine Intelligence Brain deterministic tests passed");
