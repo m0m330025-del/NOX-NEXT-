@@ -32,6 +32,13 @@ assert.equal(compositor.height, 2);
 assert.deepEqual(Array.from(compositor.canvas.image.data), [
   0,0,0,0, 200,20,60,98, 200,20,60,49, 0,0,0,0
 ]);
+const missingFrameIdentity = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+const unidentifiedVision = structuredClone(vision);
+delete unidentifiedVision.frame.id;
+assert.equal(missingFrameIdentity.accept({ sequence: 1, capturedAt: 100, vision: unidentifiedVision,
+  look: { lips: { color: [200,20,60], opacity: 0.5 } } }), false,
+  "masks without exact source-frame identity must be rejected");
+assert.equal(missingFrameIdentity.sequence, 0);
 const target = makeCanvas();
 target.width = 640; target.height = 480;
 assert.equal(compositor.draw(target, { now: 200, mirrored: true, currentFaceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 } }), true);
