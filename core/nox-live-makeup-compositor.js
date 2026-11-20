@@ -6,14 +6,14 @@
 const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
 export class NOXLiveMakeupCompositor {
-  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35 } = {}) {
+  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
     if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
-        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8) {
+        !Number.isFinite(edgeSoftness) || edgeSoftness < 0 || edgeSoftness > 0.8 ||\n        !Number.isFinite(maxCenterDrift) || maxCenterDrift <= 0 || maxCenterDrift > 0.25 ||\n        !Number.isFinite(minScaleRatio) || minScaleRatio <= 0 || minScaleRatio >= 1 ||\n        !Number.isFinite(maxScaleRatio) || maxScaleRatio <= 1 || maxScaleRatio > 2) {
       throw new TypeError("invalid-live-makeup-compositor-options");
     }
     this.canvasFactory = canvasFactory;
     this.maxAgeMs = maxAgeMs;
-    this.edgeSoftness = edgeSoftness;
+    this.edgeSoftness = edgeSoftness;\n    this.maxCenterDrift = maxCenterDrift;\n    this.minScaleRatio = minScaleRatio;\n    this.maxScaleRatio = maxScaleRatio;
     this.canvas = null;
     this.sequence = 0;
     this.capturedAt = 0;
@@ -94,17 +94,34 @@ export class NOXLiveMakeupCompositor {
       this.clear();
       return false;
     }
-    if (this.faceBox && currentFaceBox &&
-        [currentFaceBox.x, currentFaceBox.y, currentFaceBox.width, currentFaceBox.height].every(Number.isFinite)) {
+    let alignment = null;
+    if (this.faceBox) {
+      const validCurrent = currentFaceBox &&
+        [currentFaceBox.x, currentFaceBox.y, currentFaceBox.width, currentFaceBox.height].every(Number.isFinite) &&
+        currentFaceBox.width > 0 && currentFaceBox.height > 0;
+      const validPrevious = [this.faceBox.x, this.faceBox.y, this.faceBox.width, this.faceBox.height].every(Number.isFinite) &&
+        this.faceBox.width > 0 && this.faceBox.height > 0;
+      if (!validCurrent || !validPrevious) {
+        this.clear();
+        return false;
+      }
       const previousCenterX = this.faceBox.x + this.faceBox.width / 2;
       const previousCenterY = this.faceBox.y + this.faceBox.height / 2;
       const currentCenterX = currentFaceBox.x + currentFaceBox.width / 2;
       const currentCenterY = currentFaceBox.y + currentFaceBox.height / 2;
       const centerDrift = Math.hypot(currentCenterX - previousCenterX, currentCenterY - previousCenterY);
-      if (centerDrift > 0.08) {
+      const scaleX = currentFaceBox.width / this.faceBox.width;
+      const scaleY = currentFaceBox.height / this.faceBox.height;
+      const aspectRatio = (currentFaceBox.width / currentFaceBox.height) /
+        (this.faceBox.width / this.faceBox.height);
+      if (centerDrift > this.maxCenterDrift ||
+          scaleX < this.minScaleRatio || scaleX > this.maxScaleRatio ||
+          scaleY < this.minScaleRatio || scaleY > this.maxScaleRatio ||
+          aspectRatio < this.minScaleRatio || aspectRatio > this.maxScaleRatio) {
         this.clear();
         return false;
       }
+      alignment = { previousCenterX, previousCenterY, currentCenterX, currentCenterY, scaleX, scaleY };
     }
     const context = targetCanvas.getContext("2d");
     if (!context) return false;
