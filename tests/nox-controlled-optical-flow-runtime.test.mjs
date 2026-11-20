@@ -1,8 +1,27 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { NOXCortex } from "../core/nox-cortex.js";
 import { NOXAdaptiveRuntimeScheduler } from "../core/nox-adaptive-runtime-scheduler.js";
 import { NOXDynamicEngineAdapter, NOXDynamicEngineAdapterHost } from "../core/nox-dynamic-engine-adapter.js";
 import { NOXSparseOpticalFlowEngine } from "../core/nox-optical-flow-engine.js";
+
+const cameraSource = readFileSync(new URL("../core/camera.js", import.meta.url), "utf8");
+for (const token of [
+  "opticalFlowLastSampleAt",
+  "flowRuntime.samples >= 3",
+  "Number.isFinite(flowRuntime.measuredP95Ms)",
+  "noxAdaptiveRuntimeScheduler.evaluate({",
+  "if (!gate.eligibleEngineIds.includes(\"optical-flow\"))",
+  "opticalFlowRuntimeGate = \"held-frame-cost-unavailable\"",
+  "opticalFlowRuntimeGate = warmupComplete ? \"executed-controlled\" : \"executed-warmup\""
+]) {
+  assert.ok(cameraSource.includes(token), "camera controlled-runtime integration missing: " + token);
+}
+assert.ok(
+  cameraSource.indexOf("noxAdaptiveRuntimeScheduler.evaluate({", cameraSource.indexOf("async function estimateOpticalFlow")) <
+    cameraSource.indexOf("const execution = await cortex.execute(", cameraSource.indexOf("async function estimateOpticalFlow")),
+  "runtime budget gate must run before the existing CORTEX execution"
+);
 
 const width = 64;
 const height = 48;
