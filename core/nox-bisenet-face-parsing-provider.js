@@ -166,6 +166,10 @@ export class NOXBiSeNetFaceParsingProvider {
     maxInputDimension = DEFAULTS.maxInputDimension,
     executionProviders = ["webgpu", "wasm"],
     sessionFactory = null,
+    fetchImpl = (...args) => fetch(...args),
+    cryptoProvider = globalThis.crypto,
+    modelSha256 = "0d9bd318e46987c3bdbfacae9e2c0f461cae1c6ac6ea6d43bbe541a91727e33f",
+    modelBytes = 53205364,
     preprocessFrame = preprocessCanvasFrame,
     canvasFactory = defaultCanvasFactory
   } = {}) {
@@ -173,6 +177,9 @@ export class NOXBiSeNetFaceParsingProvider {
     this.modelInputSize = Math.max(1, Math.floor(Number(modelInputSize) || DEFAULTS.modelInputSize));
     this.maxInputDimension = Math.max(1, Math.floor(Number(maxInputDimension) || DEFAULTS.maxInputDimension));
     this.executionProviders = executionProviders; this.sessionFactory = sessionFactory;
+    this.fetchImpl = fetchImpl; this.cryptoProvider = cryptoProvider;
+    this.modelSha256 = String(modelSha256 || "").toLowerCase();
+    this.expectedModelBytes = Math.max(0, Math.floor(Number(modelBytes) || 0));
     this.preprocessFrame = preprocessFrame; this.canvasFactory = canvasFactory;
     this.runtime = null; this.session = null; this.inputName = null; this.outputName = null;
     this.state = "idle"; this.sequence = 0;
@@ -192,7 +199,20 @@ export class NOXBiSeNetFaceParsingProvider {
       } else {
         this.runtime = await this.runtimeLoader();
         if (!this.runtime?.InferenceSession?.create || !this.runtime?.Tensor) throw new Error("onnx-runtime-api-unavailable");
-        this.session = await this.runtime.InferenceSession.create(this.modelUrl, { executionProviders: this.executionProviders });
+        if (typeof this.fetchImpl !== "function" || !this.cryptoProvider?.subtle?.digest) {
+          throw new Error("model-integrity-verification-unavailable");
+        }
+        const response = await this.fetchImpl(this.modelUrl, { mode: "cors", credentials: "omit", cache: "force-cache" });
+        if (!response?.ok) throw new Error(`bisenet-model-http-${response?.status || "failed"}`);
+        const modelBuffer = await response.arrayBuffer();
+        if (!(modelBuffer instanceof ArrayBuffer) ||
+            (this.expectedModelBytes > 0 && modelBuffer.byteLength !== this.expectedModelBytes)) {
+          throw new Error("bisenet-model-size-mismatch");
+        }
+        const digest = await this.cryptoProvider.subtle.digest("SHA-256", modelBuffer);
+        const actualSha256 = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+        if (!this.modelSha256 || actualSha256 !== this.modelSha256) throw new Error("bisenet-model-sha256-mismatch");
+        this.session = await this.runtime.InferenceSession.create(new Uint8Array(modelBuffer), { executionProviders: this.executionProviders });
       }
       const inputs = this.session.inputNames || this.session.getInputs?.().map(item => item.name);
       const outputs = this.session.outputNames || this.session.getOutputs?.().map(item => item.name);
