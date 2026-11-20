@@ -489,6 +489,8 @@ export function initCamera() {
   let opticalFlowWidth = 0;
   let opticalFlowHeight = 0;
   let opticalFlowLastAt = 0;
+  let opticalFlowLastSampleAt = 0;
+  let opticalFlowRuntimeGate = "warmup-required";
   let opticalFlowVectors = [];
   let opticalFlowConfidence = 0;
   let opticalFlowSequence = 0;
@@ -2376,6 +2378,8 @@ export function initCamera() {
     motionSeparationResult = motionSeparationEngine.getStatus();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
+    opticalFlowLastSampleAt = 0;
+    opticalFlowRuntimeGate = "warmup-required";
     opticalFlowVectors = [];
     opticalFlowConfidence = 0;
     opticalFlowSequence = 0;
@@ -2399,7 +2403,7 @@ export function initCamera() {
     if (opticalFlowMode === "off" || !video.videoWidth || !video.videoHeight || opticalFlowProcessing) return;
     const now = performance.now();
     const interval = lowPower ? 240 : 160;
-    if (opticalFlowLastAt && now - opticalFlowLastAt < interval) return;
+    if (opticalFlowLastSampleAt && now - opticalFlowLastSampleAt < interval) return;
     ensureOpticalFlowCanvas();
     if (!opticalFlowContext) return;
     const sampleWidth = lowPower ? 48 : 64;
@@ -2426,8 +2430,10 @@ export function initCamera() {
     for (const value of gray) { const normalized = value / 255; luminanceSum += normalized; luminanceSquaredSum += normalized * normalized; }
     const meanLuminance = luminanceSum / gray.length;
     sceneLuminanceMetrics = { meanLuminance, contrast: Math.sqrt(Math.max(0, luminanceSquaredSum / gray.length - meanLuminance * meanLuminance)) };
-    opticalFlowLastAt = now;
-    if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {      opticalFlowPrevious = gray;      opticalFlowWidth = sampleWidth;
+    opticalFlowLastSampleAt = now;
+    if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {
+      opticalFlowPrevious = gray;
+      opticalFlowWidth = sampleWidth;
       opticalFlowHeight = sampleHeight;
       opticalFlowVectors = [];
       opticalFlowConfidence = 0;
@@ -2442,6 +2448,32 @@ export function initCamera() {
         requested: ["optical-flow"],
         mode: lowPower ? "lite" : "balanced"
       });
+      const runtimeSnapshot = dynamicEngineHost.getRuntimeSnapshot();
+      const flowRuntime = runtimeSnapshot.find(engine => engine.id === "optical-flow");
+      const warmupComplete = Boolean(flowRuntime && flowRuntime.samples >= 3 &&
+        Number.isFinite(flowRuntime.measuredP95Ms));
+      if (warmupComplete) {
+        if (!Number.isFinite(averageFrameCost) || averageFrameCost <= 0) {
+          opticalFlowRuntimeGate = "held-frame-cost-unavailable";
+          opticalFlowPrevious = gray;
+          return;
+        }
+        const gate = noxAdaptiveRuntimeScheduler.evaluate({
+          cortexPlan: plan,
+          runtimeSnapshot: [flowRuntime],
+          targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
+          frameCostMs: averageFrameCost,
+          lowPower
+        });
+        if (!gate.eligibleEngineIds.includes("optical-flow")) {
+          opticalFlowRuntimeGate = gate.steps.find(step => step.id === "optical-flow")?.reason || "held-no-safe-schedule";
+          opticalFlowPrevious = gray;
+          return;
+        }
+        opticalFlowRuntimeGate = "scheduled-measured-p95";
+      } else {
+        opticalFlowRuntimeGate = "warmup-sample-" + (flowRuntime?.samples || 0) + "-of-3";
+      }
       const execution = await cortex.execute(
         plan,
         { current: gray, previous, width: sampleWidth, height: sampleHeight },
@@ -2450,6 +2482,8 @@ export function initCamera() {
       );
       if (session !== opticalFlowSession || !stream ||
           execution.state !== "completed" || !execution.output?.vectors) return;
+      opticalFlowLastAt = performance.now();
+      opticalFlowRuntimeGate = warmupComplete ? "executed-controlled" : "executed-warmup";
       opticalFlowVectors = execution.output.vectors;
       opticalFlowConfidence = execution.output.confidence;
       updateMotionFreezeState();
@@ -3183,7 +3217,8 @@ export function initCamera() {
       ["حالة دورة حياة المحركات", "متصل " + adapterRuntimeCounts.connected + " / مفعّل " + adapterRuntimeCounts.enabled + " / مخطط CORTEX " + adapterRuntimeCounts.planned + " / نُفّذ بنجاح " + adapterRuntimeCounts.executed + " / فشل آخر تنفيذ " + adapterRuntimeCounts.failed],
       ["أهلية خطة العقل", recommendedEngineCount + " محرك موصى به من " + engineOrchestrationPlan.decisions.length + " — توصية قدرات وأدلة، وليست تشغيلًا تلقائيًا"],
       ["قياسات المحولات", adapterRuntimeSnapshot.map(engine => engine.id + ": " + engine.lastExecutionStatus + " / p95 " + (engine.measuredP95Ms === null ? "غير مقاس" : engine.measuredP95Ms.toFixed(2) + "ms") + " / إخفاقات تراكمية " + engine.failureCount).join(" | ")],
-      ["NOX Adaptive Runtime Scheduling", adaptiveRuntimeSchedule.state + " — مؤهل " + adaptiveRuntimeSchedule.eligibleCount + " / مؤجل " + adaptiveRuntimeSchedule.heldCount + " — تكلفة p95 " + adaptiveRuntimeSchedule.estimatedTotalMs.toFixed(2) + "/" + (adaptiveRuntimeSchedule.availableBudgetMs === null ? "ميزانية غير متاحة" : adaptiveRuntimeSchedule.availableBudgetMs.toFixed(2) + "ms") + " — توصية فقط، التنفيذ لم يتغير"],
+      ["NOX Adaptive Runtime Scheduling", adaptiveRuntimeSchedule.state + " — مؤهل " + adaptiveRuntimeSchedule.eligibleCount + " / مؤجل " + adaptiveRuntimeSchedule.heldCount + " — تكلفة p95 " + adaptiveRuntimeSchedule.estimatedTotalMs.toFixed(2) + "/" + (adaptiveRuntimeSchedule.availableBudgetMs === null ? "ميزانية غير متاحة" : adaptiveRuntimeSchedule.availableBudgetMs.toFixed(2) + "ms") + " — توصية للمحركات الأخرى"],
+      ["Optical Flow Runtime Gate", opticalFlowRuntimeGate + " — warm-up 3 عينات ثم تحكم بقياس p95 وميزانية الإطار"],
       ["قرارات جدولة CORTEX", adaptiveRuntimeSchedule.steps.map(step => step.id + ": " + (step.eligible ? "مؤهل" : "مؤجل (" + step.reason + ")") + (step.brainRecommended ? " — أوصى به العقل" : "")).join(" | ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
