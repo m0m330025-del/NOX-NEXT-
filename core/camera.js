@@ -13,6 +13,7 @@ import { createNOXCortex } from "./nox-cortex.js";
 import { NOXSparseOpticalFlowEngine } from "./nox-optical-flow-engine.js";
 import { NOXTemporalMemoryEngine } from "./nox-temporal-memory-engine.js";
 import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
+import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -338,6 +339,8 @@ export function initCamera() {
   let temporalBuffers = [];
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
+  const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
+  let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
   let opticalFlowSession = 0;
@@ -1818,6 +1821,8 @@ export function initCamera() {
     opticalFlowProcessing = false;
     opticalFlowEngine.reset();
     temporalAlignmentEngine.reset();
+    motionSeparationEngine.reset();
+    motionSeparationResult = motionSeparationEngine.getStatus();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
     opticalFlowVectors = [];
@@ -1902,9 +1907,11 @@ export function initCamera() {
       updateCameraStabilization();
       opticalFlowPrevious = gray;
       opticalFlowSequence += 1;
-      temporalAlignmentEngine.ingest(opticalFlowVectors, {
-        sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight
-      });
+      motionSeparationResult = motionSeparationEngine.process(opticalFlowVectors);
+      temporalAlignmentEngine.ingest(
+        motionSeparationResult.accepted ? motionSeparationResult.globalVectors : [],
+        { sequence: opticalFlowSequence, width: sampleWidth, height: sampleHeight }
+      );
       updateSubjectLock(gray, sampleWidth, sampleHeight);
       updateTrackedRegionFromFlow();
     } catch {
@@ -2540,6 +2547,9 @@ export function initCamera() {
       ["الذاكرة الزمنية", temporalMode === "off" ? "متوقفة" : (temporalMode === "motion-trace" ? "Motion Trace" : "Time Echo") + " — " + temporalMemoryEngine.getStatus().frameCount + "/" + temporalBuffers.length + " إطارات مصغرة"],
       ["NOX PHOTON TIME MACHINE", photonTimelineEnabled ? "نشط — " + photonTimelineOrder.length + "/" + photonTimelineSlots.length + " عينات زمنية / اختيار " + (photonTimelineSelectedIndex + 1) : "متوقف"],
       ["تقدير الحركة", opticalFlowMode === "off" ? "متوقف" : "Sparse block matching — " + opticalFlowVectors.length + " متجهًا، ثقة " + Math.round(opticalFlowConfidence * 100) + "%"],
+      ["NOX Smart Motion Separation", motionSeparationResult.accepted
+        ? "حركة عامة " + motionSeparationResult.backgroundCount + " / شذوذ محلي " + motionSeparationResult.outlierCount + " / مجموعات محلية " + motionSeparationResult.localizedMotionCandidates.length
+        : "غير موثوق — " + motionSeparationResult.reason],
       ["تتبّع قناع المنطقة", regionFollowEnabled ? "نشط — " + regionFollowVectorCount + " متجهًا داخل القناع" : "متوقف"],
       ["NOX Subject Lock", subjectLockEnabled ? "قفل بصري تجريبي — ثقة " + Math.round(subjectLockConfidence * 100) + "% / فقد " + subjectLockLostFrames + " / استعادة " + subjectLockReacquireAttempts : "متوقف"],
       ["NOX Motion Prediction", motionPredictionEnabled ? "تنبؤ محدود مفعّل — سرعة " + subjectLockVelocity.x.toFixed(1) + ", " + subjectLockVelocity.y.toFixed(1) + " عينة/إطار" : "متوقف"],
