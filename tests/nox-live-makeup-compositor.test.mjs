@@ -10,6 +10,7 @@ function makeCanvas() {
         save: () => canvas.transforms.push("save"),
         restore: () => canvas.transforms.push("restore"),
         translate: (...args) => canvas.transforms.push(["translate", ...args]),
+        rotate: (...args) => canvas.transforms.push(["rotate", ...args]),
         scale: (...args) => canvas.transforms.push(["scale", ...args]),
         drawImage: (...args) => canvas.draws.push(args)
       };
@@ -75,6 +76,20 @@ assert.equal(aligned.draw(shiftedTarget, { now: 710,
   currentFaceBox: { x: 0.35, y: 0.3, width: 0.3, height: 0.6 } }), false,
   "large face scale changes must invalidate stale masks");
 assert.equal(aligned.canvas, null);
+const rollAware = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, maxRollAgeMs: 220 });
+const rollVision = { ...alignmentVision, frame: { ...alignmentVision.frame, id: "roll-mask", capturedAtMonotonicMs: 1000 } };
+const capturedRoll = { state: "estimated", angleRadians: 0.1, frame: { id: "roll-mask", capturedAtMonotonicMs: 1000, width: 2, height: 2, coordinateSpace: "source-unmirrored-normalized" } };
+assert.equal(rollAware.accept({ sequence: 1, capturedAt: 1000, vision: rollVision, capturedRoll, look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
+const rollTarget = makeCanvas(); rollTarget.width = 1000; rollTarget.height = 800;
+const currentRoll = { state: "estimated", angleRadians: 0.2, frame: { id: "roll-current", capturedAtMonotonicMs: 1050, width: 256, height: 256, coordinateSpace: "source-unmirrored-normalized" } };
+assert.equal(rollAware.draw(rollTarget, { now: 1060, nowMonotonicMs: 1060, mirrored: true, currentFaceBox: alignmentVision.faceBox, currentRoll }), true);
+const rotateIndex = rollTarget.transforms.findIndex(item => Array.isArray(item) && item[0] === "rotate");
+assert.ok(rotateIndex > 0, "fresh compatible roll should add a rotation transform");
+assert.ok(Math.abs(rollTarget.transforms[rotateIndex][1] - 0.1) < 1e-9, "rotation must use current minus captured roll");
+assert.ok(rollTarget.transforms[1][0] === "translate" && rollTarget.transforms[2][0] === "scale", "mirror transform must be applied exactly once before alignment/rotation");
+const staleTarget = makeCanvas(); staleTarget.width = 1000; staleTarget.height = 800;
+assert.equal(rollAware.draw(staleTarget, { now: 1060, nowMonotonicMs: 1300, mirrored: false, currentFaceBox: alignmentVision.faceBox, currentRoll }), true, "stale roll should not disable otherwise valid makeup overlay");
+assert.equal(staleTarget.transforms.some(item => Array.isArray(item) && item[0] === "rotate"), false, "stale roll must skip rotation compensation");
 assert.equal(aligned.accept({ sequence: 3, capturedAt: 800, vision: alignmentVision,
   look: { lips: { color: [200,20,60], opacity: 0.5 } } }), true);
 assert.equal(aligned.draw(shiftedTarget, { now: 810,
