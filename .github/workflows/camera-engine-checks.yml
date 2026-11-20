@@ -7,6 +7,7 @@ on:
       - "core/nox-*.js"
       - "tests/nox-*.test.mjs"
       - "core/camera.js"
+      - "tests/nox-camera-webgl-fallback.test.mjs"
       - "core/nox-filter-engine.js"
       - "core/nox-original-filter-library.js"
       - "tests/nox-original-filter-library.test.mjs"
@@ -142,6 +143,7 @@ jobs:
           cp core/nox-dynamic-engine-adapter.js /tmp/dynamic-engine-adapter.mjs
           cp core/nox-cortex.js /tmp/nox-cortex.mjs
           node --check /tmp/camera.mjs
+          node tests/nox-camera-webgl-fallback.test.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
           node --check /tmp/camera-render-surface.mjs
