@@ -6,6 +6,9 @@ on:
     paths:
       - "core/camera.js"
       - "core/nox-filter-engine.js"
+      - "core/nox-original-filter-library.js"
+      - "tests/nox-original-filter-library.test.mjs"
+      - "docs/NOX-1000-ORIGINAL-FILTERS.md"
       - "core/nox-temporal-memory-engine.js"
       - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-optical-flow-engine.js"
@@ -75,6 +78,7 @@ jobs:
           cp core/camera.js /tmp/camera.mjs
           cp app.js /tmp/app.mjs
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
+          cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
           cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
           cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
@@ -89,6 +93,7 @@ jobs:
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
+          node --check /tmp/nox-original-filter-library.mjs
           node --check /tmp/mediapipe-selfie-provider.mjs
           node --check /tmp/beauty-vision-provider.mjs
           node --check /tmp/skin-segmentation-engine.mjs
@@ -100,6 +105,7 @@ jobs:
           node --check /tmp/smart-motion-separation-engine.mjs
           node --check /tmp/adaptive-temporal-fusion-engine.mjs
           node --check /tmp/multi-engine-intelligence-brain.mjs
+          node tests/nox-original-filter-library.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
           node tests/nox-temporal-alignment-engine.test.mjs
@@ -185,6 +191,15 @@ jobs:
           for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
             if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
           }
+          const originalCatalogModule = await import('file:///tmp/nox-original-filter-library.mjs');
+          if (originalCatalogModule.NOX_FILTER_COUNT !== 1000 || originalCatalogModule.listNOXFilters().length !== 1000) {
+            throw new Error('NOX ORIGINAL catalog must expose exactly 1,000 presets');
+          }
+          const originalCamera = fs.readFileSync('core/camera.js', 'utf8');
+          for (const token of ['listNOXFilters', 'NOX ORIGINAL — 1000', 'selectedOriginalFilter ? 10 + selectedOriginalFilter.familyIndex', 'selectedOriginalFilter ? selectedOriginalFilter.variantIndex / 99']) {
+            if (!originalCamera.includes(token)) throw new Error('NOX ORIGINAL live GPU filter integration missing: ' + token);
+          }
+          console.log('NOX ORIGINAL 1,000 procedural presets and live GPU selector verified');
           const catalogModule = await import('file:///tmp/filter-engine.mjs');
           const groups = catalogModule.NOX_FILTER_GROUPS;
           const filters = catalogModule.NOX_FILTERS;
