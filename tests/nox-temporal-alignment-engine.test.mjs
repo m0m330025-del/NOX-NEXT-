@@ -7,7 +7,7 @@ engine.onCapture(0);
 engine.onCapture(1);
 
 const vectors = Array.from({ length: 8 }, (_, index) => ({
-  x: (index + 1) / 10, y: 0.5,
+  x: 0.1 + (index % 4) * 0.25, y: 0.2 + Math.floor(index / 4) * 0.6,
   dx: 0.01, dy: -0.005, confidence: 0.8
 }));
 const accepted = engine.ingest(vectors, { sequence: 1, width: 64, height: 48 });
@@ -20,17 +20,22 @@ const stale = engine.ingest(vectors, { sequence: 1, width: 64, height: 48 });
 assert.equal(stale.reason, "stale-flow-sample");
 const weak = vectors.map(vector => ({ ...vector, confidence: 0.05 }));
 assert.equal(engine.ingest(weak, { sequence: 2, width: 64, height: 48 }).accepted, false);
+const localized = vectors.map((vector, index) => ({
+  ...vector, x: 0.45 + index * 0.001, y: 0.45 + index * 0.001
+}));
+assert.equal(engine.ingest(localized, { sequence: 3, width: 64, height: 48 }).reason,
+  "localized-motion-vectors");
 const inconsistent = vectors.map((vector, index) => ({
   ...vector, dx: index % 2 ? 0.09 : -0.09
 }));
-assert.equal(engine.ingest(inconsistent, { sequence: 3, width: 64, height: 48 }).reason,
+assert.equal(engine.ingest(inconsistent, { sequence: 4, width: 64, height: 48 }).reason,
   "inconsistent-motion-vectors");
 
 engine.onCapture(0);
 assert.equal(engine.getTransform(0).dx, 0, "new captures reset accumulated translation");
-engine.ingest(vectors, { sequence: 4, width: 64, height: 48 });
+engine.ingest(vectors, { sequence: 5, width: 64, height: 48 });
 assert.ok(Math.abs(engine.getTransform(0).dx - 0.01) < 1e-9);
-for (let sequence = 5; sequence < 30; sequence += 1) {
+for (let sequence = 6; sequence < 30; sequence += 1) {
   engine.ingest(vectors, { sequence, width: 64, height: 48 });
 }
 assert.equal(engine.getTransform(0).valid, false, "large accumulated drift must invalidate a slot");
