@@ -35,7 +35,8 @@ const warmup = scheduler.evaluate({
   frameCostMs: 5
 });
 assert.equal(warmup.eligibleCount, 0);
-assert.ok(warmup.rejected.every(item => item.reason === "measured-p95-not-available"));
+assert.equal(warmup.steps[0].reason, "measured-p95-not-available");
+assert.ok(warmup.steps.slice(1).every(item => item.reason === "dependency-not-runtime-eligible"));
 assert.equal(warmup.steps[1].reason, "dependency-not-runtime-eligible");
 
 const disabled = scheduler.evaluate({
