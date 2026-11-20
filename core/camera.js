@@ -10,6 +10,7 @@ import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
 import { NOXFacialMaskBuilder } from "./nox-facial-mask-builder.js";
 import { buildNOXFaceDigitalTwinDiagnostic } from "./nox-face-digital-twin-diagnostics.js";
 import { createNOXCortex } from "./nox-cortex.js";
+import { NOXSparseOpticalFlowEngine } from "./nox-optical-flow-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -395,6 +396,7 @@ export function initCamera() {
   let photonGhostGuardTiles = new Set();
   let photonGhostGuardCounts = { blocked: 0, clear: 0 };
   const cortex = createNOXCortex();
+  const opticalFlowEngine = new NOXSparseOpticalFlowEngine({ maxDimension: 128, minConfidence: 0.06 });
   const faceDetectionEngine = new NOXFaceDetectionEngine();
   const faceTrackingEngine = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 0.58 });
   const faceRegionEngine = new NOXFaceRegionEngine();
@@ -1871,47 +1873,13 @@ export function initCamera() {
       opticalFlowConfidence = 0;
       return;
     }
-    const cellStep = lowPower ? 8 : 8;
-    const patchRadius = 1;
-    const searchRadius = lowPower ? 2 : 3;
-    const vectors = [];
-    let confidenceTotal = 0;
-    const border = searchRadius + patchRadius;
-    for (let cy = border; cy < sampleHeight - border; cy += cellStep) {
-      for (let cx = border; cx < sampleWidth - border; cx += cellStep) {
-        let bestSad = Infinity;
-        let secondSad = Infinity;
-        let bestDx = 0;
-        let bestDy = 0;
-        for (let dy = -searchRadius; dy <= searchRadius; dy += 1) {
-          for (let dx = -searchRadius; dx <= searchRadius; dx += 1) {
-            let sad = 0;
-            for (let py = -patchRadius; py <= patchRadius; py += 1) {
-              for (let px = -patchRadius; px <= patchRadius; px += 1) {
-                const index = (cy + py) * sampleWidth + cx + px;
-                const previousIndex = (cy + dy + py) * sampleWidth + cx + dx + px;
-                sad += Math.abs(gray[index] - opticalFlowPrevious[previousIndex]);
-              }
-            }
-            if (sad < bestSad) {
-              secondSad = bestSad;
-              bestSad = sad;
-              bestDx = dx;
-              bestDy = dy;
-            } else if (sad < secondSad) secondSad = sad;
-          }
-        }
-        const uniqueness = secondSad === Infinity ? 0 : Math.max(0, Math.min(1, (secondSad - bestSad) / (secondSad + 1)));
-        const texture = Math.min(1, secondSad / 90);
-        const confidence = uniqueness * texture;
-        if ((Math.abs(bestDx) + Math.abs(bestDy)) > 0 && confidence > 0.06) {
-          vectors.push({ x: cx / sampleWidth, y: cy / sampleHeight, dx: -bestDx / sampleWidth, dy: -bestDy / sampleHeight, confidence });
-          confidenceTotal += confidence;
-        }
-      }
-    }
-    opticalFlowVectors = vectors;
-    opticalFlowConfidence = vectors.length ? confidenceTotal / vectors.length : 0;
+    const flowResult = opticalFlowEngine.process(gray, opticalFlowPrevious, sampleWidth, sampleHeight, {
+      cellStep: 8,
+      patchRadius: 1,
+      searchRadius: lowPower ? 2 : 3
+    });
+    opticalFlowVectors = flowResult.vectors;
+    opticalFlowConfidence = flowResult.confidence;
     updateMotionFreezeState();
     updateCameraStabilization();
     opticalFlowPrevious = gray;
