@@ -165,15 +165,18 @@ export class NOXCortex {
       if (selected.has(engine.id)) return true;
       const chain = [];
       const collect = item => {
-        if (selected.has(item.id) || chain.some(entry => entry.id === item.id)) return;
+        if (selected.has(item.id) || chain.some(entry => entry.id === item.id)) return true;
         for (const depId of item.requires) {
           const dep = this.engines.get(depId);
-          if (!dep || !dep.enabled) return;
-          collect(dep);
+          if (!dep || !dep.enabled || !collect(dep)) return false;
         }
         chain.push(item);
+        return true;
       };
-      collect(engine);
+      if (!collect(engine)) {
+        rejected.push({ id: engine.id, reason: "dependency-unavailable" });
+        return false;
+      }
       if (!chain.length && selected.has(engine.id)) return true;
       const cost = chain.reduce((sum, item) => sum + item.cost, 0);
       if (result.length + chain.length > budget.maxEngines || totalCost + cost > budget.maxCost) {
