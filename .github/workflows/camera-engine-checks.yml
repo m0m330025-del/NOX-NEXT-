@@ -382,6 +382,20 @@ jobs:
               throw new Error('Camera dynamic adapter registration missing: ' + engineId);
             }
           }
+          for (const engineId of ['temporal-memory', 'temporal-alignment', 'smart-motion-separation', 'adaptive-temporal-fusion', 'predictive-camera-intelligence', 'scene-intelligence']) {
+            if (!js.includes('id: "' + engineId + '"') || !js.includes('dynamicEngineHost.runSync("' + engineId + '"')) {
+              throw new Error('Camera synchronous dynamic adapter integration missing: ' + engineId);
+            }
+          }
+          if (!js.includes('المحركات المتصلة بالعقد الموحد') ||
+              !js.includes('dynamicEngineHost.getStatus()')) {
+            throw new Error('Dynamic adapter runtime diagnostics are missing');
+          }
+          const adapterModule = await import('file:///tmp/dynamic-engine-adapter.mjs');
+          if (typeof adapterModule.NOXDynamicEngineAdapter.prototype.handleSync !== 'function' ||
+              typeof adapterModule.NOXDynamicEngineAdapterHost.prototype.runSync !== 'function') {
+            throw new Error('Synchronous Dynamic Adapter execution API is missing');
+          }
           for (const token of ['regionFollowLastSequence', 'count < 2', 'Math.max(-0.025']) {
             if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
           }
