@@ -228,7 +228,7 @@ jobs:
           for (const token of ['listNOXFilters', 'NOX ORIGINAL — 1000', 'selectedOriginalFilter ? 10 + selectedOriginalFilter.familyIndex', 'selectedOriginalFilter ? selectedOriginalFilter.variantIndex / 99']) {
             if (!originalCamera.includes(token)) throw new Error('NOX ORIGINAL live GPU filter integration missing: ' + token);
           }
-          for (const token of ['buildNOXHybridSelection', 'selectedHybridMask', 'selectedHybridWeights', 'u_hybridWeights[6]', 'uniform1fv(renderer.hybridWeights)', 'nox-hybrid-mixer', 'nox-hybrid-weight', 'syncHybridMixer', 'hybridFallbackFilters']) {
+          for (const token of ['buildNOXHybridSelection', 'selectedHybridMask', 'selectedHybridWeights', 'u_hybridWeights[6]', 'uniform1fv(renderer.hybridWeights,', 'nox-hybrid-mixer', 'nox-hybrid-weight', 'syncHybridMixer', 'hybridFallbackFilters']) {
             if (!js.includes(token)) throw new Error('NOX multi-engine hybrid mixer integration missing: ' + token);
           }
           const hybridSelection = hybridEngineModule.buildNOXHybridSelection(['chroma-tide', 'prism-forge', 'aurora-relic'], [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
