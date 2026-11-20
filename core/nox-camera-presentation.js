@@ -33,7 +33,7 @@ export function initCameraPresentation() {
     let moving = false;
     for (const child of children) {
       if (child === firstAdvanced) moving = true;
-      if (moving && child !== filterLibrary && child !== result &&
+      if (moving && child !== result &&
           child !== captionLabel && child !== caption && child !== status) {
         advanced.append(child);
       }
@@ -48,7 +48,7 @@ export function initCameraPresentation() {
 
   if (filterLibrary) {
     const heading = filterLibrary.querySelector("b");
-    if (heading) heading.textContent = "كل فلاتر NOX";
+    if (heading) heading.textContent = "مكتبة الفلاتر المتقدمة";
   }
 
   const stage = page.querySelector(".nox-camera-v2-stage");
