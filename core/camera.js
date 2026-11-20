@@ -2492,7 +2492,7 @@ export function initCamera() {
   }
 
   function renderTemporalMemory(ctx, width, height) {
-    if (!ctx || !width || !height) return;
+    if (temporalMode === "off" || !ctx || !width || !height) return;
     ensureTemporalMemory(width, height);
     if (!temporalBuffers.length) return;
     const now = performance.now();
