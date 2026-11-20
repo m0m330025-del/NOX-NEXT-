@@ -77,3 +77,6 @@ Tests verify recipe identity, distinct blend operators, engine composition metad
 ### Multi-engine interactive mixer
 
 The camera exposes a HYBRID MIXER when a hybrid preset is selected. Each of the six engines can be enabled independently, and each active layer has its own 0–85% weight control. The GPU shader uses a bit-mask to run enabled layers sequentially in one frame, with a separate weight per engine. Combinations can contain multiple simultaneous effects instead of selecting only one shader branch. The reset control clears active layers. This is a full-frame procedural compositor, not face-aware AR or a physically simulated optical pipeline.
+
+
+CI follow-up: the multi-engine mixer contract is checked by `camera-engine-checks.yml`, including its bit-mask, six bounded layer weights, shader upload, UI controls, and Canvas fallback wiring.
