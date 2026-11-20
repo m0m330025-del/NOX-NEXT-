@@ -32,6 +32,12 @@ export class NOXLiveMakeupCompositor {
         !Number.isFinite(capturedAt) || !vision?.frame ||
         !Number.isInteger(vision.frame.width) || !Number.isInteger(vision.frame.height) ||
         vision.frame.width < 1 || vision.frame.height < 1 ||
+        !vision.faceBox ||
+        ![vision.faceBox.x, vision.faceBox.y, vision.faceBox.width, vision.faceBox.height].every(Number.isFinite) ||
+        vision.faceBox.x < 0 || vision.faceBox.y < 0 ||
+        vision.faceBox.width <= 0 || vision.faceBox.height <= 0 ||
+        vision.faceBox.x + vision.faceBox.width > 1 ||
+        vision.faceBox.y + vision.faceBox.height > 1 ||
         !look || typeof look !== "object") return false;
 
     const width = vision.frame.width, height = vision.frame.height;
