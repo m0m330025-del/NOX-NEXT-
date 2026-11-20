@@ -178,6 +178,7 @@ jobs:
           node tests/nox-dynamic-engine-adapter.test.mjs
           node tests/nox-cortex.test.mjs
           node tests/nox-adaptive-runtime-scheduler.test.mjs
+          node tests/nox-controlled-optical-flow-runtime.test.mjs
           node tests/nox-bisenet-face-parsing-provider.test.mjs
       - name: Check camera markup hooks
         run: |
