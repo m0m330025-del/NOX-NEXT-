@@ -1156,12 +1156,16 @@ export function initCamera() {
     latestFaceLandmarksAnalysis = null;
     latestFacialMaskPreview = null;
     faceDigitalTwinButton.disabled = true;
-    faceDigitalTwinStatus.textContent = "تم إيقاف محرك نقاط الوجه وتحرير موارده.";
+    faceDigitalTwinStatus.textContent = borrowedByBeautyFusion
+      ? "تم إيقاف التتبع؛ نموذج MediaPipe ما زال مشتركًا مع محرك التجميل."
+      : "تم إيقاف محرك نقاط الوجه وتحرير موارده.";
     faceDigitalTwinReport.textContent = "لا توجد نتائج تشخيصية.";
     faceLandmarksState = "متوقف";
     faceLandmarksButton.textContent = "تشغيل تتبع الوجه الحي (478 نقطة)";
     faceLandmarksButton.disabled = true;
-    faceLandmarksStatus.textContent = "تم تحرير موارد نموذج نقاط الوجه.";
+    faceLandmarksStatus.textContent = borrowedByBeautyFusion
+      ? "تم إيقاف التتبع؛ سيظل النموذج محمّلًا حتى تحرير محرك التجميل."
+      : "تم تحرير موارد نموذج نقاط الوجه.";
   }
 
   async function runBeautyMaskPreview() {
