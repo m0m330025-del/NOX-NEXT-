@@ -88,9 +88,28 @@ export class NOXMultiEngineIntelligenceBrain {
       decisions.push({ engine: "quality-governor", action: "keep-current-profile", reason: performanceReason });
     }
 
+    const engineInventory = (Array.isArray(input.registeredEngines) ? input.registeredEngines : [])
+      .filter(engine => engine && typeof engine.id === "string")
+      .filter((engine, index, all) => all.findIndex(item => item.id === engine.id) === index)
+      .map(engine => ({
+        id: engine.id,
+        name: typeof engine.name === "string" ? engine.name : engine.id,
+        category: typeof engine.category === "string" ? engine.category : "processing",
+        registered: engine.registered === true,
+        statusAvailable: engine.statusAvailable === true,
+        enabled: typeof engine.enabled === "boolean" ? engine.enabled : null,
+        capabilities: Array.isArray(engine.capabilities) ? engine.capabilities.filter(value => typeof value === "string").slice(0, 12) : [],
+        status: engine.status && typeof engine.status === "object" ? { ...engine.status } : {}
+      }));
+    for (const engine of engineInventory) {
+      decisions.push({ engine: "discovery:" + engine.id, action: engine.registered ? "discovered" : "unavailable",
+        reason: engine.statusAvailable ? "registered-engine-status-read" : "registered-engine-without-status-api" });
+    }
+
     this.lastPlan = {
       performanceMode, performanceReason, frameRatio,
-      pipeline, decisions,
+      pipeline, decisions, engineInventory,
+      discoveredEngineCount: engineInventory.length,
       status: temporalAllowed ? "coordinated-evidence-ready" :
         temporal.enabled === true ? "live-frame-protected" : "analysis-only"
     };
@@ -101,7 +120,9 @@ export class NOXMultiEngineIntelligenceBrain {
     return {
       ...this.lastPlan,
       pipeline: [...this.lastPlan.pipeline],
-      decisions: this.lastPlan.decisions.map(item => ({ ...item }))
+      decisions: this.lastPlan.decisions.map(item => ({ ...item })),
+      engineInventory: (this.lastPlan.engineInventory || []).map(item => ({ ...item, capabilities: [...item.capabilities], status: { ...item.status } })),
+      discoveredEngineCount: this.lastPlan.discoveredEngineCount || 0
     };
   }
 
@@ -112,6 +133,8 @@ export class NOXMultiEngineIntelligenceBrain {
       frameRatio: null,
       pipeline: [],
       decisions: [],
+      engineInventory: [],
+      discoveredEngineCount: 0,
       status: "no-evaluation"
     };
   }
