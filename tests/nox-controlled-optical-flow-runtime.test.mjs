@@ -12,7 +12,7 @@ for (const token of [
   "flowRuntime.samples >= 3",
   "Number.isFinite(flowRuntime.measuredP95Ms)",
   "noxAdaptiveRuntimeScheduler.evaluate({",
-  "if (!gate.eligibleEngineIds.includes(\"optical-flow\"))",
+  "if (!cameraPipelineSchedule.eligibleEngineIds.includes(\"optical-flow\"))",
   "opticalFlowRuntimeGate = \"held-frame-cost-unavailable\"",
   "opticalFlowRuntimeGate = warmupComplete ? \"executed-controlled\" : \"executed-warmup\"",
   "opticalFlowRecoveryGate.evaluate(true)",
