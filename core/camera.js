@@ -7,6 +7,8 @@ import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
 import { NOXBiSeNetFaceParsingProvider } from "./nox-bisenet-face-parsing-provider.js";
 import { NOXMakeupRenderingEngine } from "./nox-makeup-rendering-engine.js";
+import { NOXLiveMakeupController } from "./nox-live-makeup-controller.js";
+import { NOXLiveMakeupCompositor } from "./nox-live-makeup-compositor.js";
 import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
@@ -573,6 +575,9 @@ export function initCamera() {
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
   const beautyMakeupEngine = new NOXMakeupRenderingEngine({ minConfidence: 0.8, maxOpacity: 0.58 });
+  const liveMakeupController = new NOXLiveMakeupController({ intervalMs: 180, maxResultAgeMs: 220 });
+  const liveMakeupCompositor = new NOXLiveMakeupCompositor({ maxAgeMs: 220 });
+  let activeBeautyLook = null;
   noxEngineRegistry.register({ id: "temporal-memory", name: "Temporal Memory", category: "temporal", instance: temporalMemoryEngine, capabilities: ["frame-history"] });
   noxEngineRegistry.register({ id: "temporal-alignment", name: "Temporal Alignment", category: "temporal", instance: temporalAlignmentEngine, capabilities: ["global-translation-alignment"] });
   noxEngineRegistry.register({ id: "smart-motion-separation", name: "Smart Motion Separation", category: "motion", instance: motionSeparationEngine, capabilities: ["global-motion-consensus", "local-motion-outliers"] });
@@ -1228,32 +1233,85 @@ export function initCamera() {
     }
   }
 
+  function startLiveMakeup() {
+    if (!stream || !beautyVisionAdapter || beautyVisionAdapter.state !== "ready" || !activeBeautyLook) {
+      throw new Error("حلّل إطارًا أولًا وانتظر جاهزية نموذج الوجه.");
+    }
+    clearBeautyMaskPreview();
+    if (liveMakeupController.getStatus().running) return true;
+    liveMakeupController.start({
+      captureFrame: async ({ sequence }) => {
+        const scale = Math.min(1, 256 / Math.max(video.videoWidth, video.videoHeight));
+        const width = Math.max(2, Math.round(video.videoWidth * scale));
+        const height = Math.max(2, Math.round(video.videoHeight * scale));
+        beautyInputCanvas.width = width;
+        beautyInputCanvas.height = height;
+        beautyInputContext.drawImage(video, 0, 0, width, height);
+        beautyLastTimestamp = Math.max(Date.now(), beautyLastTimestamp + 1);
+        return {
+          source: beautyInputCanvas, width, height,
+          frameId: "nox-live-makeup-" + sequence,
+          timestamp: beautyLastTimestamp
+        };
+      },
+      processFrame: async (frame) => {
+        const vision = await beautyVisionAdapter.processFrame(frame);
+        if (!vision || !["complete", "partial"].includes(vision.state) ||
+            !vision.regionMasks || !Object.keys(vision.regionMasks).length) {
+          throw new Error(vision?.reason || "لم يتم اكتشاف قناع وجه موثوق.");
+        }
+        const source = beautyInputContext.getImageData(0, 0, frame.width, frame.height);
+        const plan = cortex.plan(
+          { makeupRequested: true },
+          { requested: ["makeup-rendering"], mode: lowPower ? "lite" : "balanced" }
+        );
+        const execution = await cortex.execute(
+          plan,
+          {
+            image: { width: frame.width, height: frame.height, data: new Uint8ClampedArray(source.data) },
+            regionMasks: vision.regionMasks,
+            looks: activeBeautyLook
+          },
+          dynamicEngineHost.getHandlers(),
+          { timeoutMs: 2600, stopOnError: true, context: { lowPower, liveMakeup: true } }
+        );
+        const makeup = execution.state === "completed" ? execution.output : null;
+        if (makeup?.state !== "rendered") {
+          throw new Error(makeup?.reason || "رفض محرك المكياج القناع الحالي.");
+        }
+        return { vision, makeup };
+      },
+      onResult: ({ sequence, capturedAt, ageMs, result }) => {
+        if (!liveMakeupCompositor.accept({
+          sequence, capturedAt, vision: result.vision, look: activeBeautyLook
+        })) return;
+        beautyClearLookButton.disabled = false;
+        beautyStatus.textContent = "المكياج الحي يعمل — قناع دلالي حديث، عمر النتيجة عند الوصول " +
+          Math.round(ageMs) + "ms. أي نتيجة أقدم من 220ms تُرفض تلقائيًا.";
+      },
+      onError: (error) => {
+        beautyStatus.textContent = "المكياج الحي ينتظر قناعًا موثوقًا: " +
+          String(error?.message || error).slice(0, 120);
+      }
+    });
+    return true;
+  }
+
   async function applyBeautyLook(look) {
     if (!latestBeautyVision || !latestBeautyImage) {
       beautyStatus.textContent = "حلّل إطارًا أولًا قبل تجربة التأثير.";
       return;
     }
+    activeBeautyLook = look;
     beautyLipsButton.disabled = true;
     beautyBrowsButton.disabled = true;
     try {
-      const plan = cortex.plan(
-        { makeupRequested: true },
-        { requested: ["makeup-rendering"], mode: lowPower ? "lite" : "balanced" }
-      );
-      const execution = await cortex.execute(
-        plan,
-        { image: latestBeautyImage, regionMasks: latestBeautyVision.regionMasks, looks: look },
-        dynamicEngineHost.getHandlers(),
-        { timeoutMs: 3000, stopOnError: true, context: { lowPower } }
-      );
-      const result = execution.state === "completed" ? execution.output : null;
-      if (result?.state !== "rendered" || !drawBeautyMakeupPreview(result)) {
-        throw new Error(result?.reason || "تعذر تنفيذ محرك المكياج عبر NOX CORTEX");
-      }
+      startLiveMakeup();
       beautyClearLookButton.disabled = false;
-      beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي في معاينة الإطار المحلل فقط؛ التأثير ليس حيًا ولا يدخل في الصورة أو الفيديو المحفوظين حاليًا.";
+      beautyStatus.textContent = "جارٍ تشغيل المكياج الحي؛ ستُعرض الأقنعة المقبولة فقط بعد اكتمال التحليل.";
     } catch (error) {
-      beautyStatus.textContent = "لم يُطبّق التأثير: " + String(error?.message || error).slice(0, 140);
+      activeBeautyLook = null;
+      beautyStatus.textContent = "لم يبدأ المكياج الحي: " + String(error?.message || error).slice(0, 140);
     } finally {
       beautyLipsButton.disabled = !latestBeautyVision?.regionMasks?.lips;
       beautyBrowsButton.disabled = !latestBeautyVision?.regionMasks?.brows;
@@ -1267,14 +1325,20 @@ export function initCamera() {
     brows: { color: [74, 52, 44], opacity: 0.22 }
   }));
   beautyClearLookButton.addEventListener("click", () => {
+    liveMakeupController.stop();
+    liveMakeupCompositor.clear();
+    activeBeautyLook = null;
     clearBeautyMaskPreview();
     beautyClearLookButton.disabled = true;
-    beautyStatus.textContent = "تمت إزالة تأثير المكياج والعودة إلى معاينة الكاميرا الحية.";
+    beautyStatus.textContent = "تم إيقاف المكياج الحي وإزالة طبقته من المعاينة والتسجيل.";
   });
 
   beautyButton.addEventListener("click", runBeautyMaskPreview);
 
   async function releaseBeautyVision() {
+    liveMakeupController.stop();
+    liveMakeupCompositor.clear();
+    activeBeautyLook = null;
     clearBeautyMaskPreview();
     if (beautyVisionAdapter) {
       try { await beautyVisionAdapter.reset(); } catch { /* release remains best-effort */ }
@@ -3119,6 +3183,7 @@ export function initCamera() {
       drawOpticalFlow(outputContext, outWidth, outHeight);
       outputContext.restore();
       drawFaceTrackingOverlay(outputContext, outWidth, outHeight);
+      liveMakeupCompositor.draw(renderCanvas, { now: performance.now(), mirrored: facing === "user" });
     }
     const renderCost = performance.now() - renderStartedAt;
     averageFrameCost = averageFrameCost ? averageFrameCost * 0.88 + renderCost * 0.12 : renderCost;
