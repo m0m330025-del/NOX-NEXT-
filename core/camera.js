@@ -1564,6 +1564,15 @@ export function initCamera() {
       preserveDrawingBuffer: false, powerPreference: "low-power"
     });
     if (!gl) return null;
+    glCanvas.addEventListener("webglcontextlost", (event) => {
+      event.preventDefault();
+      if (renderer?.canvas === glCanvas) {
+        renderer = null;
+        renderMode = "Canvas 2D احتياطي";
+        announce("فُقد سياق WebGL؛ تم التحويل إلى العرض الاحتياطي.", false);
+        updateDiagnostics();
+      }
+    }, { once: true });
     const program = gl.createProgram();
     gl.attachShader(program, createShader(gl, gl.VERTEX_SHADER, SHADERS.vertex));
     gl.attachShader(program, createShader(gl, gl.FRAGMENT_SHADER, SHADERS.fragment));
@@ -3171,7 +3180,15 @@ export function initCamera() {
     const outHeight = Math.max(2, Math.round(height * scale));
     ensureNOXCanvasSize(renderCanvas, outWidth, outHeight);
     if (renderer) {
-      const { gl, canvas: glCanvas, texture } = renderer;
+      const activeRenderer = renderer;
+      const { gl, canvas: glCanvas, texture } = activeRenderer;
+      if (gl.isContextLost()) {
+        renderer = null;
+        renderMode = "Canvas 2D احتياطي";
+      }
+      if (!renderer) {
+        // Continue through the Canvas 2D fallback below on this frame.
+      } else {
       // Assigning canvas dimensions clears its drawing buffer. Only resize when
       // the source dimensions actually change; keep the viewport current per frame.
       ensureNOXCanvasSize(glCanvas, outWidth, outHeight);
@@ -3205,6 +3222,7 @@ export function initCamera() {
       } catch {
         renderer = null;
         renderMode = "Canvas 2D احتياطي";
+      }
       }
     }
     if (!renderer) {
