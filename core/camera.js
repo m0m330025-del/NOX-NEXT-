@@ -1580,6 +1580,19 @@ export function initCamera() {
     return shader;
   }
 
+  function releaseRenderer(target = renderer) {
+    if (!target) return false;
+    if (renderer === target) renderer = null;
+    const gl = target.gl;
+    if (gl && !gl.isContextLost()) {
+      try { if (target.texture) gl.deleteTexture(target.texture); } catch {}
+      try { if (target.buffer) gl.deleteBuffer(target.buffer); } catch {}
+      try { if (target.program) gl.deleteProgram(target.program); } catch {}
+      try { gl.getExtension("WEBGL_lose_context")?.loseContext(); } catch {}
+    }
+    return true;
+  }
+
   function createRenderer() {
     const glCanvas = document.createElement("canvas");
     const gl = glCanvas.getContext("webgl", {
@@ -1625,7 +1638,7 @@ export function initCamera() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     return {
-      gl, canvas: glCanvas, program, texture,
+      gl, canvas: glCanvas, program, texture, buffer,
       mode: gl.getUniformLocation(program, "u_mode"),
       mirror: gl.getUniformLocation(program, "u_mirror"),
       variant: gl.getUniformLocation(program, "u_variant"),
@@ -3243,7 +3256,7 @@ export function initCamera() {
         const outputContext = renderCanvas.getContext("2d");
         drawStabilizedSource(outputContext, glCanvas, outWidth, outHeight);
       } catch {
-        renderer = null;
+        releaseRenderer(activeRenderer);
         renderMode = "Canvas 2D احتياطي";
       }
       }
@@ -4235,13 +4248,17 @@ export function initCamera() {
   window.addEventListener("nox:screenchange", (event) => {
     if (event.detail?.from === "camera" && event.detail?.to !== "camera") stopCamera();
   });
-  window.addEventListener("pagehide", stopCamera);
+  window.addEventListener("pagehide", () => {
+    void stopCamera();
+    releaseRenderer();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden && stream && !recording) stopCamera();
   });
   window.addEventListener("beforeunload", () => {
     disposed = true;
-    stopCamera();
+    void stopCamera();
+    releaseRenderer();
     revokeOutput();
   });
 
