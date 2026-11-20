@@ -836,33 +836,10 @@ export function initCamera() {
         { faceRequested: true, landmarksRequested: true, maskRequested: true },
         { requested: ["face-landmarks", "facial-mask-builder"], mode: lowPower ? "lite" : "balanced" }
       );
-      const execution = await cortex.execute(plan, video, {
-        "face-landmarks": async source => {
-          if (!faceLandmarkerProvider) {
-            faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
-          }
-          if (faceLandmarkerProvider.state !== "ready") {
-            const initialized = await faceLandmarkerProvider.initialize();
-            if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
-          }
-          const scale = Math.min(1, 256 / Math.max(source.videoWidth, source.videoHeight));
-          const width = Math.max(2, Math.round(source.videoWidth * scale));
-          const height = Math.max(2, Math.round(source.videoHeight * scale));
-          beautyInputCanvas.width = width;
-          beautyInputCanvas.height = height;
-          beautyInputContext.drawImage(source, 0, 0, width, height);
-          const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
-          if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
-          return { detected, analysis: faceLandmarksEngine.analyze(detected) };
-        },
-        "facial-mask-builder": input => ({
-          ...input,
-          maskPreview: facialMaskBuilder.build(input.detected, {
-            width: input.detected.width,
-            height: input.detected.height
-          })
-        })
-      }, { timeoutMs: 15000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced" } });
+      const execution = await cortex.execute(
+        plan, video, dynamicEngineHost.getHandlers(),
+        { timeoutMs: 15000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced", lowPower } }
+      );
       if (execution.state !== "completed" || !execution.output?.analysis) {
         const failed = execution.results.find(item => item.status === "failed");
         throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تحليل الوجه" : "تعذر تنفيذ مسار الوجه والأقنعة عبر NOX CORTEX");
@@ -995,24 +972,10 @@ export function initCamera() {
         { skinRequested: true },
         { requested: ["skin-segmentation"], mode: lowPower ? "lite" : "balanced" }
       );
-      const skinExecution = await cortex.execute(skinPlan, frame, {
-        "skin-segmentation": async currentFrame => {
-          const vision = await beautyVisionAdapter.processFrame(currentFrame);
-          if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
-            throw new Error(vision?.reason || "لم يتم اكتشاف منطقة بشرة موثوقة");
-          }
-          const skin = beautySkinEngine.validateMask({
-            data: vision.skinMask.data,
-            width: vision.skinMask.width,
-            height: vision.skinMask.height,
-            confidence: vision.skinMask.confidence,
-            source: vision.skinMask.source,
-            faceBox: vision.faceBox
-          });
-          if (skin.state !== "accepted") throw new Error("رفض قناع البشرة: " + skin.reason);
-          return { vision, skin };
-        }
-      }, { timeoutMs: 10000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced" } });
+      const skinExecution = await cortex.execute(
+        skinPlan, frame, dynamicEngineHost.getHandlers(),
+        { timeoutMs: 10000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced", lowPower } }
+      );
       if (skinExecution.state !== "completed" || !skinExecution.output?.vision || !skinExecution.output?.skin) {
         const failed = skinExecution.results.find(item => item.status === "failed");
         throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تقسيم البشرة" : "تعذر تنفيذ محرك تقسيم البشرة عبر NOX CORTEX");
@@ -1079,17 +1042,7 @@ export function initCamera() {
     const controller = new AbortController();
     faceDetectionAbortController = controller;
     const plan = cortex.plan({}, { requested: ["face-detection", "face-tracking"], mode: lowPower ? "lite" : "balanced" });
-    const handlers = {
-      "face-detection": async (source, { signal }) => {
-        if (signal.aborted) throw new Error("detection-cancelled");
-        return faceDetectionEngine.detect(source);
-      },
-      "face-tracking": (detection) => {
-        if (detection?.state !== "ok") return { detection, tracking: null };
-        return { detection, tracking: faceTrackingEngine.update(detection.faces) };
-      }
-    };
-    cortex.execute(plan, video, handlers, {
+    cortex.execute(plan, video, dynamicEngineHost.getHandlers(), {
       signal: controller.signal,
       timeoutMs: 2800,
       stopOnError: true
@@ -2220,17 +2173,12 @@ export function initCamera() {
         requested: ["optical-flow"],
         mode: lowPower ? "lite" : "balanced"
       });
-      const execution = await cortex.execute({
-        ...plan,
-      }, { current: gray, previous, width: sampleWidth, height: sampleHeight }, {
-        "optical-flow": input => opticalFlowEngine.process(
-          input.current, input.previous, input.width, input.height, {
-            cellStep: 8,
-            patchRadius: 1,
-            searchRadius: lowPower ? 2 : 3
-          }
-        )
-      }, { timeoutMs: 1200, stopOnError: true });
+      const execution = await cortex.execute(
+        plan,
+        { current: gray, previous, width: sampleWidth, height: sampleHeight },
+        dynamicEngineHost.getHandlers(),
+        { timeoutMs: 1200, stopOnError: true, context: { lowPower } }
+      );
       if (session !== opticalFlowSession || !stream ||
           execution.state !== "completed" || !execution.output?.vectors) return;
       opticalFlowVectors = execution.output.vectors;
