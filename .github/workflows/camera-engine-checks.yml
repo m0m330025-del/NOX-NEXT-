@@ -317,6 +317,13 @@ jobs:
             throw new Error('Every filter must provide a Canvas fallback style');
           }
           const cameraSource = fs.readFileSync('core/camera.js', 'utf8');
+          for (const token of [
+            'طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الملف المحفوظ',
+            'التأثير ليس حيًا ولا يدخل في الصورة أو الفيديو المحفوظين حاليًا'
+          ]) {
+            if (!cameraSource.includes(token)) throw new Error('Preview-only beauty overlay disclosure missing: ' + token);
+          }
+          console.log('Preview-only beauty and makeup overlays are disclosed at capture time');
           if (!cameraSource.includes('Boolean(selectedOriginalFilter) || Boolean(selectedHybridFilter)')) throw new Error('CORTEX diagnostics must recognize original and hybrid live filters');
 
           if (!cameraSource.includes('selectedFilter ? selectedFilter.groupIndex : -1') ||
