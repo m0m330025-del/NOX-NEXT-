@@ -1262,9 +1262,9 @@ export function initCamera() {
     brows: { color: [74, 52, 44], opacity: 0.22 }
   }));
   beautyClearLookButton.addEventListener("click", () => {
-    if (latestBeautyVision?.skinMask) drawBeautyMaskPreview(latestBeautyVision.skinMask);
+    clearBeautyMaskPreview();
     beautyClearLookButton.disabled = true;
-    beautyStatus.textContent = "تمت إزالة التأثير والعودة إلى معاينة قناع البشرة.";
+    beautyStatus.textContent = "تمت إزالة تأثير المكياج والعودة إلى معاينة الكاميرا الحية.";
   });
 
   beautyButton.addEventListener("click", runBeautyMaskPreview);
