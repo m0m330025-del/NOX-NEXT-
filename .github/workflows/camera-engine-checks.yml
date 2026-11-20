@@ -6,6 +6,8 @@ on:
     paths:
       - "core/camera.js"
       - "core/nox-filter-engine.js"
+      - "core/nox-temporal-memory-engine.js"
+      - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -53,6 +55,7 @@ jobs:
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
+          cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -62,6 +65,8 @@ jobs:
           node --check /tmp/mediapipe-face-landmarker-provider.mjs
           node --check /tmp/face-landmarks-engine.mjs
           node --check /tmp/optical-flow-engine.mjs
+          node --check /tmp/temporal-memory-engine.mjs
+          node tests/nox-temporal-memory-engine.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
