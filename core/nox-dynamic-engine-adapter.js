@@ -28,7 +28,7 @@ export class NOXDynamicEngineAdapter {
   constructor({
     id, name, category = "processing", instance, process,
     cost = 1, estimatedCostMs = null, priority = 0,
-    requires = [], capabilities = [], conflictsWith = [],
+    requires = [], requiresCapabilities = [], capabilities = [], conflictsWith = [],
     enabled = true, when, validateInput, validateOutput,
     dispose, clock = defaultClock, historyLimit = 16, minSamplesForMeasuredCost = 3
   } = {}) {
@@ -58,6 +58,7 @@ export class NOXDynamicEngineAdapter {
     this.declaredEstimatedCostMs = estimatedCostMs;
     this.priority = Number.isFinite(priority) ? priority : 0;
     this.requires = normalizeIds(requires, "requires");
+    this.requiresCapabilities = normalizeIds(requiresCapabilities, "requires-capabilities");
     this.capabilities = normalizeIds(capabilities, "capabilities");
     this.conflictsWith = normalizeIds(conflictsWith, "conflicts-with");
     this.enabled = enabled !== false;
@@ -170,7 +171,7 @@ export class NOXDynamicEngineAdapter {
         category: this.category,
         instance: this.instance,
         capabilities: this.capabilities,
-        requiresCapabilities: this.requires,
+        requiresCapabilities: this.requiresCapabilities,
         conflictsWith: this.conflictsWith,
         estimatedCostMs: this.declaredEstimatedCostMs,
         priority: this.priority,
