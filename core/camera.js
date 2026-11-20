@@ -18,6 +18,7 @@ import { NOXTemporalAlignmentEngine } from "./nox-temporal-alignment-engine.js";
 import { NOXSmartMotionSeparationEngine } from "./nox-smart-motion-separation-engine.js";
 import { NOXAdaptiveTemporalFusionEngine } from "./nox-adaptive-temporal-fusion-engine.js";
 import { NOXNeuralCameraOrchestrator } from "./nox-neural-camera-orchestrator.js";
+import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelligence.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -445,6 +446,7 @@ export function initCamera() {
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
   const adaptiveTemporalFusionEngine = new NOXAdaptiveTemporalFusionEngine();
   const noxNeuralCameraOrchestrator = new NOXNeuralCameraOrchestrator();
+  const noxPredictiveCameraIntelligence = new NOXPredictiveCameraIntelligence();
   let motionSeparationResult = motionSeparationEngine.getStatus();
   let opticalFlowMode = "off";
   let opticalFlowProcessing = false;
@@ -2014,6 +2016,7 @@ export function initCamera() {
     temporalAlignmentEngine.reset();
     motionSeparationEngine.reset();
     adaptiveTemporalFusionEngine.reset();
+    noxPredictiveCameraIntelligence.reset();
     motionSeparationResult = motionSeparationEngine.getStatus();
     opticalFlowPrevious = null;
     opticalFlowLastAt = 0;
@@ -2097,6 +2100,11 @@ export function initCamera() {
       updateCameraStabilization();
       opticalFlowPrevious = gray;
       opticalFlowSequence += 1;
+      noxPredictiveCameraIntelligence.observe({
+        vectors: opticalFlowVectors,
+        timestampMs: performance.now(),
+        sequence: opticalFlowSequence
+      });
       motionSeparationResult = motionSeparationEngine.process(opticalFlowVectors);
       temporalAlignmentEngine.ingest(
         motionSeparationResult.accepted ? motionSeparationResult.globalVectors : [],
@@ -2751,11 +2759,17 @@ export function initCamera() {
       alignment: temporalAlignmentEngine.getStatus(),
       temporal: { enabled: temporalMode !== "off" }
     });
+    const predictivePlan = noxPredictiveCameraIntelligence.evaluate({
+      nowMs: performance.now(),
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps
+    });
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["قرارات العقل", intelligencePlan.decisions.map(item => item.engine + ": " + item.action + " (" + item.reason + ")").join(" | ")],
       ["ذاكرة التكيف قصيرة المدى", intelligencePlan.adaptiveMemory.action + " — " + intelligencePlan.adaptiveMemory.reason + " — " + intelligencePlan.adaptiveMemory.sampleCount + "/" + intelligencePlan.adaptiveMemory.historyLimit + " إطار"],
+      ["NOX Predictive Camera Intelligence", predictivePlan.action + " — " + predictivePlan.reason + " — ثقة " + Math.round(predictivePlan.confidence * 100) + "% / أفق " + (predictivePlan.horizonMs ?? "—") + "ms"],
       ["HTTPS", supported.secure ? "متاح" : "غير آمن — يلزم HTTPS"],
       ["getUserMedia", supported.getUserMedia ? "متاح" : "غير مدعوم"],
       ["MediaRecorder", supported.mediaRecorder ? "متاح" : "غير مدعوم"],
