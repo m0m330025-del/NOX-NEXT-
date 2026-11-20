@@ -5,6 +5,7 @@ import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
 import { NOXBiSeNetFaceParsingProvider } from "./nox-bisenet-face-parsing-provider.js";
+import { NOXMakeupRenderingEngine } from "./nox-makeup-rendering-engine.js";
 import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
 import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
@@ -566,6 +567,7 @@ export function initCamera() {
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
+  const beautyMakeupEngine = new NOXMakeupRenderingEngine({ minConfidence: 0.8, maxOpacity: 0.58 });
   noxEngineRegistry.register({ id: "temporal-memory", name: "Temporal Memory", category: "temporal", instance: temporalMemoryEngine, capabilities: ["frame-history"] });
   noxEngineRegistry.register({ id: "temporal-alignment", name: "Temporal Alignment", category: "temporal", instance: temporalAlignmentEngine, capabilities: ["global-translation-alignment"] });
   noxEngineRegistry.register({ id: "smart-motion-separation", name: "Smart Motion Separation", category: "motion", instance: motionSeparationEngine, capabilities: ["global-motion-consensus", "local-motion-outliers"] });
@@ -760,6 +762,8 @@ export function initCamera() {
   let beautyLastTimestamp = 0;
   let beautyProcessing = false;
   let beautyState = "متوقف";
+  let latestBeautyVision = null;
+  let latestBeautyImage = null;
   const beautyInputCanvas = document.createElement("canvas");
   const beautyInputContext = beautyInputCanvas.getContext("2d", { willReadFrequently: true });
   const faceLandmarkInputCanvas = document.createElement("canvas");
@@ -778,21 +782,33 @@ export function initCamera() {
   beautyTitle.textContent = "NOX BEAUTY VISION — REAL AI";
   const beautyButton = document.createElement("button");
   beautyButton.type = "button";
-  beautyButton.textContent = "تحميل نموذج تقسيم البشرة";
+  beautyButton.textContent = "تحميل نموذج تحليل الوجه";
   beautyButton.disabled = true;
   const beautyStatus = document.createElement("small");
   beautyStatus.setAttribute("role", "status");
   beautyStatus.textContent = "شغّل الكاميرا ثم ابدأ التحليل. النموذج يُحمّل عند طلبك فقط.";
   const beautyPrivacy = document.createElement("small");
-  beautyPrivacy.textContent = "المعالجة على الجهاز. قد ترسل مكتبة MediaPipe بيانات قياس استخدام؛ لا ترسل إطارات الكاميرا إلى خوادم النموذج.";
-  beautyPanel.append(beautyTitle, beautyButton, beautyStatus, beautyPrivacy);
+  beautyPrivacy.textContent = "إطارات الكاميرا تُحلّل محليًا داخل المتصفح؛ يتم تنزيل ملف النموذج ومكتبة التشغيل فقط.";
+  const beautyLipsButton = document.createElement("button");
+  beautyLipsButton.type = "button";
+  beautyLipsButton.textContent = "تجربة لون الشفاه";
+  beautyLipsButton.disabled = true;
+  const beautyBrowsButton = document.createElement("button");
+  beautyBrowsButton.type = "button";
+  beautyBrowsButton.textContent = "تجربة لون الحواجب";
+  beautyBrowsButton.disabled = true;
+  const beautyClearLookButton = document.createElement("button");
+  beautyClearLookButton.type = "button";
+  beautyClearLookButton.textContent = "إزالة التأثير";
+  beautyClearLookButton.disabled = true;
+  beautyPanel.append(beautyTitle, beautyButton, beautyLipsButton, beautyBrowsButton, beautyClearLookButton, beautyStatus, beautyPrivacy);
   const faceLandmarksButton = document.createElement("button");
   faceLandmarksButton.type = "button";
   faceLandmarksButton.textContent = "تشغيل تتبع الوجه الحي (478 نقطة)";
   faceLandmarksButton.disabled = true;
   const faceLandmarksStatus = document.createElement("small");
   faceLandmarksStatus.setAttribute("role", "status");
-  faceLandmarksStatus.textContent = "تتبع حي لنقاط الوجه مع تنعيم زمني. الأقنعة التجميلية الدقيقة لا تُفعّل دون مزود أقنعة دلالية موثوق." ;
+  faceLandmarksStatus.textContent = "تتبع حي لنقاط الوجه مع تنعيم زمني؛ وتتوفر أقنعة دلالية مستقلة للشفاه والحواجب.";
   beautyPanel.append(faceLandmarksButton, faceLandmarksStatus);
   const faceDigitalTwinButton = document.createElement("button");
   faceDigitalTwinButton.type = "button";
@@ -875,6 +891,20 @@ export function initCamera() {
       image.data[offset + 2] = 174;
       image.data[offset + 3] = probability > 0 ? Math.round(118 * probability) : 0;
     }
+    beautyOverlayContext.putImageData(image, 0, 0);
+    beautyOverlay.style.transform = facing === "user" ? "scaleX(-1)" : "none";
+    beautyOverlay.hidden = false;
+    return true;
+  }
+
+  function drawBeautyMakeupPreview(result) {
+    if (!result?.image?.data || !beautyOverlayContext) return false;
+    const { width, height, data } = result.image;
+    if (!Number.isInteger(width) || !Number.isInteger(height) || data.length !== width * height * 4) return false;
+    beautyOverlay.width = width;
+    beautyOverlay.height = height;
+    const image = beautyOverlayContext.createImageData(width, height);
+    image.data.set(data);
     beautyOverlayContext.putImageData(image, 0, 0);
     beautyOverlay.style.transform = facing === "user" ? "scaleX(-1)" : "none";
     beautyOverlay.hidden = false;
@@ -1151,6 +1181,12 @@ export function initCamera() {
         throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تقسيم البشرة" : "تعذر تنفيذ محرك تقسيم البشرة عبر NOX CORTEX");
       }
       const { vision, skin } = skinExecution.output;
+      latestBeautyVision = vision;
+      const sourceImage = beautyInputContext.getImageData(0, 0, width, height);
+      latestBeautyImage = { width, height, data: new Uint8ClampedArray(sourceImage.data) };
+      beautyLipsButton.disabled = !vision.regionMasks?.lips;
+      beautyBrowsButton.disabled = !vision.regionMasks?.brows;
+      beautyClearLookButton.disabled = true;
       if (!drawBeautyMaskPreview(vision.skinMask)) {
         throw new Error("تعذر رسم قناع المعاينة");
       }
@@ -1162,6 +1198,11 @@ export function initCamera() {
       beautyButton.textContent = "إعادة تحليل إطار";
     } catch (error) {
       beautyState = "غير متاح";
+      latestBeautyVision = null;
+      latestBeautyImage = null;
+      beautyLipsButton.disabled = true;
+      beautyBrowsButton.disabled = true;
+      beautyClearLookButton.disabled = true;
       clearBeautyMaskPreview();
       beautyStatus.textContent = "لم يعمل التحليل: " + String(error?.message || error).slice(0, 180);
       beautyButton.textContent = "إعادة محاولة تحميل النموذج";
@@ -1171,6 +1212,32 @@ export function initCamera() {
       updateDiagnostics();
     }
   }
+
+  function applyBeautyLook(look) {
+    if (!latestBeautyVision || !latestBeautyImage) {
+      beautyStatus.textContent = "حلّل إطارًا أولًا قبل تجربة التأثير.";
+      return;
+    }
+    const result = beautyMakeupEngine.render(latestBeautyImage, latestBeautyVision.regionMasks, look);
+    if (result.state !== "rendered" || !drawBeautyMakeupPreview(result)) {
+      beautyStatus.textContent = "لم يُطبّق التأثير: " + (result.reason || "تعذر رسم النتيجة");
+      return;
+    }
+    beautyClearLookButton.disabled = false;
+    beautyStatus.textContent = "تم تطبيق التأثير على " + result.changedPixels + " بكسل من القناع الدلالي فقط.";
+  }
+
+  beautyLipsButton.addEventListener("click", () => applyBeautyLook({
+    lips: { color: [198, 48, 88], opacity: 0.34 }
+  }));
+  beautyBrowsButton.addEventListener("click", () => applyBeautyLook({
+    brows: { color: [74, 52, 44], opacity: 0.22 }
+  }));
+  beautyClearLookButton.addEventListener("click", () => {
+    if (latestBeautyVision?.skinMask) drawBeautyMaskPreview(latestBeautyVision.skinMask);
+    beautyClearLookButton.disabled = true;
+    beautyStatus.textContent = "تمت إزالة التأثير والعودة إلى معاينة قناع البشرة.";
+  });
 
   beautyButton.addEventListener("click", runBeautyMaskPreview);
 
@@ -1183,8 +1250,14 @@ export function initCamera() {
     beautyVisionProvider = null;
     beautyLastTimestamp = 0;
     beautySkinEngine.reset();
+    beautyMakeupEngine.reset();
+    latestBeautyVision = null;
+    latestBeautyImage = null;
+    beautyLipsButton.disabled = true;
+    beautyBrowsButton.disabled = true;
+    beautyClearLookButton.disabled = true;
     beautyState = "متوقف";
-    beautyButton.textContent = "تحميل نموذج تقسيم البشرة";
+    beautyButton.textContent = "تحميل نموذج تحليل الوجه";
     beautyButton.disabled = true;
     beautyStatus.textContent = "تم تحرير موارد النموذج. شغّل الكاميرا لإعادة الاختبار.";
   }
