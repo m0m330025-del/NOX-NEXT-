@@ -368,9 +368,15 @@ jobs:
             throw new Error('Sparse optical flow engine must normalize horizontal motion vectors');
           }
           if (!js.includes('opticalFlowEngine.process') ||
-              !js.includes('"optical-flow": input =>') ||
+              !js.includes('dynamicEngineHost.getHandlers()') ||
+              !js.includes('new NOXDynamicEngineAdapter') ||
               !js.includes('cortex.execute')) {
-            throw new Error('Sparse optical flow must execute through the NOX CORTEX handler');
+            throw new Error('Sparse optical flow must execute through the NOX Dynamic Adapter and CORTEX');
+          }
+          for (const engineId of ['optical-flow', 'face-detection', 'face-tracking', 'face-landmarks', 'facial-mask-builder', 'skin-segmentation']) {
+            if (!js.includes('id: "' + engineId + '"')) {
+              throw new Error('Camera dynamic adapter registration missing: ' + engineId);
+            }
           }
           for (const token of ['regionFollowLastSequence', 'count < 2', 'Math.max(-0.025']) {
             if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
