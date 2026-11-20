@@ -126,3 +126,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Recommendations are diagnostic only. The orchestrator does not switch quality tiers, toggle engines, infer battery/temperature, or train a neural network. "Neural" is the feature name; the implemented policy is deterministic and testable.
 - Invalid measurements are ignored. Deterministic tests cover overload, recovery hysteresis, low-power floor, bounded history, invalid input, and reset.
 - Measurements are collected once per rendered camera frame. Browser CI does not prove device-specific benefit; real profiling is still required.
+
+
+## NOX Predictive Camera Intelligence
+
+- `core/nox-predictive-camera-intelligence.js` estimates a single short-horizon motion step from fresh, confident sparse optical-flow vectors. It uses robust median displacement, an inlier-consensus gate, measured sample intervals, and a bounded extrapolation horizon.
+- At least two timed flow observations are required. Conflicting vectors, weak confidence, duplicate/out-of-order samples, stale measurements, and long gaps suppress the prediction rather than guessing.
+- A direction change reduces confidence; predicted displacement is capped. High measured frame cost returns a defer-analysis recommendation so diagnostics do not compete with an overloaded render budget.
+- The camera adapter records each completed optical-flow sample and displays the estimator's action, reason, confidence, and horizon in diagnostics. It does not alter pixels, camera settings, quality tiers, or engine scheduling.
+- This is deterministic kinematic extrapolation, not a trained neural network, semantic scene understanding, or prediction of unseen image detail. The estimate is diagnostic only and requires real-scene/device validation before any future control integration.
+- Deterministic tests cover steady motion, acceleration, direction changes, stale/invalid timing, low-confidence vectors, conflicting motion populations, and frame-budget protection.
