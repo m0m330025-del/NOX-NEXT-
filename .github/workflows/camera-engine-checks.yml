@@ -445,7 +445,7 @@ jobs:
             if (!js.includes(token)) throw new Error('Motion prediction smoothing or bounded lead missing: ' + token);
           }
           console.log('NOX Motion Prediction bounded lead and velocity smoothing verified');
-          for (const token of ['stableVectors.length < 4', 'maxOffset = 0.025', 'stabilizationTarget.x - motionX * 0.72', 'stabilizationOffset.x * 0.76', 'const zoom = cameraStabilizationEnabled ? 1.06 : 1']) {
+          for (const token of ['stableVectors.length < 4', 'maxOffset = 0.025', 'stabilizationTarget.x - correctionX', 'stabilizationOffset.x * 0.76', 'const zoom = cameraStabilizationEnabled ? 1.06 : 1']) {
             if (!js.includes(token)) throw new Error('Smart Stabilizer confidence, crop, or smoothing guard missing: ' + token);
           }
           for (const token of ['noxPredictiveCameraIntelligence.evaluate', 'prediction.action === "report-short-horizon-estimate"', 'prediction.confidence >= 0.2', 'prediction.horizonMs <= 250', 'prediction.prediction.dx * 0.18', 'prediction.prediction.dy * 0.18']) {
