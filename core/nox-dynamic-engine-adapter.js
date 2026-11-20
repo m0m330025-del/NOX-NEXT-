@@ -293,6 +293,32 @@ export class NOXDynamicEngineAdapterHost {
     return [...this.adapters.values()].map(adapter => ({ id: adapter.id, ...adapter.getStatus() }));
   }
 
+  getRuntimeSnapshot() {
+    const cortexStatus = typeof this.cortex.getStatus === "function" ? this.cortex.getStatus() : {};
+    const plannedIds = new Set(Array.isArray(cortexStatus.lastPlan?.engines)
+      ? cortexStatus.lastPlan.engines.map(engine => engine.id) : []);
+    const executionById = new Map(Array.isArray(cortexStatus.lastExecution?.results)
+      ? cortexStatus.lastExecution.results.map(result => [result.id, result]) : []);
+    return [...this.adapters.values()].map(adapter => {
+      const status = adapter.getStatus();
+      const execution = executionById.get(adapter.id) || null;
+      return {
+        id: adapter.id,
+        connected: true,
+        enabled: status.enabled,
+        state: status.state,
+        planned: plannedIds.has(adapter.id),
+        lastExecutionStatus: execution?.status || "not-executed",
+        executed: execution?.status === "success",
+        failed: execution?.status === "failed",
+        failureCount: status.failures,
+        samples: status.samples,
+        measuredP95Ms: status.measuredP95Ms,
+        estimatedCostMs: status.estimatedCostMs
+      };
+    });
+  }
+
   clear() {
     for (const id of [...this.adapters.keys()]) this.unregister(id);
   }
