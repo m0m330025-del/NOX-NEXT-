@@ -68,3 +68,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 - This is global 2D translation only. It does not estimate rotation, zoom, parallax, depth, rolling shutter, or dense per-pixel deformation. It cannot guarantee complete ghost removal.
 - Deterministic tests cover confidence filtering, stale sequences, inconsistent vectors, slot reset, and accumulated-drift invalidation. Optical-flow, temporal-memory, and temporal-alignment tests are all included in the camera workflow.
 - Real-scene visual quality, edge cropping, device performance, heat, and battery impact remain unverified until tested on physical devices, including Galaxy M12.
+
+
+## Temporal Alignment validation hardening
+
+- Sparse flow now retains confident zero-displacement vectors, allowing textured stationary frames to confirm that no translation occurred instead of appearing as missing motion data.
+- If a flow sample has too few confident vectors, inconsistent vectors, or a displacement beyond the supported per-sample bound, previously accumulated slot transforms are invalidated. The renderer therefore skips those uncertain historical samples instead of reusing a stale alignment.
+- Per-sample translation is no longer silently clamped: over-bound movement is rejected. The default accepted step bound is 0.065 normalized units per axis; accumulated drift remains bounded to 0.12.
+- A deterministic integration test connects synthetic translated pixel frames through sparse optical flow and temporal alignment. This validates vector sign, normalization, and the resulting transform together.
+- These are conservative source-level safeguards, not proof of visual quality on real scenes or device performance.
