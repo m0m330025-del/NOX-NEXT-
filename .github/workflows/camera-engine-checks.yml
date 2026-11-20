@@ -206,6 +206,8 @@ jobs:
           node tests/nox-bisenet-face-parsing-provider.test.mjs
           cp core/nox-live-makeup-compositor.js /tmp/nox-live-makeup-compositor.mjs
           node --check /tmp/nox-live-makeup-compositor.mjs
+          cp core/nox-live-makeup-controller.js core/nox-live-makeup-controller.mjs
+          node tests/nox-live-makeup-controller.test.mjs
           cp core/nox-live-makeup-compositor.js core/nox-live-makeup-compositor.mjs
           node tests/nox-live-makeup-compositor.test.mjs
       - name: Check camera markup hooks
