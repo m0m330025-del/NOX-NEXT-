@@ -15,7 +15,7 @@ export class NOXFaceTopologyIntelligence {
     if (!Array.isArray(landmarks) || landmarks.length < 3 || landmarks.length > 10_000 ||
         landmarks.some(point => !validPoint(point))) return unavailable("invalid-landmark-array");
     const edges = connections?.tessellation;
-    if (!Array.isArray(edges) || edges.length < 3 || edges.length > MAX_EDGES)
+    if (!Array.isArray(edges) || edges.length < 1 || edges.length > MAX_EDGES)
       return unavailable("invalid-tessellation-edge-count");
     const adjacency = new Map(), seen = new Set();
     let duplicateEdges = 0;
