@@ -3220,6 +3220,7 @@ export function initCamera() {
     });
     if (qualityDecision.action === "recommend-reduce-load" && qualityTier < QUALITY_TIERS.length - 1) {
       qualityTier += 1;
+      noxNeuralCameraOrchestrator.commitAdaptiveDecision(qualityDecision.action);
       slowFrameStreak = 0;
       stableFrameStreak = 0;
       announce("NOX Neural Decision: خفض الحمل بعد " + qualityDecision.overloadSamples +
@@ -3228,6 +3229,7 @@ export function initCamera() {
     } else if (qualityDecision.action === "recommend-one-tier-recovery" &&
         qualityTier > (lowPower ? 1 : 0)) {
       qualityTier -= 1;
+      noxNeuralCameraOrchestrator.commitAdaptiveDecision(qualityDecision.action);
       stableFrameStreak = 0;
       slowFrameStreak = 0;
       announce("NOX Neural Decision: استعادة مستوى واحد بعد ثبات الأداء — " +
