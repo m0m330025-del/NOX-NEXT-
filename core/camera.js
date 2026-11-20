@@ -556,22 +556,35 @@ export function initCamera() {
     faceLandmarksState = "جارٍ تحميل نموذج نقاط الوجه";
     faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
     try {
-      if (!faceLandmarkerProvider) {
-        faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+      const plan = cortex.plan(
+        { faceRequested: true, landmarksRequested: true },
+        { requested: ["face-landmarks"], mode: lowPower ? "lite" : "balanced" }
+      );
+      const execution = await cortex.execute(plan, video, {
+        "face-landmarks": async source => {
+          if (!faceLandmarkerProvider) {
+            faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+          }
+          if (faceLandmarkerProvider.state !== "ready") {
+            const initialized = await faceLandmarkerProvider.initialize();
+            if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
+          }
+          const scale = Math.min(1, 256 / Math.max(source.videoWidth, source.videoHeight));
+          const width = Math.max(2, Math.round(source.videoWidth * scale));
+          const height = Math.max(2, Math.round(source.videoHeight * scale));
+          beautyInputCanvas.width = width;
+          beautyInputCanvas.height = height;
+          beautyInputContext.drawImage(source, 0, 0, width, height);
+          const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
+          if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
+          return faceLandmarksEngine.analyze(detected);
+        }
+      }, { timeoutMs: 15000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced" } });
+      if (execution.state !== "completed" || !execution.output) {
+        const failed = execution.results.find(item => item.status === "failed");
+        throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تحليل الوجه" : "تعذر تنفيذ مسار نقاط الوجه عبر NOX CORTEX");
       }
-      if (faceLandmarkerProvider.state !== "ready") {
-        const initialized = await faceLandmarkerProvider.initialize();
-        if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
-      }
-      const scale = Math.min(1, 256 / Math.max(video.videoWidth, video.videoHeight));
-      const width = Math.max(2, Math.round(video.videoWidth * scale));
-      const height = Math.max(2, Math.round(video.videoHeight * scale));
-      beautyInputCanvas.width = width;
-      beautyInputCanvas.height = height;
-      beautyInputContext.drawImage(video, 0, 0, width, height);
-      const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
-      if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
-      const analysis = faceLandmarksEngine.analyze(detected);
+      const analysis = execution.output;
       latestFaceLandmarksAnalysis = analysis;
       if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
         throw new Error("تعذر استخراج نقاط المناطق");
