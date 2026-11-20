@@ -20,7 +20,7 @@ function makeCanvas() {
 const created = [];
 const compositor = new NOXLiveMakeupCompositor({ canvasFactory: () => { const canvas = makeCanvas(); created.push(canvas); return canvas; }, maxAgeMs: 220 });
 const data = new Float32Array([0, 1, 0.5, 0]);
-const vision = { frame: { width: 2, height: 2 }, regionMasks: {
+const vision = { frame: { width: 2, height: 2 }, faceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 }, regionMasks: {
   lips: { width: 2, height: 2, data, confidence: 0.95, source: "test" }
 } };
 assert.equal(compositor.accept({ sequence: 1, capturedAt: 100, vision, look: { lips: { color: [200, 20, 60], opacity: 0.5 } } }), true);
@@ -31,7 +31,7 @@ assert.deepEqual(Array.from(compositor.canvas.image.data), [
 ]);
 const target = makeCanvas();
 target.width = 640; target.height = 480;
-assert.equal(compositor.draw(target, { now: 200, mirrored: true }), true);
+assert.equal(compositor.draw(target, { now: 200, mirrored: true, currentFaceBox: { x: 0.4, y: 0.3, width: 0.2, height: 0.4 } }), true);
 assert.equal(target.draws.length, 1);
 assert.deepEqual(target.transforms[0], "save");
 assert.deepEqual(target.transforms[1], ["translate", 640, 0]);
@@ -40,5 +40,8 @@ assert.equal(compositor.accept({ sequence: 1, capturedAt: 110, vision, look: { l
 assert.equal(compositor.draw(target, { now: 321 }), false);
 assert.equal(compositor.canvas, null);
 assert.equal(compositor.accept({ sequence: 2, capturedAt: 400, vision, look: { eyelids: { color: [1,2,3], opacity: 0.2 } } }), false);
+assert.equal(compositor.accept({ sequence: 2, capturedAt: 400, vision, look: { lips: { color: [200, 20, 60], opacity: 0.5 } } }), true);
+assert.equal(compositor.draw(target, { now: 410, currentFaceBox: { x: 0.58, y: 0.3, width: 0.2, height: 0.4 } }), false, "large face-center drift must invalidate the old makeup mask");
+assert.equal(compositor.canvas, null);
 compositor.clear();
 console.log("NOX Live Makeup Compositor tests passed");
