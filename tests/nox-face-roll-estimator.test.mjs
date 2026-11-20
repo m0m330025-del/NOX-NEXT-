@@ -9,7 +9,7 @@ function eyePoints(indices, x, y) {
 const base = {
   source: "mediapipe-face-landmarker-478",
   width: 640, height: 480, landmarkCount: 478,
-  frameId: "frame-17", timestamp: 1700,
+  frameId: "frame-17", timestamp: 1700, capturedAtMonotonicMs: 1200,
   coordinateSpace: "source-unmirrored-normalized",
   regions: {
     leftEye: eyePoints([1,2,3,4], 0.25, 0.4),
