@@ -97,7 +97,8 @@ jobs:
           cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
           cp core/nox-smart-motion-separation-engine.js /tmp/smart-motion-separation-engine.mjs
           cp core/nox-adaptive-temporal-fusion-engine.js /tmp/adaptive-temporal-fusion-engine.mjs
-          cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs\n          cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
+          cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs
+          cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -112,7 +113,8 @@ jobs:
           node --check /tmp/temporal-alignment-engine.mjs
           node --check /tmp/smart-motion-separation-engine.mjs
           node --check /tmp/adaptive-temporal-fusion-engine.mjs
-          node --check /tmp/multi-engine-intelligence-brain.mjs\n          node --check /tmp/neural-camera-orchestrator.mjs
+          node --check /tmp/multi-engine-intelligence-brain.mjs
+          node --check /tmp/neural-camera-orchestrator.mjs
           node tests/nox-original-filter-library.test.mjs
           node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
@@ -120,7 +122,8 @@ jobs:
           node tests/nox-temporal-alignment-integration.test.mjs
           node tests/nox-smart-motion-separation-engine.test.mjs
           node tests/nox-adaptive-temporal-fusion-engine.test.mjs
-          node tests/nox-multi-engine-intelligence-brain.test.mjs\n          node tests/nox-neural-camera-orchestrator.test.mjs
+          node tests/nox-multi-engine-intelligence-brain.test.mjs
+          node tests/nox-neural-camera-orchestrator.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
