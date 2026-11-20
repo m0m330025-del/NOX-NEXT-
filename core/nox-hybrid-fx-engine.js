@@ -24,3 +24,17 @@ export function getNOXHybridFilter(id) {
 
 export const NOX_HYBRID_FILTERS = FILTERS;
 export const NOX_HYBRID_FILTER_COUNT = FILTERS.length;
+
+/** Build a bit-mask and bounded per-engine weights for the live shader mixer. */
+export function buildNOXHybridSelection(ids = [], weights = []) {
+  const selected = new Set(Array.isArray(ids) ? ids.map(String) : []);
+  let mask = 0;
+  NOX_HYBRID_FILTERS.forEach((filter, index) => {
+    if (selected.has(filter.id)) mask += 2 ** index;
+  });
+  const normalizedWeights = NOX_HYBRID_FILTERS.map((filter, index) => {
+    const value = Number(weights[index] ?? filter.mix);
+    return Number.isFinite(value) ? Math.max(0, Math.min(0.85, value)) : filter.mix;
+  });
+  return Object.freeze({ mask, weights: Object.freeze(normalizedWeights), count: NOX_HYBRID_FILTERS.filter((filter) => selected.has(filter.id)).length });
+}
