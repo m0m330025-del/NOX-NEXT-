@@ -522,10 +522,10 @@ export function initCamera() {
     }, 1850);
   }
 
-  // Unlock audio synchronously from the camera navigation gesture where possible.
-  document.querySelectorAll('[data-nav="camera"], .add-story').forEach((control) => {
-    control.addEventListener("click", () => { getNOXAudioContext(); }, { passive: true });
-  });
+  // Capture the navigation gesture before the router handles it, so audio can unlock.
+  document.addEventListener("click", (event) => {
+    if (event.target.closest('[data-nav="camera"], .add-story')) getNOXAudioContext();
+  }, true);
 
   let stream = null;
   let cameraStartGeneration = 0;
