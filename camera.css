@@ -172,3 +172,8 @@
 .nox-beauty-ai-panel button:disabled{opacity:.55;cursor:not-allowed}
 .nox-beauty-ai-panel small{font-size:11px;line-height:1.7;color:#d0e9e1}
 #nox-beauty-ai-mask-preview[hidden]{display:none!important}
+
+
+/* NOX Face Landmarker preview */
+#nox-face-landmarks-preview[hidden]{display:none!important}
+.nox-beauty-ai-panel #nox-face-landmarks-preview{pointer-events:none}
