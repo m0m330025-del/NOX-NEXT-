@@ -33,9 +33,14 @@ const averageDx = flow.vectors.reduce((sum, vector) => sum + vector.dx, 0) / flo
 assert.ok(averageDx > 0, "rightward frame motion must produce rightward flow vectors");
 
 const blank = new Uint8Array(width * height);
-const still = engine.process(blank, blank, width, height);
-assert.equal(still.sampleCount, 0, "identical frames should not report motion vectors");
-assert.equal(still.confidence, 0);
+const still = engine.process(previous, previous, width, height);
+assert.ok(still.sampleCount > 0, "textured still frames should provide zero-motion confidence samples");
+assert.ok(still.vectors.every(vector => vector.dx === 0 && vector.dy === 0),
+  "identical textured frames should report zero displacement");
+assert.ok(still.confidence > 0 && still.confidence <= 1);
+const blankStill = engine.process(blank, blank, width, height);
+assert.equal(blankStill.sampleCount, 0, "textureless frames should not claim a motion estimate");
+assert.equal(blankStill.confidence, 0);
 assert.throws(() => engine.process(new Uint8Array(2), blank, width, height), /invalid-optical-flow-frame/);
 assert.throws(() => engine.process(blank, blank, 512, 512), /invalid-optical-flow-frame/);
 engine.reset();
