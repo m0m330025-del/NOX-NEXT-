@@ -162,6 +162,39 @@ assert.equal(pendingInitProvider.state, "idle",
 assert.equal(staleSessionReleased, 1,
   "a session created after dispose must be released immediately");
 
+let finishPendingInference;
+let inferenceStarted;
+let sessionReleasedAfterInference = false;
+const inferenceStartedPromise = new Promise(resolve => { inferenceStarted = resolve; });
+const pendingInferenceProvider = new NOXBiSeNetFaceParsingProvider({
+  modelInputSize: size,
+  sessionFactory: async () => ({
+    inputNames: ["input"], outputNames: ["output"],
+    run: () => {
+      inferenceStarted();
+      return new Promise(resolve => { finishPendingInference = resolve; });
+    },
+    release: async () => { sessionReleasedAfterInference = true; }
+  }),
+  preprocessFrame: async () => new Float32Array(3 * pixels),
+  maxInputDimension: 64
+});
+assert.equal((await pendingInferenceProvider.initialize()).available, true);
+const pendingFrame = pendingInferenceProvider.segment({
+  source: {}, width: size, height: size, frameId: "pending-run", timestamp: 101
+});
+await inferenceStartedPromise;
+const pendingDispose = pendingInferenceProvider.dispose();
+await Promise.resolve();
+assert.equal(sessionReleasedAfterInference, false,
+  "dispose must wait while ONNX inference is still running");
+finishPendingInference({ output: { data: logits, dims: [1, 19, size, size] } });
+await pendingDispose;
+assert.equal(sessionReleasedAfterInference, true,
+  "dispose must release the ONNX session after inference settles");
+await assert.rejects(pendingFrame, /superseded-bisenet-frame/,
+  "an inference completed after dispose must not publish a frame result");
+
 let runtimeCreatedOnMismatch = false;
 const mismatchProvider = new NOXBiSeNetFaceParsingProvider({
   modelUrl: "https://models.example.test/face.onnx",
