@@ -105,12 +105,12 @@ export class NOXDynamicEngineAdapter {
   async handle(input, context = {}) {
     if (!this.enabled) throw new Error("engine-disabled");
     if (context.signal?.aborted) throw new Error("engine-aborted");
-    if (this.validateInput && this.validateInput(input) === false) throw new TypeError("engine-input-rejected");
 
     const started = this.clock();
     this.state = "running";
     this.lastError = null;
     try {
+      if (this.validateInput && this.validateInput(input) === false) throw new TypeError("engine-input-rejected");
       const output = await this.process(input, {
         engineId: this.id,
         adapterVersion: NOX_ENGINE_ADAPTER_CONTRACT_VERSION,
