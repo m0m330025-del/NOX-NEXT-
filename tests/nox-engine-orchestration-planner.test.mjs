@@ -23,7 +23,7 @@ const plan = planner.evaluate({ registeredEngines: inventory, capabilityEvidence
 assert.equal(plan.status, "recommendation-ready");
 assert.deepEqual(plan.steps.map(item => item.engine), ["flow", "new-engine", "motion", "align", "fusion"]);
 assert.equal(plan.executionPerformed, false);
-assert.equal(plan.decisions.find(item => item.engine === "new-engine").reason, "capability-and-evidence-gates-passed");
+assert.equal(plan.decisions.find(item => item.engine === "new-engine").reason, "capability-supported-status-unknown-plan-only");
 
 const missing = planner.evaluate({
   registeredEngines: inventory,
