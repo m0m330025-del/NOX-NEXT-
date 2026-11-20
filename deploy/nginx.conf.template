@@ -4,6 +4,20 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Never expose dotfiles (except the standard ACME challenge path).
+    location ~ /\.(?!well-known(?:/|$)) {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    # Keep common secret, database, backup, and diagnostic artifacts private.
+    location ~* \.(?:env|pem|key|p12|pfx|sqlite|db|bak|backup|log)$ {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
     location / {
         try_files $uri $uri/ =404;
     }
