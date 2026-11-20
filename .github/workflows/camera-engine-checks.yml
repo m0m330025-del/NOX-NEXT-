@@ -8,6 +8,14 @@ on:
       - "core/nox-filter-engine.js"
       - "core/nox-temporal-memory-engine.js"
       - "tests/nox-temporal-memory-engine.test.mjs"
+      - "core/nox-optical-flow-engine.js"
+      - "tests/nox-optical-flow-engine.test.mjs"
+      - "core/nox-temporal-alignment-engine.js"
+      - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "core/nox-optical-flow-engine.js"
+      - "tests/nox-optical-flow-engine.test.mjs"
+      - "core/nox-temporal-alignment-engine.js"
+      - "tests/nox-temporal-alignment-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -58,6 +66,7 @@ jobs:
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
           cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
+          cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
           node --check /tmp/camera.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
@@ -68,7 +77,10 @@ jobs:
           node --check /tmp/face-landmarks-engine.mjs
           node --check /tmp/optical-flow-engine.mjs
           node --check /tmp/temporal-memory-engine.mjs
+          node --check /tmp/temporal-alignment-engine.mjs
+          node tests/nox-optical-flow-engine.test.mjs
           node tests/nox-temporal-memory-engine.test.mjs
+          node tests/nox-temporal-alignment-engine.test.mjs
       - name: Check camera markup hooks
         run: |
           node --input-type=module <<'NODE'
@@ -192,6 +204,14 @@ jobs:
           }
           console.log('Living Metal prototype hooks present: 3');
           console.log('Manual region mask hooks present: 3');
+          const temporalAlignmentSource = fs.readFileSync('core/nox-temporal-alignment-engine.js', 'utf8');
+          for (const token of ['minConfidence = 0.16', 'minVectorCount = 4', 'maxAccumulated = 0.12', 'inconsistent-motion-vectors', 'onCapture(index)', 'getTransform(index)', 'reset()']) {
+            if (!temporalAlignmentSource.includes(token)) throw new Error('Temporal alignment confidence and drift policy missing: ' + token);
+          }
+          for (const token of ['NOXTemporalAlignmentEngine', 'temporalAlignmentEngine.ingest', 'temporalAlignmentEngine.onCapture', 'temporalAlignmentEngine.getTransform', 'alignment.dx * width']) {
+            if (!js.includes(token)) throw new Error('Temporal alignment is not connected to the camera pipeline: ' + token);
+          }
+          console.log('Temporal alignment confidence gates, drift bounds, and camera adapter hooks verified');
           const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
           for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
             if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
