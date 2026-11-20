@@ -45,6 +45,25 @@ export class NOXEngineRegistry {
     };
   }
 
+  replace(descriptor = {}) {
+    const previous = this.entries.get(descriptor.id) || null;
+    if (previous) this.entries.delete(descriptor.id);
+    let current;
+    try {
+      this.register(descriptor);
+      current = this.entries.get(descriptor.id);
+    } catch (error) {
+      if (previous) this.entries.set(descriptor.id, previous);
+      throw error;
+    }
+    return () => {
+      if (this.entries.get(descriptor.id) !== current) return false;
+      this.entries.delete(descriptor.id);
+      if (previous) this.entries.set(descriptor.id, previous);
+      return true;
+    };
+  }
+
   snapshot() {
     return [...this.entries.values()].map(entry => {
       let rawStatus = null;
