@@ -11,6 +11,8 @@ on:
       - "core/nox-face-research-suite.js"
       - "core/nox-face-digital-twin-diagnostics.js"
       - "core/camera.js"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
       - "tests/nox-face-digital-twin-diagnostics.test.mjs"
       - "tests/nox-face-landmarks-engine.test.mjs"
       - "tests/nox-mediapipe-face-landmarker-provider.test.mjs"
@@ -62,6 +64,7 @@ jobs:
           node --check core/nox-face-research-suite.mjs
           node --experimental-default-type=module --check core/nox-face-digital-twin-diagnostics.js
           node --experimental-default-type=module --check core/camera.js
+          node --experimental-default-type=module --check core/nox-cortex.js
       - name: Run landmark region tests
         run: node tests/nox-face-landmarks-engine.test.mjs
       - name: Run MediaPipe provider contract tests
@@ -74,3 +77,5 @@ jobs:
         run: node tests/nox-face-research-suite.test.mjs
       - name: Run Face Digital Twin camera diagnostic contract tests
         run: node --experimental-default-type=module tests/nox-face-digital-twin-diagnostics.test.mjs
+      - name: Run NOX CORTEX orchestration tests
+        run: node --experimental-default-type=module tests/nox-cortex.test.mjs
