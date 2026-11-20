@@ -4,6 +4,8 @@
 
 - The camera page exposes an opt-in **NOX BEAUTY VISION — REAL AI** panel. The user starts the camera and explicitly requests model loading; inference does not start automatically.
 - \`NOXBiSeNetFaceParsingProvider\` uses the BiSeNet ResNet-18 ONNX face-parsing model with ONNX Runtime Web. The current camera configuration bounds the largest input dimension to 256 pixels.
+- BiSeNet preprocessing preserves source aspect ratio with centered letterboxing instead of stretching a portrait/landscape face into a square. The semantic output is cropped to the valid letterbox region before masks and face bounds are restored to original frame dimensions.
+- Padding approximates the model's ImageNet RGB mean, minimizing artificial edge contrast after normalization.
 - \`NOXBeautyVisionProvider\` validates frame metadata, mask dimensions, mask values, confidence, and frame freshness before exposing semantic masks.
 - The currently supported semantic makeup masks are lips and brows. The model does not provide dedicated cheek or eyelid classes; those looks are unavailable rather than guessed.
 - \`NOXMakeupRenderingEngine\` validates the selected look and applies color only inside the accepted semantic masks.
