@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - "core/nox-*.js"
+      - "tests/nox-*.test.mjs"
       - "core/camera.js"
       - "core/nox-filter-engine.js"
       - "core/nox-original-filter-library.js"
@@ -53,6 +55,8 @@ on:
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
+      - "core/nox-*.js"
+      - "tests/nox-*.test.mjs"
       - "core/nox-optical-flow-engine.js"
       - "tests/nox-optical-flow-engine.test.mjs"
       - "core/nox-temporal-alignment-engine.js"
