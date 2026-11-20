@@ -68,3 +68,11 @@ This branch replaces the previous camera controller with a standalone browser ca
 - This is global 2D translation only. It does not estimate rotation, zoom, parallax, depth, rolling shutter, or dense per-pixel deformation. It cannot guarantee complete ghost removal.
 - Deterministic tests cover confidence filtering, stale sequences, inconsistent vectors, slot reset, and accumulated-drift invalidation. Optical-flow, temporal-memory, and temporal-alignment tests are all included in the camera workflow.
 - Real-scene visual quality, edge cropping, device performance, heat, and battery impact remain unverified until tested on physical devices, including Galaxy M12.
+
+
+## Optical Flow configuration hardening
+
+- Non-finite constructor and per-frame tuning values now fall back to documented safe defaults rather than producing NaN loop bounds or silently empty results.
+- Configured maximum sample dimensions are clamped to 256 pixels per side to keep the block-matching workload bounded; the default remains 128.
+- Confidence thresholds are clamped to the inclusive 0–1 range. The confidence output remains a local heuristic, not a calibrated probability.
+- Deterministic tests cover invalid configuration, upper bounds, and safe fallback behavior. This does not replace device profiling or visual validation.
