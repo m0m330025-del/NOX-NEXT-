@@ -585,7 +585,7 @@ export function initCamera() {
   noxEngineRegistry.register({ id: "scene-intelligence", name: "Scene Intelligence", category: "scene-analysis", instance: noxSceneIntelligenceEngine, capabilities: ["luminance", "contrast", "motion-state"] });
   noxEngineRegistry.register({ id: "optical-flow", name: "Sparse Optical Flow", category: "motion", instance: opticalFlowEngine, capabilities: ["sparse-motion-vectors"] });
   noxEngineRegistry.register({ id: "face-detection", name: "Face Detection", category: "vision", instance: faceDetectionEngine, capabilities: ["platform-face-detection"] });
-  noxEngineRegistry.register({ id: "face-tracking", name: "Face Tracking", category: "vision", instance: faceTrackingEngine, capabilities: ["face-track-continuity"] });
+  noxEngineRegistry.register({ id: "face-tracking", name: "Face Tracking", category: "vision", instance: faceTrackingEngine, capabilities: ["face-track-continuity", "live-landmark-smoothing", "short-loss-coasting"] });
   noxEngineRegistry.register({ id: "face-region", name: "Face Region", category: "vision", instance: faceRegionEngine, capabilities: ["face-region-geometry"] });
   noxEngineRegistry.register({ id: "face-landmarks", name: "Face Landmarks", category: "vision", instance: faceLandmarksEngine, capabilities: ["landmark-analysis"] });
   noxEngineRegistry.register({ id: "facial-mask-builder", name: "Facial Mask Builder", category: "vision", instance: facialMaskBuilder, capabilities: ["geometric-face-masks"] });
