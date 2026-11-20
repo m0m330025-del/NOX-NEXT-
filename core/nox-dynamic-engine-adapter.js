@@ -26,7 +26,7 @@ export const NOX_ENGINE_ADAPTER_CONTRACT_VERSION = 1;
  */
 export class NOXDynamicEngineAdapter {
   constructor({
-    id, name, category = "processing", instance, process,
+    id, name, category = "processing", instance, process, processSync,
     cost = 1, estimatedCostMs = null, priority = 0,
     requires = [], requiresCapabilities = [], capabilities = [], conflictsWith = [],
     enabled = true, when, validateInput, validateOutput,
@@ -38,7 +38,7 @@ export class NOXDynamicEngineAdapter {
     if (!instance || (typeof instance !== "object" && typeof instance !== "function")) {
       throw new TypeError("engine-adapter-instance-required");
     }
-    if (typeof process !== "function") throw new TypeError("engine-adapter-process-required");
+    if (typeof process !== "function" && typeof processSync !== "function") throw new TypeError("engine-adapter-process-required");
     if (!Number.isFinite(cost) || cost < 0) throw new TypeError("engine-adapter-cost-invalid");
     if (estimatedCostMs !== null && (!Number.isFinite(estimatedCostMs) || estimatedCostMs < 0)) {
       throw new TypeError("engine-adapter-estimated-cost-invalid");
@@ -54,6 +54,7 @@ export class NOXDynamicEngineAdapter {
     this.category = typeof category === "string" && category.trim() ? category.trim() : "processing";
     this.instance = instance;
     this.process = process;
+    this.processSync = processSync;
     this.cost = cost;
     this.declaredEstimatedCostMs = estimatedCostMs;
     this.priority = Number.isFinite(priority) ? priority : 0;
@@ -121,6 +122,43 @@ export class NOXDynamicEngineAdapter {
         previousResults: Array.isArray(context.previousResults) ? context.previousResults.slice() : [],
         signal: context.signal
       });
+      if (output === undefined) throw new Error("engine-returned-undefined");
+      if (this.validateOutput && this.validateOutput(output) === false) throw new TypeError("engine-output-rejected");
+      const ended = this.clock();
+      const duration = Number.isFinite(started) && Number.isFinite(ended) ? Math.max(0, ended - started) : null;
+      if (duration !== null) {
+        this.lastDurationMs = duration;
+        this.history.push(duration);
+        if (this.history.length > this.historyLimit) this.history.shift();
+      }
+      this.state = "ready";
+      return output;
+    } catch (error) {
+      this.failures += 1;
+      this.state = "failed";
+      this.lastError = typeof error?.message === "string" ? error.message.slice(0, 120) : "engine-error";
+      const ended = this.clock();
+      if (Number.isFinite(started) && Number.isFinite(ended)) this.lastDurationMs = Math.max(0, ended - started);
+      throw error;
+    }
+  }
+
+  handleSync(input, context = {}) {
+    if (typeof this.processSync !== "function") throw new Error("engine-sync-handler-unavailable");
+    if (!this.enabled) throw new Error("engine-disabled");
+    if (context.signal?.aborted) throw new Error("engine-aborted");
+    const started = this.clock();
+    this.state = "running";
+    this.lastError = null;
+    try {
+      if (this.validateInput && this.validateInput(input) === false) throw new TypeError("engine-input-rejected");
+      const output = this.processSync(input, {
+        engineId: this.id,
+        adapterVersion: NOX_ENGINE_ADAPTER_CONTRACT_VERSION,
+        context: context.context || {},
+        signal: context.signal
+      });
+      if (output && typeof output.then === "function") throw new Error("sync-engine-returned-promise");
       if (output === undefined) throw new Error("engine-returned-undefined");
       if (this.validateOutput && this.validateOutput(output) === false) throw new TypeError("engine-output-rejected");
       const ended = this.clock();
@@ -240,7 +278,15 @@ export class NOXDynamicEngineAdapterHost {
   }
 
   getHandlers() {
-    return Object.fromEntries([...this.adapters].map(([id, adapter]) => [id, adapter.handle.bind(adapter)]));
+    return Object.fromEntries([...this.adapters].map(([id, adapter]) => [id,
+      typeof adapter.process === "function" ? adapter.handle.bind(adapter) : adapter.handleSync.bind(adapter)
+    ]));
+  }
+
+  runSync(id, input, context = {}) {
+    const adapter = this.adapters.get(id);
+    if (!adapter) throw new Error("engine-adapter-not-registered:" + id);
+    return adapter.handleSync(input, context);
   }
 
   getStatus() {
