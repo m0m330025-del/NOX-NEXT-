@@ -1047,11 +1047,13 @@ export function initCamera() {
       faceDigitalTwinButton.disabled = true;
       clearFaceLandmarksPreview();
     } finally {
-      const processingCost = Math.max(0, performance.now() - processingStartedAt);
-      faceLandmarkAverageCost = faceLandmarkAverageCost
-        ? faceLandmarkAverageCost * 0.72 + processingCost * 0.28
-        : processingCost;
-      faceLandmarksProcessing = false;
+      if (session === faceLandmarksSession) {
+        const processingCost = Math.max(0, performance.now() - processingStartedAt);
+        faceLandmarkAverageCost = faceLandmarkAverageCost
+          ? faceLandmarkAverageCost * 0.72 + processingCost * 0.28
+          : processingCost;
+        faceLandmarksProcessing = false;
+      }
     }
   }
 
@@ -1059,6 +1061,9 @@ export function initCamera() {
     if (faceLandmarksLiveEnabled) {
       faceLandmarksSession += 1;
       faceLandmarksLiveEnabled = false;
+      // Release the task lock for the new session; stale finally blocks must not
+      // clear a lock acquired by a later session.
+      faceLandmarksProcessing = false;
       faceTrackingEngine.resetLandmarks();
       faceLandmarksLastAt = 0;
       latestFaceLandmarksAnalysis = null;
