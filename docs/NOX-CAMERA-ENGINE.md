@@ -17,9 +17,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 ## Explicit limitations
 - Browser camera APIs are not universally available; HTTPS and user permission are required.
 - MediaRecorder codecs and file formats vary by browser. The app checks support and disables recording when the required APIs are missing.
-- FaceDetector is only reported as a capability hint. Face tracking and skin smoothing are NOT implemented in this version; no fake beauty control is shown.
+- Face detection and geometric face tracking are implemented in the camera runtime. Optional MediaPipe Face Landmarker support provides live landmark analysis/preview when its model and browser runtime are available.
+- The opt-in NOX BEAUTY VISION path uses BiSeNet face parsing and the live makeup compositor. Its current semantic makeup regions are lips and brows only; it is not general skin smoothing, and it does not provide dedicated cheek/eyelid masks.
+- Beauty Vision and landmark inference are optional, model-backed paths. First load requires network access; offline model caching is not implemented. Model availability, device performance, and live visual alignment still require real-device verification.
 - This source-level change has not yet been exercised on physical Android/iOS devices. Device-specific permission, camera switching, thermal, and recording tests remain required.
-- This repository currently has no package.json or configured automated test command in the inspected root. Validation in this change is source review only; do not treat that as a successful device test.
+- The repository root has no package.json or npm test script. Automated checks are run directly with Node.js test files from GitHub Actions workflows (including syntax, camera markup, and deterministic engine/provider contracts). A passing CI run validates those source-level contracts only; it does not validate live camera output, model accuracy, image quality, or physical-device performance.
+- The camera workflow previously failed because the face-roll test imported a same-directory `.mjs` module that the workflow had not created. The workflow now creates that compatibility copy before running the test; the new commit must complete CI again before this repair is considered verified.
 
 ## Manual device test checklist
 1. Open the deployed HTTPS site in Android Chrome and iOS Safari.
