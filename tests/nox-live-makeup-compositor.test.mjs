@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { NOXLiveMakeupCompositor } from "../core/nox-live-makeup-compositor.mjs";
+import { NOXMakeupRenderingEngine } from "../core/nox-makeup-rendering-engine.mjs";
 
 function makeCanvas() {
   const canvas = { width: 0, height: 0, image: null, draws: [], transforms: [],
@@ -133,3 +135,39 @@ assert.equal(unanchored.accept({ sequence: 1, capturedAt: 930, vision: alignment
   look: { lips: { color: [200,20,60], opacity: 0.4 } } }), true);
 assert.throws(() => new NOXLiveMakeupCompositor({ edgeSoftness: 0.9 }), /invalid-live-makeup-compositor-options/);
 console.log("NOX Live Makeup Compositor tests passed");
+
+// The live camera path must use the rendering engine's transparent output,
+// not independently recolor semantic masks inside the compositor.
+const engineVision = structuredClone(vision);
+const engine = new NOXMakeupRenderingEngine({ minConfidence: 0.8, maxOpacity: 0.58 });
+const engineBase = new Uint8ClampedArray(engineVision.frame.width * engineVision.frame.height * 4);
+for (let i = 0; i < engineBase.length; i += 4) engineBase[i + 3] = 255;
+const engineMasks = Object.fromEntries(Object.entries(engineVision.regionMasks).map(([key, mask]) =>
+  [key, { ...mask, source: mask.source || "test-semantic-provider" }]));
+const engineResult = engine.render({
+  width: engineVision.frame.width, height: engineVision.frame.height,
+  data: engineBase, frame: engineVision.frame
+}, engineMasks, { lips: { color: [200, 20, 60], opacity: 0.5 } });
+assert.equal(engineResult.state, "rendered");
+const engineCompositor = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+assert.equal(engineCompositor.accept({
+  sequence: 1, capturedAt: 100, vision: engineVision, makeup: engineResult
+}), true, "compositor must accept the matching engine-rendered overlay");
+assert.deepEqual(Array.from(engineCompositor.canvas.image.data), Array.from(engineResult.overlay.data),
+  "compositor must transfer the engine overlay unchanged");
+const engineTarget = makeCanvas(); engineTarget.width = 640; engineTarget.height = 480;
+assert.equal(engineCompositor.draw(engineTarget, {
+  now: 110, currentFaceBox: engineVision.faceBox
+}), true);
+assert.equal(engineTarget.draws.length, 1);
+const mismatchedEngineCompositor = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+assert.equal(mismatchedEngineCompositor.accept({
+  sequence: 1, capturedAt: 100, vision: engineVision,
+  makeup: { ...engineResult, frame: { ...engineResult.frame, id: "different-frame" } }
+}), false, "engine output from another source frame must be rejected");
+
+const cameraSource = readFileSync(new URL("../core/camera.js", import.meta.url), "utf8");
+assert.ok(cameraSource.includes("frame: vision.frame"),
+  "makeup engine input must carry the exact captured source-frame identity");
+assert.ok(cameraSource.includes("sequence, capturedAt, vision: result.vision, makeup: result.makeup"),
+  "live camera compositor must receive the makeup rendering engine result");
