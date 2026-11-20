@@ -117,6 +117,7 @@ jobs:
           cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
           cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
           cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
+          cp core/nox-face-landmark-temporal-tracker.js /tmp/face-landmark-temporal-tracker.mjs
           cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
           cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
           cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
@@ -140,6 +141,7 @@ jobs:
           node --check /tmp/skin-segmentation-engine.mjs
           node --check /tmp/mediapipe-face-landmarker-provider.mjs
           node --check /tmp/face-landmarks-engine.mjs
+          node --check /tmp/face-landmark-temporal-tracker.mjs
           node --check /tmp/optical-flow-engine.mjs
           node --check /tmp/temporal-memory-engine.mjs
           node --check /tmp/temporal-alignment-engine.mjs
