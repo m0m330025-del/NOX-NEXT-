@@ -18,15 +18,20 @@
 - When a current face detector track is available, the compositor compares its normalized face center with the face box captured by BiSeNet. A displacement above 0.08 frame-diagonal units invalidates the old mask instead of drawing it over a moved face. This is a conservative rejection guard, not geometric mask warping; if the detector track is unavailable, the 220ms freshness limit remains the available guard.
 - Inference runs locally in the browser after the ONNX runtime and model are downloaded. Offline model caching is not implemented.
 
-## Face landmarks are a separate capability
+## Multi-model face fusion
 
-- \`NOXMediaPipeFaceLandmarkerProvider\` uses MediaPipe Tasks Vision to produce face landmarks for tracking and diagnostics.
-- Landmark tracking is separate from BiSeNet semantic makeup masks. The landmark points are not substituted for missing cheek or eyelid segmentation.
+- NOXMultiModelFaceFusionProvider now runs BiSeNet semantic parsing and MediaPipe Face Landmarker against the same downscaled camera frame.
+- BiSeNet remains the source of pixel masks. MediaPipe contributes observed landmark topology and face-oval geometry; landmarks are never converted into fake pixel segmentation masks.
+- The fusion provider verifies frame identity, timestamp, dimensions, and face-box overlap before marking the result as fused. The current minimum face-box IoU is 0.20.
+- If MediaPipe is unavailable or its face box does not align, valid BiSeNet masks remain available as an explicitly partial result. If segmentation fails or its frame metadata does not match, the fused request is rejected.
+- NOXBeautyVisionProvider preserves validated fusion status and landmark analysis metadata for downstream diagnostics. The camera's live makeup pipeline now initializes this fusion provider rather than using BiSeNet alone.
+- The independent MediaPipe live landmark preview and tracking capability remains available; it has a separate lifecycle from the makeup pipeline.
 
 ## Explicit limitations
 
 - The current makeup model supports lips and brows only; cheek and eyelid makeup are not implemented.
-- The 220ms freshness limit reduces stale overlays but does not guarantee perfect alignment during fast head movement. Dense motion-warp compensation is not claimed.
+- The 220ms freshness limit and face-box overlap gate reduce stale or mismatched overlays but do not guarantee perfect alignment during fast head movement. Dense motion-warp compensation is not claimed.
+- Fusion contract tests use synthetic face geometry and fake model providers. They verify frame matching, fail-closed behavior, and metadata propagation; they do not prove real-model landmark/segmentation agreement on live faces.
 - The controller uses a bounded low-resolution inference path. Sustained frame rate, heat, memory usage, and visual quality have not been measured on physical Android/iOS devices.
 - The model/runtime require an internet connection for first load. Offline caching has not been implemented.
 - CI tests use synthetic masks and fake provider sessions; they verify contracts and composition logic, not the real model's visual accuracy on a live face.
