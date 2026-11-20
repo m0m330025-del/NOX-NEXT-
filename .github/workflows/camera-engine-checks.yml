@@ -232,6 +232,8 @@ jobs:
             'runBeautyMaskPreview', 'await releaseBeautyVision()',
             'maxInputDimension: 256', 'beautySkinEngine.validateMask',
             'NOXMediaPipeFaceLandmarkerProvider', 'NOXFaceLandmarksEngine',
+            'NOXFaceLandmarkTemporalTracker', 'processLiveFaceLandmarks',
+            'faceLandmarkTemporalTracker.update', 'faceLandmarksLiveEnabled',
             'runFaceLandmarksPreview', 'await releaseFaceLandmarker()',
             'nox-face-landmarks-preview'
           ]) {
