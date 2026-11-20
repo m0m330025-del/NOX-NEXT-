@@ -64,7 +64,7 @@ export class NOXSparseOpticalFlowEngine {
           Math.max(0, Math.min(1, (secondSad - bestSad) / (secondSad + 1)));
         const texture = Math.min(1, secondSad / 90);
         const confidence = uniqueness * texture;
-        if ((Math.abs(bestDx) + Math.abs(bestDy)) > 0 && confidence > this.minConfidence) {
+        if (confidence > this.minConfidence) {
           vectors.push({
             x: cx / width,
             y: cy / height,
