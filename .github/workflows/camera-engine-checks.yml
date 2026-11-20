@@ -228,6 +228,14 @@ jobs:
           for (const token of ['listNOXFilters', 'NOX ORIGINAL — 1000', 'selectedOriginalFilter ? 10 + selectedOriginalFilter.familyIndex', 'selectedOriginalFilter ? selectedOriginalFilter.variantIndex / 99']) {
             if (!originalCamera.includes(token)) throw new Error('NOX ORIGINAL live GPU filter integration missing: ' + token);
           }
+          for (const token of ['buildNOXHybridSelection', 'selectedHybridMask', 'selectedHybridWeights', 'u_hybridWeights[6]', 'uniform1fv(renderer.hybridWeights)', 'nox-hybrid-mixer', 'nox-hybrid-weight', 'syncHybridMixer', 'hybridFallbackFilters']) {
+            if (!js.includes(token)) throw new Error('NOX multi-engine hybrid mixer integration missing: ' + token);
+          }
+          const hybridSelection = hybridEngineModule.buildNOXHybridSelection(['chroma-tide', 'prism-forge', 'aurora-relic'], [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
+          if (hybridSelection.mask !== 35 || hybridSelection.count !== 3 || hybridSelection.weights[5] !== 0.8) {
+            throw new Error('NOX hybrid mixer mask/weight contract failed');
+          }
+          console.log('NOX weighted multi-engine mixer and Canvas fallback verified');
           console.log('NOX ORIGINAL 1,000 procedural presets and live GPU selector verified');
           const catalogModule = await import('file:///tmp/filter-engine.mjs');
           const groups = catalogModule.NOX_FILTER_GROUPS;
