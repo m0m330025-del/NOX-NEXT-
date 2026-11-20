@@ -1339,7 +1339,7 @@ export function initCamera() {
         const execution = await cortex.execute(
           plan,
           {
-            image: { width: frame.width, height: frame.height, data: new Uint8ClampedArray(source.data) },
+            image: { width: frame.width, height: frame.height, data: new Uint8ClampedArray(source.data), frame: vision.frame },
             regionMasks: vision.regionMasks,
             looks: activeBeautyLook
           },
@@ -1354,7 +1354,7 @@ export function initCamera() {
       },
       onResult: ({ sequence, capturedAt, ageMs, result }) => {
         if (!liveMakeupCompositor.accept({
-          sequence, capturedAt, vision: result.vision, look: activeBeautyLook,
+          sequence, capturedAt, vision: result.vision, makeup: result.makeup,
           capturedRoll: result.capturedRoll
         })) return;
         beautyClearLookButton.disabled = false;
