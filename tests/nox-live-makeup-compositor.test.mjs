@@ -171,3 +171,24 @@ assert.ok(cameraSource.includes("frame: vision.frame"),
   "makeup engine input must carry the exact captured source-frame identity");
 assert.ok(cameraSource.includes("sequence, capturedAt, vision: result.vision, makeup: result.makeup"),
   "live camera compositor must receive the makeup rendering engine result");
+
+// Without the experimental FaceDetector API, the compositor falls back to the
+// same-frame faceBox already validated by the Beauty Vision provider.
+const noDetector = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, maxAgeMs: 220 });
+assert.equal(noDetector.accept({
+  sequence: 1, capturedAt: 100, vision,
+  look: { lips: { color: [200, 20, 60], opacity: 0.5 } }
+}), true);
+const noDetectorTarget = makeCanvas(); noDetectorTarget.width = 640; noDetectorTarget.height = 480;
+assert.equal(noDetector.draw(noDetectorTarget, { now: 150 }), true,
+  "a fresh validated semantic faceBox must allow makeup when no current FaceDetector box is available");
+assert.equal(noDetectorTarget.draws.length, 1);
+const invalidCurrentBox = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas });
+assert.equal(invalidCurrentBox.accept({
+  sequence: 1, capturedAt: 100, vision,
+  look: { lips: { color: [200, 20, 60], opacity: 0.5 } }
+}), true);
+assert.equal(invalidCurrentBox.draw(noDetectorTarget, {
+  now: 150, currentFaceBox: { x: NaN, y: 0.3, width: 0.2, height: 0.4 }
+}), false, "an explicitly invalid tracker result must fail closed instead of silently falling back");
+
