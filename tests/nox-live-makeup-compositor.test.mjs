@@ -45,4 +45,14 @@ assert.equal(compositor.accept({ sequence: 2, capturedAt: 400, vision, look: { l
 assert.equal(compositor.draw(target, { now: 410, currentFaceBox: { x: 0.58, y: 0.3, width: 0.2, height: 0.4 } }), false, "large face-center drift must invalidate the old makeup mask");
 assert.equal(compositor.canvas, null);
 compositor.clear();
+const crisp = new NOXLiveMakeupCompositor({ canvasFactory: makeCanvas, edgeSoftness: 0.5 });
+const crispMask = { frame: { width: 3, height: 3 }, regionMasks: {
+  lips: { width: 3, height: 3, data: new Float32Array([0,0,0,0,1,0,0,0,0]), confidence: 0.99 }
+} };
+assert.equal(crisp.accept({ sequence: 1, capturedAt: 500, vision: crispMask,
+  look: { lips: { color: [100, 50, 25], opacity: 0.5 } } }), true);
+const edgeAlpha = crisp.canvas.image.data[(1 * 3 + 1) * 4 + 3];
+assert.equal(edgeAlpha, 64, "isolated boundary pixel must be softened");
+assert.equal(crisp.canvas.image.data[3], 0, "feathering must never create alpha outside the mask");
+assert.throws(() => new NOXLiveMakeupCompositor({ edgeSoftness: 0.9 }), /invalid-live-makeup-compositor-options/);
 console.log("NOX Live Makeup Compositor tests passed");
