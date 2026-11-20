@@ -14,7 +14,7 @@ assert.equal(ready.status, "coordinated-evidence-ready");
 assert.deepEqual(ready.pipeline, ["optical-flow", "motion-separation", "temporal-alignment", "temporal-fusion"]);
 assert.equal(ready.decisions.find(x => x.engine === "temporal-fusion").action, "allow-evidence-gated-fusion");
 
-const lowPower = brain.evaluate({ ...good, lowPower: true, frameCostMs: 44 });
+const lowPower = brain.evaluate({ ...good, lowPower: true, frameCostMs: 38 });
 assert.equal(lowPower.performanceMode, "conserve");
 assert.equal(lowPower.performanceReason, "low-power-device-over-budget");
 assert.equal(lowPower.decisions.find(x => x.engine === "quality-governor").action, "recommend-lower-cost-profile");
