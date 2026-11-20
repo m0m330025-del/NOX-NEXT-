@@ -15,6 +15,7 @@
 - \`NOXLiveMakeupCompositor\` builds a transparent color layer from the accepted masks and draws it over each fresh base render. It does not paint onto a previous composed frame, avoiding a feedback loop.
 - The compositor is called from the camera \`renderFrame()\` path on the shared \`renderCanvas\`. Photo capture copies that canvas, and video recording uses its \`captureStream()\`, so a fresh accepted makeup layer is included in both outputs.
 - If a makeup result expires, it is not drawn. A capture taken without a fresh result may therefore contain no makeup rather than a stale mask.
+- When a current face detector track is available, the compositor compares its normalized face center with the face box captured by BiSeNet. A displacement above 0.08 frame-diagonal units invalidates the old mask instead of drawing it over a moved face. This is a conservative rejection guard, not geometric mask warping; if the detector track is unavailable, the 220ms freshness limit remains the available guard.
 - Inference runs locally in the browser after the ONNX runtime and model are downloaded. Offline model caching is not implemented.
 
 ## Face landmarks are a separate capability
