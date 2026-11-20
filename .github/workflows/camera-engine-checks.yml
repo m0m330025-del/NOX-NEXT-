@@ -375,13 +375,13 @@ jobs:
           }
           console.log('NOX Adaptive Temporal Fusion evidence gates and camera compositor integration verified');
           const orchestratorSource = fs.readFileSync('core/nox-neural-camera-orchestrator.js', 'utf8');
-          for (const token of ['NOXNeuralCameraOrchestrator', 'historySize = 12', 'overloadRatio = 0.92', 'recoveryRatio = 0.68', 'session-only', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'reset()']) {
+          for (const token of ['NOXNeuralCameraOrchestrator', 'historySize = 12', 'overloadRatio = 0.92', 'recoveryRatio = 0.68', 'session-only', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'decisionCooldownFrames = 12', 'decision-cooldown-active', 'commitAdaptiveDecision', 'cooldownRemaining', 'reset()']) {
             if (!orchestratorSource.includes(token)) throw new Error('NOX Neural Camera Orchestrator bounded adaptive-memory policy missing: ' + token);
           }
           for (const token of ['NOXNeuralCameraOrchestrator', 'noxNeuralCameraOrchestrator.observeFrame', 'noxNeuralCameraOrchestrator.evaluate', 'ذاكرة التكيف قصيرة المدى']) {
             if (!js.includes(token)) throw new Error('NOX Neural Camera Orchestrator is not integrated with measured camera frames: ' + token);
           }
-          for (const token of ['getAdaptiveRecommendation', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'NOX Neural Decision']) {
+          for (const token of ['getAdaptiveRecommendation', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'NOX Neural Decision', 'commitAdaptiveDecision(qualityDecision.action)']) {
             if (!js.includes(token)) throw new Error('Measured neural decision policy is not controlling bounded camera quality tiers: ' + token);
           }
           console.log('NOX Neural Camera Orchestrator session-only adaptive memory and camera integration verified');
