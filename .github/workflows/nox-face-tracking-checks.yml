@@ -5,6 +5,8 @@ on:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
       - "core/nox-face-tracking-engine.js"
+      - "core/nox-face-landmark-temporal-tracker.js"
+      - "core/camera.js"
       - ".github/workflows/nox-face-tracking-checks.yml"
   pull_request:
     branches: [main]
@@ -47,4 +49,32 @@ jobs:
           tracker.reset();
           assert.equal(tracker.update([face]).state, 'acquired');
           console.log('Face tracking lifecycle tests passed');
+          NODE
+
+      - name: Test unified MediaPipe landmark tracking
+        run: |
+          cp core/nox-face-tracking-engine.js /tmp/nox-face-tracking-engine.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const { NOXFaceTrackingEngine } = await import('file:///tmp/nox-face-tracking-engine.mjs');
+          const tracker = new NOXFaceTrackingEngine({ maxMissedFrames: 2, smoothing: 0.5 });
+          const oval = Array.from({ length: 8 }, (_, i) => ({ start: i, end: (i + 1) % 8 }));
+          const points = Array.from({ length: 478 }, (_, i) => ({
+            x: i < 8 ? [0.3,0.7,0.75,0.7,0.3,0.25,0.4,0.6][i] : 0.5,
+            y: i < 8 ? [0.2,0.2,0.5,0.8,0.8,0.5,0.25,0.25][i] : 0.5,
+            z: 0
+          }));
+          const frame = { detected: true, source: 'mediapipe-face-landmarker-478',
+            width: 256, height: 192, landmarks: points, connections: { faceOval: oval } };
+          assert.equal(tracker.updateLandmarks(frame).state, 'acquired');
+          const moved = { ...frame, landmarks: points.map(point => ({ ...point, x: point.x + 0.1 })) };
+          const tracked = tracker.updateLandmarks(moved);
+          assert.equal(tracked.state, 'tracking');
+          assert.ok(Math.abs(tracked.face.landmarks[20].x - 0.55) < 1e-9);
+          assert.equal(tracker.updateLandmarks({ detected: false }).state, 'coasting');
+          assert.equal(tracker.updateLandmarks({ detected: false }).state, 'coasting');
+          assert.equal(tracker.updateLandmarks({ detected: false }).state, 'lost');
+          tracker.resetLandmarks();
+          assert.equal(tracker.updateLandmarks(frame).state, 'acquired');
+          console.log('Unified face and landmark tracking tests passed');
           NODE
