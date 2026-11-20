@@ -98,16 +98,16 @@ jobs:
             width: 256, height: 192, landmarks: points, connections: { faceOval: oval } };
           tracker.updateLandmarks(frame);
           const expressive = { ...frame, landmarks: points.map((point, i) => ({
-            ...point, y: point.y + (i >= 300 && i < 330 ? 0.08 : 0.02)
+            ...point, y: point.y + (i >= 300 && i < 330 ? 0.12 : 0.02)
           })) };
           const result = tracker.updateLandmarks(expressive);
           const stablePointDelta = result.face.landmarks[40].y - points[40].y;
           const expressivePointDelta = result.face.landmarks[310].y - points[310].y;
           assert.ok(Math.abs(stablePointDelta - 0.01) < 1e-9,
             'uniform head motion should retain baseline smoothing');
-          assert.ok(expressivePointDelta > 0.04,
+          assert.ok(expressivePointDelta > 0.06,
             'local non-rigid motion should respond faster than baseline smoothing');
-          assert.ok(expressivePointDelta < 0.08,
+          assert.ok(expressivePointDelta < 0.12,
             'adaptive response must remain bounded and smoothed');
           console.log('Expression-aware local landmark response tests passed');
           NODE
