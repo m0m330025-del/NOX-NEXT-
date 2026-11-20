@@ -23,6 +23,7 @@ import { NOXPredictiveCameraIntelligence } from "./nox-predictive-camera-intelli
 import { NOXSceneIntelligenceEngine } from "./nox-scene-intelligence-engine.js";
 import { NOXEngineRegistry } from "./nox-engine-registry.js";
 import { NOXEngineOrchestrationPlanner } from "./nox-engine-orchestration-planner.js";
+import { NOXAdaptiveRuntimeScheduler } from "./nox-adaptive-runtime-scheduler.js";
 import { NOXDynamicEngineAdapter, NOXDynamicEngineAdapterHost } from "./nox-dynamic-engine-adapter.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -467,6 +468,7 @@ export function initCamera() {
   let temporalBuffers = [];
   const noxEngineRegistry = new NOXEngineRegistry();
   const noxEngineOrchestrationPlanner = new NOXEngineOrchestrationPlanner();
+  const noxAdaptiveRuntimeScheduler = new NOXAdaptiveRuntimeScheduler();
   const temporalMemoryEngine = new NOXTemporalMemoryEngine();
   const temporalAlignmentEngine = new NOXTemporalAlignmentEngine();
   const motionSeparationEngine = new NOXSmartMotionSeparationEngine();
@@ -3065,6 +3067,14 @@ export function initCamera() {
       counts.failed += engine.failed ? 1 : 0;
       return counts;
     }, { connected: 0, enabled: 0, planned: 0, executed: 0, failed: 0 });
+    const adaptiveRuntimeSchedule = noxAdaptiveRuntimeScheduler.evaluate({
+      cortexPlan,
+      runtimeSnapshot: adapterRuntimeSnapshot,
+      targetFrameMs: 1000 / QUALITY_TIERS[qualityTier].targetFps,
+      frameCostMs: averageFrameCost > 0 ? averageFrameCost : null,
+      lowPower,
+      brainRecommendedIds: engineOrchestrationPlan.steps.map(step => step.engine)
+    });
     const recommendedEngineCount = engineOrchestrationPlan.decisions.filter(item => item.action === "recommend").length;
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
@@ -3073,6 +3083,8 @@ export function initCamera() {
       ["حالة دورة حياة المحركات", "متصل " + adapterRuntimeCounts.connected + " / مفعّل " + adapterRuntimeCounts.enabled + " / مخطط CORTEX " + adapterRuntimeCounts.planned + " / نُفّذ بنجاح " + adapterRuntimeCounts.executed + " / فشل آخر تنفيذ " + adapterRuntimeCounts.failed],
       ["أهلية خطة العقل", recommendedEngineCount + " محرك موصى به من " + engineOrchestrationPlan.decisions.length + " — توصية قدرات وأدلة، وليست تشغيلًا تلقائيًا"],
       ["قياسات المحولات", adapterRuntimeSnapshot.map(engine => engine.id + ": " + engine.lastExecutionStatus + " / p95 " + (engine.measuredP95Ms === null ? "غير مقاس" : engine.measuredP95Ms.toFixed(2) + "ms") + " / إخفاقات تراكمية " + engine.failureCount).join(" | ")],
+      ["NOX Adaptive Runtime Scheduling", adaptiveRuntimeSchedule.state + " — مؤهل " + adaptiveRuntimeSchedule.eligibleCount + " / مؤجل " + adaptiveRuntimeSchedule.heldCount + " — تكلفة p95 " + adaptiveRuntimeSchedule.estimatedTotalMs.toFixed(2) + "/" + (adaptiveRuntimeSchedule.availableBudgetMs === null ? "ميزانية غير متاحة" : adaptiveRuntimeSchedule.availableBudgetMs.toFixed(2) + "ms") + " — توصية فقط، التنفيذ لم يتغير"],
+      ["قرارات جدولة CORTEX", adaptiveRuntimeSchedule.steps.map(step => step.id + ": " + (step.eligible ? "مؤهل" : "مؤجل (" + step.reason + ")") + (step.brainRecommended ? " — أوصى به العقل" : "")).join(" | ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
       ["حالة مخطط التشغيل", engineOrchestrationPlan.status + " — " + engineOrchestrationPlan.mode + " — توصية فقط؛ لم يتم تشغيل أي محرك"],
