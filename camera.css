@@ -200,17 +200,79 @@
 .nox-evolve-status{display:block;line-height:1.7;color:#d8c8f4;font-size:11px;min-height:22px}
 
 
-/* Approved NOX camera review layout: live full-screen stage and bottom lens arc. */
+
+/* NOX CAMERA — consolidated swipe-first selector layout */
+.nox-camera-family-tabs{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  width:100%;max-width:420px;margin:0;padding:5px;
+  border:1px solid rgba(216,194,138,.32);border-radius:16px;
+  background:rgba(15,9,32,.82);
+}
+.nox-camera-family-tab{
+  min-width:0;min-height:44px;padding:8px 6px;border:1px solid transparent;
+  border-radius:11px;background:transparent;color:#d8cce9;
+  font:800 12px/1.35 Cairo,sans-serif;white-space:nowrap;
+  touch-action:manipulation;cursor:pointer;
+  transition:background .16s ease,border-color .16s ease,color .16s ease;
+}
+.nox-camera-family-tab.active,.nox-camera-family-tab[aria-pressed="true"]{
+  color:#2b1a3d;border-color:#f5d78d;
+  background:linear-gradient(135deg,#ffe8ad,#d7ad5a);
+  box-shadow:0 3px 12px rgba(215,173,90,.18);
+}
+.nox-camera-family-tab:focus-visible,.nox-lens-selector .nox-lens-v2:focus-visible,
+.nox-camera-v2-controls button:focus-visible,.nox-camera-v2-top button:focus-visible{
+  outline:3px solid #ffe18a;outline-offset:3px;
+}
+.nox-lens-v2[hidden]{display:none!important}
+.nox-camera-v2-tools{gap:16px;min-width:0}
+.nox-camera-v2-section-title{align-items:center;text-align:center;gap:6px;margin:0 0 2px}
+.nox-camera-v2-section-title b{font-size:18px;line-height:1.35}
+.nox-camera-v2-section-title small{max-width:38ch;font-size:12px;line-height:1.65;text-align:center}
+.nox-lens-selector{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;min-height:104px;margin:0;padding:10px 8px;
+  border:1px solid rgba(190,160,225,.28);border-radius:18px;
+  background:linear-gradient(135deg,rgba(38,23,62,.94),rgba(19,13,38,.96));
+  overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
+  overscroll-behavior:contain;
+}
+.nox-lens-selector:before{display:none!important}
+.nox-lens-selector .nox-lens-track{
+  position:static!important;inset:auto!important;display:flex;align-items:center;
+  justify-content:center;gap:9px;width:100%;height:auto;
+  transform:none!important;transition:none!important;
+}
+.nox-lens-selector .nox-lens-v2{
+  position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+  flex:0 1 78px;width:78px;height:78px;min-width:0;min-height:78px;margin:0;
+  padding:7px 5px;border:1px solid rgba(213,188,240,.45);border-radius:17px;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  background:linear-gradient(145deg,#49316c,#25183d);color:#fff;
+  box-shadow:0 4px 12px rgba(0,0,0,.2);transform:none!important;
+}
+.nox-lens-selector .nox-lens-v2[hidden]{display:none!important}
+.nox-lens-selector .nox-lens-v2 span{font-size:22px;line-height:1;color:#ffdf91}
+.nox-lens-selector .nox-lens-v2 b{
+  font:800 10px/1.35 Cairo,sans-serif;text-align:center;overflow-wrap:anywhere;
+}
+.nox-lens-selector .nox-lens-v2.active{
+  border:2px solid #ffe6a0;color:#2c1a3d;
+  background:linear-gradient(145deg,#ffe6a0,#c99537);
+  box-shadow:0 0 0 3px rgba(255,222,140,.12),0 6px 16px rgba(0,0,0,.2);
+}
+.nox-lens-selector .nox-lens-v2.active span{color:#40265b}
+.nox-camera-v2-tools button,.nox-camera-v2-tools select,.nox-camera-v2-tools input{font-family:Cairo,sans-serif}
+.nox-camera-v2-tools section{scroll-margin-block:16px}
 .nox-camera-v2-stage #nox-camera-exit{
-  min-width:44px;min-height:42px;padding:0;border:1px solid #ffe2a0;border-radius:50%;
-  background:#170b35e8;color:#ffe2a0;font:700 26px Cairo,sans-serif;line-height:1;
+  min-width:46px;min-height:46px;padding:0;border:1px solid #ffe2a0;
+  border-radius:50%;background:#170b35e8;color:#ffe2a0;
+  font:700 26px Cairo,sans-serif;line-height:1;
 }
 .nox-camera-v2-controls #nox-camera-record,
 .nox-camera-v2-stage #nox-camera-stop{display:none!important}
-.nox-camera-v2-controls #nox-camera-capture{touch-action:none;user-select:none;-webkit-user-select:none}
-.nox-lens-v2.active{
-  z-index:2;width:88px;height:88px;margin:0;
-  transform:translate(-50%,-50%) scale(1.04);
+.nox-camera-v2-controls #nox-camera-capture{
+  touch-action:none;user-select:none;-webkit-user-select:none;
 }
 @media(max-width:760px){
   .nox-camera-page:has(.nox-camera-v2-stage.is-live){
@@ -230,29 +292,66 @@
     top:calc(12px + env(safe-area-inset-top));left:14px;right:14px;
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools{display:contents}
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>*:not(.nox-lens-orbit):not(.nox-camera-v2-section-title){display:none!important}
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-section-title{
-    position:fixed;z-index:1004;left:50%;bottom:calc(300px + env(safe-area-inset-bottom));
-    transform:translateX(-50%);align-items:center;text-align:center;pointer-events:none;
-    text-shadow:0 2px 8px #000;
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>*:not(.nox-camera-family-tabs):not(.nox-lens-selector){
+    display:none!important;
   }
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-section-title b{font-size:14px}
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-orbit{
-    position:fixed;z-index:1003;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));
-    transform:translateX(-50%);width:min(82vw,290px);margin:0;
-    background:radial-gradient(circle,#45256d 0 28%,#21103d 29% 63%,#d2a64d 64% 65%,#21103d 66%);
-    box-shadow:0 8px 30px #0008;
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tabs{
+    display:grid!important;position:fixed!important;z-index:1004!important;
+    left:50%!important;right:auto!important;bottom:calc(218px + env(safe-area-inset-bottom))!important;
+    transform:translateX(-50%)!important;width:min(92vw,360px)!important;
+    margin:0!important;box-sizing:border-box;gap:6px;padding:4px;
+    backdrop-filter:blur(16px);
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tab{
+    min-height:44px;padding:8px 5px;font-size:11px;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-selector{
+    display:flex!important;position:fixed!important;z-index:1003!important;
+    left:50%!important;right:auto!important;bottom:calc(108px + env(safe-area-inset-bottom))!important;
+    transform:translateX(-50%)!important;width:min(94vw,390px)!important;
+    min-height:96px!important;margin:0!important;padding:8px 6px;box-sizing:border-box;
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls{
     position:fixed;z-index:1005;left:12px;right:12px;
-    bottom:calc(292px + env(safe-area-inset-bottom));justify-content:space-between;
+    bottom:calc(8px + env(safe-area-inset-bottom));justify-content:space-between;
   }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls #nox-camera-capture{
-    position:absolute;left:50%;transform:translateX(-50%);width:68px;height:68px;min-width:68px;
-    border:3px solid #ffe8b0;background:#ffffff35;box-shadow:0 0 0 5px #eac15d35,0 0 24px #ffdb7b70;
+    position:absolute;left:50%;transform:translateX(-50%);
+    width:70px;height:70px;min-width:70px;flex-basis:70px;
+    border:3px solid #ffe8b0;background:#ffffff35;
+    box-shadow:0 0 0 5px #eac15d35,0 0 24px #ffdb7b70;
   }
-  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls #nox-camera-capture i{width:50px;height:50px}
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls #nox-camera-capture i{
+    width:52px;height:52px;
+  }
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls #nox-camera-gallery{
-    min-width:58px;min-height:44px;background:#170b35d9;border-color:#ffe2a088;
+    min-width:58px;min-height:48px;background:#170b35d9;border-color:#ffe2a088;
   }
 }
+@media(max-width:380px){
+  .nox-camera-v2-tools{gap:12px}
+  .nox-camera-family-tab{font-size:10px;padding-inline:3px}
+  .nox-lens-selector .nox-lens-v2{flex-basis:62px;width:62px;height:68px;min-height:68px;padding:5px 3px}
+  .nox-lens-selector .nox-lens-v2 b{font-size:9px}
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-lens-selector{
+    width:96vw!important;min-height:88px!important;padding:7px 4px!important;
+  }
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-controls{gap:10px}
+}
+@media(prefers-reduced-motion:reduce){.nox-camera-family-tab{transition:none}}
+
+
+/* NOX camera boot splash — a short, phone-like brand startup sequence. */
+.nox-camera-boot{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:radial-gradient(circle at 50% 42%,#56318c 0%,#24113f 46%,#090613 100%);color:#fff;animation:nox-camera-boot-in .28s ease-out both;pointer-events:auto}
+.nox-camera-boot-mark{display:grid;place-items:center;width:82px;height:82px;border:1px solid #ffe3a0;border-radius:25px;background:linear-gradient(145deg,#ffe7a3,#bb8735);color:#27133e;font:900 48px/1 Cairo,sans-serif;box-shadow:0 0 0 7px #ffe3a01c,0 0 42px #e9c16b75}
+.nox-camera-boot>b{margin-top:7px;font:900 32px/1.1 Cairo,sans-serif;letter-spacing:.22em;text-shadow:0 0 24px #d6b4ff88}
+.nox-camera-boot>small{color:#e2d1fa;font:700 10px/1.2 Cairo,sans-serif;letter-spacing:.34em}
+.nox-camera-boot-line{width:118px;height:2px;margin-top:20px;overflow:hidden;border-radius:4px;background:#ffffff25}
+.nox-camera-boot-line:after{content:"";display:block;width:42%;height:100%;background:#ffdf91;box-shadow:0 0 12px #ffdf91;animation:nox-camera-boot-progress 1.35s ease-in-out both}
+.nox-camera-boot-sound{position:absolute;bottom:22px;min-height:38px;padding:7px 14px;border:1px solid #ffffff55;border-radius:20px;background:#160b35aa;color:#fff;font:700 11px Cairo,sans-serif;cursor:pointer}
+.nox-camera-boot-sound[aria-pressed="false"]{opacity:.72}
+.nox-camera-boot.is-leaving{animation:nox-camera-boot-out .4s ease-in both}
+@keyframes nox-camera-boot-in{from{opacity:0}to{opacity:1}}
+@keyframes nox-camera-boot-out{to{opacity:0;visibility:hidden}}
+@keyframes nox-camera-boot-progress{from{transform:translateX(-145%)}to{transform:translateX(245%)}}
+@media(prefers-reduced-motion:reduce){.nox-camera-boot,.nox-camera-boot.is-leaving,.nox-camera-boot-line:after{animation-duration:.01ms;animation-iteration-count:1}}

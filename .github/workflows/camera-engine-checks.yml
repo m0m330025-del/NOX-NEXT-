@@ -2,17 +2,17 @@ name: NOX Camera Engine Checks
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feature/nox-camera-engine-rebuild]
     paths:
       - "core/nox-*.js"
       - "tests/nox-*.test.mjs"
+      - "core/nox-camera-swipe-navigation.js"
+      - "tests/nox-camera-swipe-navigation.test.mjs"
       - "core/camera.js"
       - "tests/nox-camera-webgl-fallback.test.mjs"
       - "core/nox-filter-engine.js"
       - "core/nox-original-filter-library.js"
       - "tests/nox-original-filter-library.test.mjs"
-      - "core/nox-hybrid-fx-engine.js"
-      - "tests/nox-hybrid-fx-engine.test.mjs"
       - "core/nox-hybrid-fx-engine.js"
       - "tests/nox-hybrid-fx-engine.test.mjs"
       - "docs/NOX-1000-ORIGINAL-FILTERS.md"
@@ -54,7 +54,7 @@ on:
       - "camera.css"
       - ".github/workflows/camera-engine-checks.yml"
   push:
-    branches: ["feature/nox-camera-engine-rebuild"]
+    branches: ["feature/nox-camera-engine-rebuild", "feature/nox-camera-swipe-ui"]
     paths:
       - "core/nox-*.js"
       - "tests/nox-*.test.mjs"
@@ -109,6 +109,7 @@ jobs:
       - name: Check browser module syntax
         run: |
           cp core/camera.js /tmp/camera.mjs
+          cp core/nox-camera-swipe-navigation.js core/nox-camera-swipe-navigation.mjs
           cp app.js /tmp/app.mjs
           cp core/nox-filter-engine.js /tmp/filter-engine.mjs
           cp core/nox-camera-render-surface.js /tmp/camera-render-surface.mjs
@@ -147,6 +148,9 @@ jobs:
           cp core/nox-cortex.js /tmp/nox-cortex.mjs
           node --check /tmp/camera.mjs
           node tests/nox-camera-webgl-fallback.test.mjs
+          node tests/nox-camera-lifecycle-cleanup.test.mjs
+          node tests/nox-camera-sound-ui.test.mjs
+          node tests/nox-camera-swipe-navigation.test.mjs
           node --check /tmp/app.mjs
           node --check /tmp/filter-engine.mjs
           node --check /tmp/camera-render-surface.mjs

@@ -431,6 +431,102 @@ export function initCamera() {
   const filterSelect = $("#nox-filter-select");
   if (!video || !stage || !renderCanvas || !startButton) return;
 
+
+  // NOX camera boot identity + lightweight synthesized UI sounds.
+  // Audio is opt-in at runtime and starts only after a user gesture, respecting browser autoplay rules.
+  let noxCameraAudioContext = null;
+  let noxCameraSoundsEnabled = true;
+  let noxCameraBootTimer = 0;
+  let noxCameraBootShownAt = 0;
+
+  function getNOXAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!noxCameraAudioContext) noxCameraAudioContext = new AudioContextClass();
+    if (noxCameraAudioContext.state === "suspended") void noxCameraAudioContext.resume().catch(() => {});
+    return noxCameraAudioContext;
+  }
+
+  function playNOXTone(frequency, delay, duration, type = "sine", volume = 0.045) {
+    if (!noxCameraSoundsEnabled) return;
+    const context = getNOXAudioContext();
+    if (!context) return;
+    const startAt = context.currentTime + delay;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.03);
+  }
+
+  function playNOXCameraSound(kind) {
+    if (!noxCameraSoundsEnabled) return;
+    if (kind === "boot") {
+      playNOXTone(196, 0, 0.24, "sine", 0.055);
+      playNOXTone(293.66, 0.16, 0.28, "sine", 0.05);
+      playNOXTone(440, 0.34, 0.42, "triangle", 0.045);
+      playNOXTone(587.33, 0.58, 0.55, "sine", 0.035);
+    } else if (kind === "shutter") {
+      playNOXTone(1250, 0, 0.055, "square", 0.025);
+      playNOXTone(760, 0.045, 0.09, "triangle", 0.035);
+    } else if (kind === "record-on") {
+      playNOXTone(660, 0, 0.12, "sine", 0.04);
+      playNOXTone(880, 0.12, 0.16, "sine", 0.04);
+    } else if (kind === "record-off") {
+      playNOXTone(880, 0, 0.12, "sine", 0.04);
+      playNOXTone(523.25, 0.12, 0.18, "sine", 0.04);
+    } else if (kind === "lens") {
+      playNOXTone(740, 0, 0.075, "sine", 0.025);
+    } else if (kind === "flip") {
+      playNOXTone(520, 0, 0.09, "triangle", 0.03);
+      playNOXTone(390, 0.08, 0.12, "triangle", 0.03);
+    } else if (kind === "wake") {
+      playNOXTone(440, 0, 0.1, "sine", 0.025);
+    }
+  }
+
+  function showNOXCameraBoot() {
+    const now = performance.now();
+    if (now - noxCameraBootShownAt < 900) return;
+    noxCameraBootShownAt = now;
+    const splash = document.createElement("div");
+    splash.className = "nox-camera-boot";
+    splash.setAttribute("role", "status");
+    splash.setAttribute("aria-label", "NOX Camera starting");
+    splash.innerHTML = '<span class="nox-camera-boot-mark" aria-hidden="true">N</span><b>NOX</b><small>CAMERA STUDIO</small><span class="nox-camera-boot-line" aria-hidden="true"></span>';
+    const soundToggle = document.createElement("button");
+    soundToggle.type = "button";
+    soundToggle.className = "nox-camera-boot-sound";
+    soundToggle.textContent = noxCameraSoundsEnabled ? "الصوت يعمل" : "الصوت مكتوم";
+    soundToggle.setAttribute("aria-pressed", String(noxCameraSoundsEnabled));
+    soundToggle.setAttribute("aria-label", "تفعيل أو كتم أصوات الكاميرا");
+    soundToggle.addEventListener("click", () => {
+      noxCameraSoundsEnabled = !noxCameraSoundsEnabled;
+      soundToggle.textContent = noxCameraSoundsEnabled ? "الصوت يعمل" : "الصوت مكتوم";
+      soundToggle.setAttribute("aria-pressed", String(noxCameraSoundsEnabled));
+      if (noxCameraSoundsEnabled) playNOXCameraSound("boot");
+    });
+    splash.append(soundToggle);
+    stage.append(splash);
+    playNOXCameraSound("boot");
+    window.clearTimeout(noxCameraBootTimer);
+    noxCameraBootTimer = window.setTimeout(() => {
+      splash.classList.add("is-leaving");
+      window.setTimeout(() => splash.remove(), 420);
+    }, 1850);
+  }
+
+  // Capture the navigation gesture before the router handles it, so audio can unlock.
+  document.addEventListener("click", (event) => {
+    if (event.target.closest('[data-nav="camera"], .add-story')) getNOXAudioContext();
+  }, true);
+
   let stream = null;
   let cameraStartGeneration = 0;
   let cameraStartAbortController = null;
@@ -3091,6 +3187,7 @@ export function initCamera() {
     const output = createOutputCanvas();
     output.toBlob((blob) => {
       if (!blob) return announce("تعذر إنشاء الصورة.");
+      playNOXCameraSound("shutter");
       showBlob(blob, "image", "nox-next-photo.jpg");
       announce("تم التقاط الصورة. اضغط حفظ على الجهاز. مؤثرات خرج الكاميرا النشطة مضمّنة في الملف المحفوظ.");
     }, "image/jpeg", 0.92);
@@ -3683,6 +3780,12 @@ export function initCamera() {
       if (generation !== cameraStartGeneration || disposed) return;
       stopTracks(stream);
       stream = null;
+      // A failed start must detach the stopped MediaStream from the video element.
+      // Otherwise a stale srcObject can survive the error and confuse the next start.
+      video.pause();
+      video.srcObject = null;
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
       setReady(false);
       const messages = {
         NotAllowedError: "إذن الكاميرا مرفوض. اسمح بالكاميرا من إعدادات المتصفح.",
@@ -3737,6 +3840,50 @@ export function initCamera() {
     ctx.restore();
   }
 
+  // Permanent NOX brand mark is composited into the exported still image,
+  // not merely shown as a preview overlay, so it remains in the saved JPEG.
+  function drawNOXPhotoWatermark(context, width, height) {
+    if (!context || width < 1 || height < 1) return;
+    const scale = Math.max(0.72, Math.min(1.6, width / 1080));
+    const pad = Math.round(Math.min(width, height) * 0.028);
+    const fontSize = Math.max(13, Math.round(22 * scale));
+    const markSize = Math.max(25, Math.round(36 * scale));
+    const gap = Math.max(7, Math.round(10 * scale));
+    const textWidth = fontSize * 2.5;
+    const boxWidth = pad * 1.45 + markSize + gap + textWidth;
+    const boxHeight = Math.max(markSize, fontSize) + pad * 0.72;
+    const x = width - pad - boxWidth;
+    const y = height - pad - boxHeight;
+    context.save();
+    context.globalAlpha = 0.92;
+    context.fillStyle = "rgba(10, 8, 22, 0.58)";
+    context.strokeStyle = "rgba(255, 222, 150, 0.82)";
+    context.lineWidth = Math.max(1, scale);
+    const radius = Math.round(boxHeight * 0.34);
+    context.beginPath();
+    context.roundRect(x, y, boxWidth, boxHeight, radius);
+    context.fill();
+    context.stroke();
+    const markX = x + pad * 0.55;
+    const markY = y + (boxHeight - markSize) / 2;
+    const markRadius = Math.round(markSize * 0.27);
+    context.fillStyle = "rgba(255, 225, 160, 0.98)";
+    context.beginPath();
+    context.roundRect(markX, markY, markSize, markSize, markRadius);
+    context.fill();
+    context.fillStyle = "#241533";
+    context.font = "900 " + Math.round(markSize * 0.72) + "px Cairo, sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("N", markX + markSize / 2, markY + markSize / 2 + 1);
+    context.fillStyle = "#fff4d9";
+    context.font = "900 " + fontSize + "px Cairo, sans-serif";
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.fillText("NOX", markX + markSize + gap, y + boxHeight / 2 + 1);
+    context.restore();
+  }
+
   function createOutputCanvas() {
     const canvas = document.createElement("canvas");
     const stage = renderCanvas.closest(".nox-camera-v2-stage");
@@ -3757,6 +3904,7 @@ export function initCamera() {
       0, 0, canvas.width, canvas.height
     );
     drawCaption(ctx, canvas.width, canvas.height);
+    drawNOXPhotoWatermark(ctx, canvas.width, canvas.height);
     return canvas;
   }
 
@@ -3963,6 +4111,7 @@ export function initCamera() {
     if (!stream) return;
     if (recording) {
       recording = false;
+      playNOXCameraSound("record-off");
       if (recorder && recorder.state !== "inactive") recorder.stop();
       recordButton.textContent = "فيديو";
       announce("جارٍ تجهيز الفيديو…");
@@ -3981,7 +4130,14 @@ export function initCamera() {
       const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported?.(type));
       recorder = new MediaRecorder(output, mimeType ? { mimeType } : undefined);
       recorder.ondataavailable = (event) => { if (event.data?.size) chunks.push(event.data); };
-      recorder.onerror = () => { recording = false; announce("حدث خطأ أثناء التسجيل."); };
+      recorder.onerror = () => {
+        recording = false;
+        chunks = [];
+        if (recordButton) recordButton.textContent = "فيديو";
+        stopTracks(recordingStream);
+        recordingStream = null;
+        announce("حدث خطأ أثناء التسجيل. تم إيقاف مسار التسجيل.");
+      };
       recorder.onstop = () => {
         recording = false;
         if (recordButton) recordButton.textContent = "فيديو";
@@ -3994,6 +4150,7 @@ export function initCamera() {
         announce("الفيديو جاهز للحفظ.");
       };
       recorder.start(300);
+      playNOXCameraSound("record-on");
       recordButton.textContent = "إيقاف";
       announce("جارٍ تسجيل الفيديو… مؤثرات خرج الكاميرا النشطة مضمّنة في الفيديو.");
     } catch {
@@ -4006,6 +4163,7 @@ export function initCamera() {
 
   function selectLens(index) {
     selectedLens = (index + LENSES.length) % LENSES.length;
+    playNOXCameraSound("lens");
     selectedFilter = null;
     selectedOriginalFilter = null;
     selectedHybridFilter = null;
@@ -4020,9 +4178,8 @@ export function initCamera() {
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
     });
-    if (track) {
-      track.style.transform = "rotate(" + (-selectedLens * 360 / LENSES.length) + "deg)";
-    }
+    // The swipe-first selector is a static rail; do not apply legacy orbit transforms.
+    if (track) track.style.transform = "none";
     if (stream) renderFrame(false);
     announce("تم اختيار عدسة " + LENSES[selectedLens].name, Boolean(stream));
     updateDiagnostics();
@@ -4176,39 +4333,23 @@ export function initCamera() {
     });
   }
 
-  function buildLensWheel() {
+  function buildLensSelector() {
     if (!orbit || !track) return;
     track.replaceChildren();
     LENSES.forEach((lens, index) => {
       const button = document.createElement("button");
+      const family = index <= 2 ? "beauty" : index <= 4 ? "color" : "classic";
       button.type = "button";
       button.className = "nox-lens-v2" + (index === 0 ? " active" : "");
       button.dataset.filter = String(lens.mode);
+      button.dataset.lensFamily = family;
       button.setAttribute("aria-pressed", String(index === 0));
       button.innerHTML = "<span></span><b></b>";
       button.querySelector("span").textContent = lens.icon;
       button.querySelector("b").textContent = lens.name;
-      const angle = index * 360 / LENSES.length;
-      button.style.setProperty("--lens-angle", angle + "deg");
-      button.style.setProperty("--lens-counter", -angle + "deg");
       button.addEventListener("click", () => selectLens(index));
       track.append(button);
     });
-    orbit.addEventListener("pointerdown", (event) => {
-      pointerStart = { x: event.clientX, y: event.clientY, index: selectedLens, id: event.pointerId };
-      orbit.setPointerCapture?.(event.pointerId);
-    });
-    orbit.addEventListener("pointerup", (event) => {
-      if (!pointerStart || pointerStart.id !== event.pointerId) return;
-      const dx = event.clientX - pointerStart.x;
-      const dy = event.clientY - pointerStart.y;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) > 22) {
-        const step = Math.max(1, Math.round(Math.hypot(dx, dy) / 52));
-        selectLens(pointerStart.index + (dx < 0 ? step : -step));
-      }
-      pointerStart = null;
-    });
-    orbit.addEventListener("pointercancel", () => { pointerStart = null; });
     selectLens(0);
   }
 
@@ -4241,11 +4382,12 @@ export function initCamera() {
   });
   $("#nox-camera-back")?.addEventListener("click", () => { location.hash = "#home"; });
   $("#nox-camera-exit")?.addEventListener("click", async () => { await stopCamera(); location.hash = "#home"; });
-  startButton.addEventListener("click", startCamera);
+  startButton.addEventListener("click", () => { playNOXCameraSound("wake"); void startCamera(); });
   stopButton.addEventListener("click", stopCamera);
-  flip.addEventListener("click", switchCamera);
+  flip.addEventListener("click", () => { playNOXCameraSound("flip"); void switchCamera(); });
 
   window.addEventListener("nox:screenchange", (event) => {
+    if (event.detail?.to === "camera") showNOXCameraBoot();
     if (event.detail?.from === "camera" && event.detail?.to !== "camera") stopCamera();
   });
   window.addEventListener("pagehide", () => {
@@ -4262,7 +4404,7 @@ export function initCamera() {
     revokeOutput();
   });
 
-  buildLensWheel();
+  buildLensSelector();
   setReady(false);
   updateDiagnostics();
 }
