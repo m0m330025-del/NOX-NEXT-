@@ -12,6 +12,8 @@ on:
     branches: [main]
     paths:
       - "core/nox-face-tracking-engine.js"
+      - "core/nox-face-landmark-temporal-tracker.js"
+      - "core/camera.js"
       - ".github/workflows/nox-face-tracking-checks.yml"
 
 permissions:
