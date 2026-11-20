@@ -193,15 +193,18 @@ export class NOXCortex {
         return false;
       }
       if (!chain.length && selected.has(engine.id)) return true;
-      const conflict = chain.find((item, index) => {
+      let conflict = null;
+      for (let index = 0; index < chain.length && !conflict; index += 1) {
+        const item = chain[index];
         const alreadySelected = [...selected].map(id => this.engines.get(id)).filter(Boolean);
         const priorInChain = chain.slice(0, index);
-        return [...alreadySelected, ...priorInChain].find(other =>
-          item.conflictsWith.includes(other.id) || other.conflictsWith.includes(item.id)
+        const other = [...alreadySelected, ...priorInChain].find(candidate =>
+          item.conflictsWith.includes(candidate.id) || candidate.conflictsWith.includes(item.id)
         );
-      });
+        if (other) conflict = { engine: item.id, with: other.id };
+      }
       if (conflict) {
-        rejected.push({ id: engine.id, reason: "engine-conflict", conflict: conflict.id });
+        rejected.push({ id: engine.id, reason: "engine-conflict", conflict: conflict.with });
         return false;
       }
       const cost = chain.reduce((sum, item) => sum + item.cost, 0);
