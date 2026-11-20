@@ -431,6 +431,102 @@ export function initCamera() {
   const filterSelect = $("#nox-filter-select");
   if (!video || !stage || !renderCanvas || !startButton) return;
 
+
+  // NOX camera boot identity + lightweight synthesized UI sounds.
+  // Audio is opt-in at runtime and starts only after a user gesture, respecting browser autoplay rules.
+  let noxCameraAudioContext = null;
+  let noxCameraSoundsEnabled = true;
+  let noxCameraBootTimer = 0;
+  let noxCameraBootShownAt = 0;
+
+  function getNOXAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!noxCameraAudioContext) noxCameraAudioContext = new AudioContextClass();
+    if (noxCameraAudioContext.state === "suspended") void noxCameraAudioContext.resume().catch(() => {});
+    return noxCameraAudioContext;
+  }
+
+  function playNOXTone(frequency, delay, duration, type = "sine", volume = 0.045) {
+    if (!noxCameraSoundsEnabled) return;
+    const context = getNOXAudioContext();
+    if (!context) return;
+    const startAt = context.currentTime + delay;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    gain.gain.setValueAtTime(0.0001, startAt);
+    gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.03);
+  }
+
+  function playNOXCameraSound(kind) {
+    if (!noxCameraSoundsEnabled) return;
+    if (kind === "boot") {
+      playNOXTone(196, 0, 0.24, "sine", 0.055);
+      playNOXTone(293.66, 0.16, 0.28, "sine", 0.05);
+      playNOXTone(440, 0.34, 0.42, "triangle", 0.045);
+      playNOXTone(587.33, 0.58, 0.55, "sine", 0.035);
+    } else if (kind === "shutter") {
+      playNOXTone(1250, 0, 0.055, "square", 0.025);
+      playNOXTone(760, 0.045, 0.09, "triangle", 0.035);
+    } else if (kind === "record-on") {
+      playNOXTone(660, 0, 0.12, "sine", 0.04);
+      playNOXTone(880, 0.12, 0.16, "sine", 0.04);
+    } else if (kind === "record-off") {
+      playNOXTone(880, 0, 0.12, "sine", 0.04);
+      playNOXTone(523.25, 0.12, 0.18, "sine", 0.04);
+    } else if (kind === "lens") {
+      playNOXTone(740, 0, 0.075, "sine", 0.025);
+    } else if (kind === "flip") {
+      playNOXTone(520, 0, 0.09, "triangle", 0.03);
+      playNOXTone(390, 0.08, 0.12, "triangle", 0.03);
+    } else if (kind === "wake") {
+      playNOXTone(440, 0, 0.1, "sine", 0.025);
+    }
+  }
+
+  function showNOXCameraBoot() {
+    const now = performance.now();
+    if (now - noxCameraBootShownAt < 900) return;
+    noxCameraBootShownAt = now;
+    const splash = document.createElement("div");
+    splash.className = "nox-camera-boot";
+    splash.setAttribute("role", "status");
+    splash.setAttribute("aria-label", "NOX Camera starting");
+    splash.innerHTML = '<span class="nox-camera-boot-mark" aria-hidden="true">N</span><b>NOX</b><small>CAMERA STUDIO</small><span class="nox-camera-boot-line" aria-hidden="true"></span>';
+    const soundToggle = document.createElement("button");
+    soundToggle.type = "button";
+    soundToggle.className = "nox-camera-boot-sound";
+    soundToggle.textContent = noxCameraSoundsEnabled ? "الصوت يعمل" : "الصوت مكتوم";
+    soundToggle.setAttribute("aria-pressed", String(noxCameraSoundsEnabled));
+    soundToggle.setAttribute("aria-label", "تفعيل أو كتم أصوات الكاميرا");
+    soundToggle.addEventListener("click", () => {
+      noxCameraSoundsEnabled = !noxCameraSoundsEnabled;
+      soundToggle.textContent = noxCameraSoundsEnabled ? "الصوت يعمل" : "الصوت مكتوم";
+      soundToggle.setAttribute("aria-pressed", String(noxCameraSoundsEnabled));
+      if (noxCameraSoundsEnabled) playNOXCameraSound("boot");
+    });
+    splash.append(soundToggle);
+    stage.append(splash);
+    playNOXCameraSound("boot");
+    window.clearTimeout(noxCameraBootTimer);
+    noxCameraBootTimer = window.setTimeout(() => {
+      splash.classList.add("is-leaving");
+      window.setTimeout(() => splash.remove(), 420);
+    }, 1850);
+  }
+
+  // Unlock audio synchronously from the camera navigation gesture where possible.
+  page.querySelectorAll('[data-nav="camera"], .add-story').forEach((control) => {
+    control.addEventListener("click", () => { getNOXAudioContext(); }, { passive: true });
+  });
+
   let stream = null;
   let cameraStartGeneration = 0;
   let cameraStartAbortController = null;
@@ -3073,6 +3169,7 @@ export function initCamera() {
     const output = createOutputCanvas();
     output.toBlob((blob) => {
       if (!blob) return announce("تعذر إنشاء الصورة.");
+      playNOXCameraSound("shutter");
       showBlob(blob, "image", "nox-next-photo.jpg");
       announce("تم التقاط الصورة. اضغط حفظ على الجهاز. مؤثرات خرج الكاميرا النشطة مضمّنة في الملف المحفوظ.");
     }, "image/jpeg", 0.92);
@@ -3951,6 +4048,7 @@ export function initCamera() {
     if (!stream) return;
     if (recording) {
       recording = false;
+      playNOXCameraSound("record-off");
       if (recorder && recorder.state !== "inactive") recorder.stop();
       recordButton.textContent = "فيديو";
       announce("جارٍ تجهيز الفيديو…");
@@ -3989,6 +4087,7 @@ export function initCamera() {
         announce("الفيديو جاهز للحفظ.");
       };
       recorder.start(300);
+      playNOXCameraSound("record-on");
       recordButton.textContent = "إيقاف";
       announce("جارٍ تسجيل الفيديو… مؤثرات خرج الكاميرا النشطة مضمّنة في الفيديو.");
     } catch {
@@ -4001,6 +4100,7 @@ export function initCamera() {
 
   function selectLens(index) {
     selectedLens = (index + LENSES.length) % LENSES.length;
+    playNOXCameraSound("lens");
     selectedFilter = null;
     selectedOriginalFilter = null;
     selectedHybridFilter = null;
@@ -4219,11 +4319,12 @@ export function initCamera() {
   });
   $("#nox-camera-back")?.addEventListener("click", () => { location.hash = "#home"; });
   $("#nox-camera-exit")?.addEventListener("click", async () => { await stopCamera(); location.hash = "#home"; });
-  startButton.addEventListener("click", startCamera);
+  startButton.addEventListener("click", () => { playNOXCameraSound("wake"); void startCamera(); });
   stopButton.addEventListener("click", stopCamera);
-  flip.addEventListener("click", switchCamera);
+  flip.addEventListener("click", () => { playNOXCameraSound("flip"); void switchCamera(); });
 
   window.addEventListener("nox:screenchange", (event) => {
+    if (event.detail?.to === "camera") showNOXCameraBoot();
     if (event.detail?.from === "camera" && event.detail?.to !== "camera") stopCamera();
   });
   window.addEventListener("pagehide", stopCamera);
