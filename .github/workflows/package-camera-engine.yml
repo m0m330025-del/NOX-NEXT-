@@ -72,7 +72,7 @@ jobs:
               if (!name.endsWith('.test.mjs') || name === 'auth-contract.test.mjs') continue;
               const testPath = path.join('tests', name);
               const testSource = fs.readFileSync(path.join(root,testPath), 'utf8');
-              const relativeSpecs = [...testSource.matchAll(/(?:import|export)\s+(?:[^'"]*?\\s+from\\s+)?['"]([^'"]+)['"]/g)]
+              const relativeSpecs = [...testSource.matchAll(/(?:import|export)\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/g)]
                 .map(match => match[1]).filter(spec => spec.startsWith('.'));
               const allPresent = relativeSpecs.every(spec => {
                 const target = path.resolve(root, path.dirname(testPath), spec);
