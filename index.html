@@ -103,16 +103,21 @@
           <input id="nox-camera-file" type="file" accept="image/*,video/*" hidden>
         </div>
         <aside class="nox-camera-v2-tools">
-          <div class="nox-camera-v2-section-title"><b>العدسات</b><small>اسحب الدائرة أو اختر عدسة</small></div>
+          <div class="nox-camera-v2-section-title"><b>العدسات والفلاتر</b><small>اسحب لأعلى ولأسفل للتبديل، ويمينًا ويسارًا لتغيير المجموعة</small></div>
+          <div class="nox-camera-family-tabs" role="group" aria-label="مجموعات الفلاتر">
+            <button type="button" class="nox-camera-family-tab active" data-lens-family="beauty" aria-pressed="true">طبيعي وجمال</button>
+            <button type="button" class="nox-camera-family-tab" data-lens-family="color" aria-pressed="false">ألوان</button>
+            <button type="button" class="nox-camera-family-tab" data-lens-family="classic" aria-pressed="false">كلاسيك</button>
+          </div>
           <div class="nox-lens-orbit" id="nox-lens-orbit" aria-label="عجلة العدسات">
             <div class="nox-lens-track" id="nox-lens-track">
-              <button type="button" class="nox-lens-v2 active" data-filter="none" aria-pressed="true"><span>◎</span><b>طبيعي</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="brightness(1.12) saturate(1.35)"><span>✧</span><b>Glow</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="sepia(.28) saturate(1.4)"><span>🌸</span><b>روز</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="hue-rotate(145deg) saturate(1.4)"><span>◈</span><b>نيون</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="saturate(1.8) contrast(1.08)"><span>✺</span><b>ألوان</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="sepia(.45) contrast(1.08)"><span>☼</span><b>Retro</b></button>
-              <button type="button" class="nox-lens-v2" data-filter="grayscale(1) contrast(1.12)"><span>◐</span><b>أبيض وأسود</b></button>
+              <button type="button" class="nox-lens-v2 active" data-lens-family="beauty" data-filter="none" aria-pressed="true"><span>◎</span><b>طبيعي</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="beauty" data-filter="brightness(1.12) saturate(1.35)"><span>✧</span><b>Glow</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="beauty" data-filter="sepia(.28) saturate(1.4)"><span>🌸</span><b>روز</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="color" data-filter="hue-rotate(145deg) saturate(1.4)"><span>◈</span><b>نيون</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="color" data-filter="saturate(1.8) contrast(1.08)"><span>✺</span><b>ألوان</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="classic" data-filter="sepia(.45) contrast(1.08)"><span>☼</span><b>Retro</b></button>
+              <button type="button" class="nox-lens-v2" data-lens-family="classic" data-filter="grayscale(1) contrast(1.12)"><span>◐</span><b>أبيض وأسود</b></button>
             </div>
           </div>
           <section class="nox-region-mask-panel" aria-label="أداة تحديد المنطقة">
