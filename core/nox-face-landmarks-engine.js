@@ -54,6 +54,10 @@ export class NOXFaceLandmarksEngine {
       height: result.height,
       source: result.source,
       landmarkCount: result.landmarks.length,
+      frameId: result.frameId,
+      timestamp: result.timestamp,
+      capturedAtMonotonicMs: result.capturedAtMonotonicMs,
+      coordinateSpace: result.coordinateSpace,
       regions,
       unavailable
     };
