@@ -717,22 +717,33 @@ export function initCamera() {
         frameId: "nox-beauty-" + (++beautyFrameCounter),
         timestamp: beautyLastTimestamp
       };
-      const vision = await beautyVisionAdapter.processFrame(frame);
-      if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
-        throw new Error(vision?.reason || "لم يتم اكتشاف منطقة بشرة موثوقة");
+      const skinPlan = cortex.plan(
+        { skinRequested: true },
+        { requested: ["skin-segmentation"], mode: lowPower ? "lite" : "balanced" }
+      );
+      const skinExecution = await cortex.execute(skinPlan, frame, {
+        "skin-segmentation": async currentFrame => {
+          const vision = await beautyVisionAdapter.processFrame(currentFrame);
+          if (!vision || !["complete", "partial"].includes(vision.state) || !vision.skinMask) {
+            throw new Error(vision?.reason || "لم يتم اكتشاف منطقة بشرة موثوقة");
+          }
+          const skin = beautySkinEngine.validateMask({
+            data: vision.skinMask.data,
+            width: vision.skinMask.width,
+            height: vision.skinMask.height,
+            confidence: vision.skinMask.confidence,
+            source: vision.skinMask.source,
+            faceBox: vision.faceBox
+          });
+          if (skin.state !== "accepted") throw new Error("رفض قناع البشرة: " + skin.reason);
+          return { vision, skin };
+        }
+      }, { timeoutMs: 10000, stopOnError: true, context: { mode: lowPower ? "lite" : "balanced" } });
+      if (skinExecution.state !== "completed" || !skinExecution.output?.vision || !skinExecution.output?.skin) {
+        const failed = skinExecution.results.find(item => item.status === "failed");
+        throw new Error(failed?.reason === "timeout" ? "انتهت مهلة تقسيم البشرة" : "تعذر تنفيذ محرك تقسيم البشرة عبر NOX CORTEX");
       }
-
-      const skin = beautySkinEngine.validateMask({
-        data: vision.skinMask.data,
-        width: vision.skinMask.width,
-        height: vision.skinMask.height,
-        confidence: vision.skinMask.confidence,
-        source: vision.skinMask.source,
-        faceBox: vision.faceBox
-      });
-      if (skin.state !== "accepted") {
-        throw new Error("رفض قناع البشرة: " + skin.reason);
-      }
+      const { vision, skin } = skinExecution.output;
       if (!drawBeautyMaskPreview(vision.skinMask)) {
         throw new Error("تعذر رسم قناع المعاينة");
       }
