@@ -79,3 +79,11 @@ This branch replaces the previous camera controller with a standalone browser ca
 - These are conservative source-level safeguards, not proof of visual quality on real scenes or device performance.
 
 - A spatial-span gate now rejects vector sets confined to a small image region, reducing the chance that a locally moving subject is mistaken for global camera motion. It requires confident samples to span at least 25% of both normalized image axes; this is conservative and can reject valid camera motion in low-texture scenes.
+
+
+## Optical Flow configuration hardening
+
+- Non-finite constructor and per-frame tuning values now fall back to documented safe defaults rather than producing NaN loop bounds or silently empty results.
+- Configured maximum sample dimensions are clamped to 256 pixels per side to keep the block-matching workload bounded; the default remains 128.
+- Confidence thresholds are clamped to the inclusive 0–1 range. The confidence output remains a local heuristic, not a calibrated probability.
+- Deterministic tests cover invalid configuration, upper bounds, and safe fallback behavior. This does not replace device profiling or visual validation.
