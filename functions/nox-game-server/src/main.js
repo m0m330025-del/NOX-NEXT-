@@ -3,8 +3,8 @@ import { Client, Account, Databases, ID, Query, Permission, Role } from "node-ap
 const MAX_SEATS = 15;
 const ROOM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-function json(res, status, payload) {
-  return res.json(payload, status);
+function json(res, status, payload, headers = {}) {
+  return res.json(payload, status, headers);
 }
 
 function makeRoomCode() {
@@ -83,7 +83,16 @@ export default async ({ req, res, log, error }) => {
         Permission.update(Role.user(user.$id)),
         Permission.delete(Role.user(user.$id))
       ]);
-      return json(res, 201, { ok: true, room: cleanRoom(room) }, headers);
+      await db.createDocument(databaseId, seatsCollection, `${room.$id}_0`, {
+        roomId: room.$id, userId: user.$id, seatIndex: 0,
+        displayName: String(user.name || "Player").slice(0, 32),
+        role: "owner", ready: true
+      }, [
+        Permission.read(Role.users()),
+        Permission.update(Role.user(user.$id)),
+        Permission.delete(Role.user(user.$id))
+      ]);
+      return json(res, 201, { ok: true, room: cleanRoom(room), seat: 0 }, headers);
     }
 
     if (action === "room.join") {
