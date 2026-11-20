@@ -13,7 +13,7 @@ export class NOXTemporalAlignmentEngine {
   constructor({
     minConfidence = 0.16,
     minVectorCount = 4,
-    maxStep = 0.035,
+    maxStep = 0.065,
     maxAccumulated = 0.12,
     maxDispersion = 0.018
   } = {}) {
@@ -51,6 +51,7 @@ export class NOXTemporalAlignmentEngine {
       Math.abs(vector.dx) <= 0.25 && Math.abs(vector.dy) <= 0.25
     );
     if (usable.length < this.options.minVectorCount) {
+      this.invalidateAll();
       return { accepted: false, reason: "insufficient-confident-vectors", vectorCount: usable.length };
     }
     const dx = median(usable.map(vector => vector.dx));
@@ -58,10 +59,15 @@ export class NOXTemporalAlignmentEngine {
     const dispersion = median(usable.map(vector => Math.hypot(vector.dx - dx, vector.dy - dy)));
     const confidence = usable.reduce((sum, vector) => sum + vector.confidence, 0) / usable.length;
     if (dispersion > this.options.maxDispersion) {
+      this.invalidateAll();
       return { accepted: false, reason: "inconsistent-motion-vectors", vectorCount: usable.length, dispersion };
     }
-    const stepX = Math.max(-this.options.maxStep, Math.min(this.options.maxStep, dx));
-    const stepY = Math.max(-this.options.maxStep, Math.min(this.options.maxStep, dy));
+    if (Math.abs(dx) > this.options.maxStep || Math.abs(dy) > this.options.maxStep) {
+      this.invalidateAll();
+      return { accepted: false, reason: "motion-step-exceeds-bound", vectorCount: usable.length, dx, dy };
+    }
+    const stepX = dx;
+    const stepY = dy;
     for (const slot of this.slots) {
       if (!slot.valid) continue;
       const nextX = slot.dx + stepX;
@@ -78,6 +84,16 @@ export class NOXTemporalAlignmentEngine {
     }
     this.lastAccepted = { dx: stepX, dy: stepY, confidence, dispersion, vectorCount: usable.length, sequence };
     return { accepted: true, ...this.lastAccepted };
+  }
+
+  invalidateAll() {
+    let invalidated = 0;
+    for (const slot of this.slots) {
+      if (slot.valid) invalidated += 1;
+      slot.valid = false;
+      slot.confidence = 0;
+    }
+    return invalidated;
   }
 
   onCapture(index) {
