@@ -5,6 +5,8 @@ import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
 import { NOXMediaPipeSelfieProvider } from "./nox-mediapipe-selfie-provider.js";
 import { NOXBeautyVisionProvider } from "./nox-beauty-vision-provider.js";
 import { NOXSkinSegmentationEngine } from "./nox-skin-segmentation-engine.js";
+import { NOXMediaPipeFaceLandmarkerProvider } from "./nox-mediapipe-face-landmarker-provider.js";
+import { NOXFaceLandmarksEngine } from "./nox-face-landmarks-engine.js";
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -400,6 +402,9 @@ export function initCamera() {
   let trackedFace = null;
   let beautyVisionAdapter = null;
   let beautyVisionProvider = null;
+  let faceLandmarkerProvider = null;
+  const faceLandmarksEngine = new NOXFaceLandmarksEngine();
+  let faceLandmarksState = "متوقف";
   let beautySkinEngine = new NOXSkinSegmentationEngine({
     minConfidence: 0.55, minCoverage: 0.04, maxCoverage: 0.9, minPixels: 16
   });
@@ -431,6 +436,21 @@ export function initCamera() {
   const beautyPrivacy = document.createElement("small");
   beautyPrivacy.textContent = "المعالجة على الجهاز. قد ترسل مكتبة MediaPipe بيانات قياس استخدام؛ لا ترسل إطارات الكاميرا إلى خوادم النموذج.";
   beautyPanel.append(beautyTitle, beautyButton, beautyStatus, beautyPrivacy);
+  const faceLandmarksButton = document.createElement("button");
+  faceLandmarksButton.type = "button";
+  faceLandmarksButton.textContent = "تحميل محرك نقاط الوجه (478 نقطة)";
+  faceLandmarksButton.disabled = true;
+  const faceLandmarksStatus = document.createElement("small");
+  faceLandmarksStatus.setAttribute("role", "status");
+  faceLandmarksStatus.textContent = "يحدد الشفاه والعينين والحواجب من نقاط MediaPipe الفعلية، دون إنشاء أقنعة تجميل وهمية.";
+  beautyPanel.append(faceLandmarksButton, faceLandmarksStatus);
+  const faceLandmarksOverlay = document.createElement("canvas");
+  faceLandmarksOverlay.id = "nox-face-landmarks-preview";
+  faceLandmarksOverlay.hidden = true;
+  faceLandmarksOverlay.setAttribute("aria-hidden", "true");
+  faceLandmarksOverlay.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:4;pointer-events:none;";
+  stage.append(faceLandmarksOverlay);
+  const faceLandmarksContext = faceLandmarksOverlay.getContext("2d");
   page.querySelector(".nox-camera-v2-tools")?.prepend(beautyPanel);
 
   const supported = {
@@ -471,6 +491,102 @@ export function initCamera() {
     beautyOverlay.style.transform = facing === "user" ? "scaleX(-1)" : "none";
     beautyOverlay.hidden = false;
     return true;
+  }
+
+  function clearFaceLandmarksPreview() {
+    if (faceLandmarksContext) faceLandmarksContext.clearRect(0, 0, faceLandmarksOverlay.width, faceLandmarksOverlay.height);
+    faceLandmarksOverlay.hidden = true;
+    faceLandmarksOverlay.style.transform = "none";
+  }
+
+  function drawFaceLandmarksPreview(analysis) {
+    if (!analysis?.regions || !faceLandmarksContext) return false;
+    const width = analysis.width;
+    const height = analysis.height;
+    faceLandmarksOverlay.width = width;
+    faceLandmarksOverlay.height = height;
+    faceLandmarksContext.clearRect(0, 0, width, height);
+    const colors = { lips: "#ff4e91", leftEye: "#62d9ff", rightEye: "#62d9ff", leftEyebrow: "#ffd166", rightEyebrow: "#ffd166", faceOval: "#7df0b1" };
+    for (const [name, region] of Object.entries(analysis.regions)) {
+      faceLandmarksContext.strokeStyle = colors[name] || "#ffffff";
+      faceLandmarksContext.fillStyle = colors[name] || "#ffffff";
+      faceLandmarksContext.lineWidth = Math.max(1.2, width / 220);
+      faceLandmarksContext.beginPath();
+      for (const [start, end] of region.edges) {
+        const a = region.points.find(point => point.index === start);
+        const b = region.points.find(point => point.index === end);
+        if (!a || !b) continue;
+        faceLandmarksContext.moveTo(a.x * width, a.y * height);
+        faceLandmarksContext.lineTo(b.x * width, b.y * height);
+      }
+      faceLandmarksContext.stroke();
+      for (const point of region.points) {
+        faceLandmarksContext.beginPath();
+        faceLandmarksContext.arc(point.x * width, point.y * height, Math.max(1, width / 420), 0, Math.PI * 2);
+        faceLandmarksContext.fill();
+      }
+    }
+    faceLandmarksOverlay.style.transform = facing === "user" ? "scaleX(-1)" : "none";
+    faceLandmarksOverlay.hidden = false;
+    return true;
+  }
+
+  async function runFaceLandmarksPreview() {
+    if (!stream || video.readyState < 2) {
+      faceLandmarksStatus.textContent = "شغّل الكاميرا وانتظر ظهور الصورة أولًا.";
+      return;
+    }
+    faceLandmarksButton.disabled = true;
+    faceLandmarksState = "جارٍ تحميل نموذج نقاط الوجه";
+    faceLandmarksStatus.textContent = faceLandmarksState + " — التحميل الأول يحتاج اتصالًا بالإنترنت.";
+    try {
+      if (!faceLandmarkerProvider) {
+        faceLandmarkerProvider = new NOXMediaPipeFaceLandmarkerProvider({ delegate: "CPU" });
+      }
+      if (faceLandmarkerProvider.state !== "ready") {
+        const initialized = await faceLandmarkerProvider.initialize();
+        if (!initialized.available) throw new Error(initialized.reason || "تعذر تحميل Face Landmarker");
+      }
+      const scale = Math.min(1, 256 / Math.max(video.videoWidth, video.videoHeight));
+      const width = Math.max(2, Math.round(video.videoWidth * scale));
+      const height = Math.max(2, Math.round(video.videoHeight * scale));
+      beautyInputCanvas.width = width;
+      beautyInputCanvas.height = height;
+      beautyInputContext.drawImage(video, 0, 0, width, height);
+      const detected = faceLandmarkerProvider.detect(beautyInputCanvas);
+      if (!detected.detected) throw new Error("لم يتم العثور على وجه واضح في الإطار");
+      const analysis = faceLandmarksEngine.analyze(detected);
+      if (!["complete", "partial"].includes(analysis.state) || !drawFaceLandmarksPreview(analysis)) {
+        throw new Error("تعذر استخراج نقاط المناطق");
+      }
+      faceLandmarksState = "نشط — " + analysis.landmarkCount + " نقطة";
+      faceLandmarksStatus.textContent =
+        "تم تحديد " + Object.keys(analysis.regions).join("، ") +
+        (analysis.unavailable.length ? " — غير متاح: " + analysis.unavailable.join("، ") : "") +
+        ". هذه خطوط نقاط مرجعية وليست أقنعة مكياج بكسلية بعد.";
+      faceLandmarksButton.textContent = "إعادة تحليل ملامح الوجه";
+    } catch (error) {
+      faceLandmarksState = "غير متاح";
+      clearFaceLandmarksPreview();
+      faceLandmarksStatus.textContent = "تعذر التحليل: " + String(error?.message || error).slice(0, 180);
+      faceLandmarksButton.textContent = "إعادة محاولة تحميل نقاط الوجه";
+    } finally {
+      faceLandmarksButton.disabled = !stream;
+      updateDiagnostics();
+    }
+  }
+  faceLandmarksButton.addEventListener("click", runFaceLandmarksPreview);
+
+  async function releaseFaceLandmarker() {
+    clearFaceLandmarksPreview();
+    if (faceLandmarkerProvider) {
+      try { await faceLandmarkerProvider.dispose(); } catch { /* best-effort cleanup */ }
+    }
+    faceLandmarkerProvider = null;
+    faceLandmarksState = "متوقف";
+    faceLandmarksButton.textContent = "تحميل محرك نقاط الوجه (478 نقطة)";
+    faceLandmarksButton.disabled = true;
+    faceLandmarksStatus.textContent = "تم تحرير موارد نموذج نقاط الوجه.";
   }
 
   async function runBeautyMaskPreview() {
@@ -667,6 +783,7 @@ export function initCamera() {
     renderCanvas.hidden = !ready;
     stage.classList.toggle("is-live", ready);
     beautyButton.disabled = !ready || beautyProcessing;
+    faceLandmarksButton.disabled = !ready;
   }
 
   function stopTracks(target) {
@@ -2297,6 +2414,7 @@ export function initCamera() {
       ["حجم الذاكرة الزمنية", temporalBuffers.length ? temporalSampleWidth + " × " + temporalSampleHeight + " لكل إطار" : "لم تُخصص بعد"],
       ["قناع المنطقة", livingMetalRegion ? "مستطيل يدوي محفوظ" : (regionMaskEnabled ? "اسحب على الصورة لتحديد منطقة" : "لا يوجد قناع")],
       ["Living Metal", livingMetalEnabled ? (livingMetalRegion ? "نشط داخل القناع اليدوي" : "نشط — حدد منطقة أولًا") : "متوقف"],
+      ["NOX Face Landmarks", faceLandmarksState],
       ["NOX Beauty Vision", beautyState],
       ["تجميل البشرة", "معاينة قناع وجه حقيقي؛ لا يوجد مكياج دقيق بعد"],
       ["المؤثر النشط", renderMode],
@@ -2342,6 +2460,7 @@ export function initCamera() {
     clearSubjectLock();
     resetFaceTracking();
     await releaseBeautyVision();
+    await releaseFaceLandmarker();
     stopTracks(stream);
     stream = null;
     video.pause();
