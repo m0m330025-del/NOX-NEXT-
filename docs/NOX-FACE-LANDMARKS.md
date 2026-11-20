@@ -42,3 +42,29 @@
 - Source files and CI tests added to the development branch.
 - GitHub Actions results must be checked for the latest commit before describing CI as passed.
 - Physical-device testing has not been performed.
+
+
+## NOX Face Topology Intelligence — first research module
+
+- Added a read-only audit for supplied normalized landmarks and tessellation edges.
+- Reports used vertices, unique and duplicate edges, connected components, maximum vertex degree, and reconstructable triangle count.
+- Rejects malformed coordinates, invalid edges, oversized input, excessive vertex degree, and excessive triangle reconstruction.
+- Reports disconnected components, unused points, duplicate edges, and triangle absence as warnings.
+- Does not infer missing landmarks, repair geometry, claim anatomical accuracy, or authorize a makeup mask.
+
+## Planned NOX face research roadmap
+
+These are development targets, not claims of implementation or proven scientific novelty:
+
+1. **NOX Face Topology Intelligence** — audit mesh structure and reject malformed topology.
+2. **NOX Mask Uncertainty Engine** — expose per-region evidence gaps; missing evidence is never confidence.
+3. **NOX Temporal Mask Memory** — compare observed geometry across frames and reset on track discontinuity.
+4. **NOX Occlusion Intelligence** — flag likely occlusion and suppress unsupported masks.
+5. **NOX Adaptive Mesh Rasterizer** — bounded triangle-local rasterization with pixel and work budgets.
+6. **NOX Region Evidence Engine** — retain provenance and validation reasons for each region.
+7. **NOX Expression Deformation Engine** — evaluate stability across observed expressions without assuming static contours.
+8. **NOX Mask Self-Repair Lab** — propose only deterministic repairs backed by local evidence; otherwise reject.
+
+## NOX Face Digital Twin — integration concept
+
+A research orchestration layer may combine geometry, region evidence, temporal observations, uncertainty, and rendering eligibility. It must not invent hidden anatomy or bypass the makeup compositor trusted-mask gate. Confidence calibration requires representative real-world validation, not synthetic tests alone.
