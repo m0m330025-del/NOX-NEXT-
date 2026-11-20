@@ -220,9 +220,6 @@ export class NOXBiSeNetFaceParsingProvider {
     const croppedLabels = cropLetterboxed(
       decoded.labels, this.modelInputSize, this.modelInputSize, letterbox
     );
-    const croppedConfidence = cropLetterboxed(
-      decoded.confidence, this.modelInputSize, this.modelInputSize, letterbox
-    );
     if (croppedLabels.width < 1 || croppedLabels.height < 1) {
       throw new Error("invalid-bisenet-letterbox-region");
     }
