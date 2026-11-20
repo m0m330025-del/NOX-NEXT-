@@ -257,14 +257,14 @@ jobs:
           for (const token of [
             'NOXBiSeNetFaceParsingProvider', 'NOXBeautyVisionProvider', 'NOXMakeupRenderingEngine',
             'NOXSkinSegmentationEngine', 'NOX BEAUTY VISION — REAL AI',
-            'runBeautyMaskPreview', 'await releaseBeautyVision()',
+            'runBeautyMaskPreview', 'releaseBeautyVision()',
             'maxInputDimension: 256', 'beautySkinEngine.validateMask',
             'NOXMediaPipeFaceLandmarkerProvider', 'NOXFaceLandmarksEngine',
             'NOXFaceTrackingEngine', 'processLiveFaceLandmarks',
             'id: "face-landmark-temporal-tracker"', 'dynamicEngineHost.getHandlers()',
             'liveFaceTracking: true', 'faceTrackingEngine.updateLandmarks', 'faceLandmarksLiveEnabled',
-            'runFaceLandmarksPreview', 'await releaseFaceLandmarker()',
-            'nox-face-landmarks-preview'
+            'runFaceLandmarksPreview', 'releaseFaceLandmarker()',
+            'nox-face-landmarks-preview', 'await Promise.all(['
           ]) {
             if (!js.includes(token)) throw new Error('Real Beauty Vision camera integration missing: ' + token);
           }
