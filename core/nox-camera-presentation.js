@@ -57,6 +57,6 @@ export function initCameraPresentation() {
 
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = "./camera-pro.css?v=1";
+  link.href = "./camera-pro.css?v=2";
   document.head.append(link);
 }
