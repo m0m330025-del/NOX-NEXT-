@@ -1,0 +1,87 @@
+import assert from "node:assert/strict";
+import { NOXLiveMakeupController } from "../core/nox-live-makeup-controller.mjs";
+let now = 100, nextId = 1;
+const queue = [];
+const schedule = (callback, delay) => { const item = { id: nextId++, callback, delay, cancelled: false }; queue.push(item); return item; };
+const cancel = item => { item.cancelled = true; };
+const flush = async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); };
+const runNext = async () => { let item; while (queue.length && (!item || item.cancelled)) item = queue.shift(); assert.ok(item && !item.cancelled); item.callback(); await flush(); };
+const accepted = [], errors = [];
+const controller = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 250, clock: () => now, schedule, cancel });
+assert.equal(controller.start({
+  captureFrame: async ({ sequence }) => ({ id: sequence }),
+  processFrame: async frame => ({ output: frame.id }),
+  onResult: value => accepted.push(value), onError: error => errors.push(error)
+}), true);
+await runNext();
+assert.equal(accepted.length, 1);
+assert.equal(accepted[0].sequence, 1);
+assert.equal(accepted[0].result.output, 1);
+assert.equal(controller.getStatus().lastAcceptedSequence, 1);
+assert.equal(controller.start({ captureFrame: () => ({}), processFrame: () => ({}), onResult: () => {} }), false);
+controller.stop();
+assert.equal(controller.getStatus().running, false);
+assert.equal(errors.length, 0);
+
+let resolveSlow;
+const stale = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 150, clock: () => now, schedule, cancel });
+const staleAccepted = [];
+stale.start({
+  captureFrame: async () => ({ id: "slow" }),
+  processFrame: () => new Promise(resolve => { resolveSlow = resolve; }),
+  onResult: value => staleAccepted.push(value)
+});
+const pending = runNext();
+await flush();
+assert.equal(typeof resolveSlow, "function");
+now += 200;
+resolveSlow({ output: "too-late" });
+await pending;
+assert.equal(staleAccepted.length, 0);
+stale.stop();
+
+let resolveAfterStop;
+const stoppedAccepted = [];
+const stopped = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 200, clock: () => now, schedule, cancel });
+stopped.start({
+  captureFrame: async () => ({ id: "stop" }),
+  processFrame: () => new Promise(resolve => { resolveAfterStop = resolve; }),
+  onResult: value => stoppedAccepted.push(value)
+});
+const stoppedPending = runNext();
+await flush();
+stopped.stop();
+resolveAfterStop({ output: "after-stop" });
+await stoppedPending;
+assert.equal(stoppedAccepted.length, 0);
+
+let resolveOldSession;
+const restarted = new NOXLiveMakeupController({ intervalMs: 100, maxResultAgeMs: 200, clock: () => now, schedule, cancel });
+const restartedAccepted = [];
+restarted.start({
+  captureFrame: async () => ({ id: "old-session" }),
+  // Deliberately ignores AbortSignal to model inference that cannot be cancelled mid-call.
+  processFrame: () => new Promise(resolve => { resolveOldSession = resolve; }),
+  onResult: value => restartedAccepted.push({ session: "old", value })
+});
+const oldPending = runNext();
+await flush();
+assert.equal(typeof resolveOldSession, "function");
+restarted.stop();
+assert.equal(restarted.getStatus().inFlight, false, "stopping releases the old session lock");
+restarted.start({
+  captureFrame: async () => ({ id: "new-session" }),
+  processFrame: async frame => ({ output: frame.id }),
+  onResult: value => restartedAccepted.push({ session: "new", value })
+});
+await runNext();
+assert.equal(restartedAccepted.length, 1, "new session must not wait for unabortable old inference");
+assert.equal(restartedAccepted[0].session, "new");
+assert.equal(restartedAccepted[0].value.result.output, "new-session");
+resolveOldSession({ output: "stale-old-session" });
+await oldPending;
+assert.equal(restartedAccepted.length, 1, "old session must not publish after restart");
+assert.equal(restarted.getStatus().inFlight, false, "old finally block must not clear new session state");
+restarted.stop();
+
+console.log("NOX Live Makeup Controller tests passed");

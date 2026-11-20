@@ -1,0 +1,45 @@
+# NOX Beauty Vision — implementation status
+
+## Live makeup path
+
+- The camera page exposes an opt-in **NOX BEAUTY VISION — REAL AI** panel. The user starts the camera and explicitly requests model loading; inference does not start automatically.
+- \`NOXBiSeNetFaceParsingProvider\` uses the BiSeNet ResNet-18 ONNX face-parsing model with ONNX Runtime Web. The current camera configuration bounds the largest input dimension to 256 pixels.
+- BiSeNet preprocessing preserves source aspect ratio with centered letterboxing instead of stretching a portrait/landscape face into a square. The semantic output is cropped to the valid letterbox region before masks and face bounds are restored to original frame dimensions.
+- Padding approximates the model's ImageNet RGB mean, minimizing artificial edge contrast after normalization.
+- BiSeNet decoding retains softmax probabilities for the supported semantic classes. Region probabilities are combined per semantic family and resized with bilinear interpolation, preserving soft edges instead of expanding hard argmax labels with nearest-neighbor sampling. A region is exposed only when it has at least the configured minimum number of pixels with probability ≥ 0.5; its confidence is averaged over those active pixels.
+- Restored masks suppress probabilities below 0.05 to prevent tiny softmax residue from tinting pixels outside the semantic region while retaining meaningful fractional edge coverage.
+- \`NOXBeautyVisionProvider\` validates frame metadata, mask dimensions, mask values, confidence, and frame freshness before exposing semantic masks.
+- The currently supported semantic makeup masks are lips and brows. The model does not provide dedicated cheek or eyelid classes; those looks are unavailable rather than guessed.
+- \`NOXMakeupRenderingEngine\` validates the selected look and applies color only inside the accepted semantic masks.
+- \`NOXLiveMakeupController\` serializes inference so only one frame is processed at a time. The configured interval is 180ms; results older than 220ms are rejected.
+- \`NOXLiveMakeupCompositor\` builds a transparent color layer from the accepted masks and draws it over each fresh base render. It does not paint onto a previous composed frame, avoiding a feedback loop.
+- The compositor is called from the camera \`renderFrame()\` path on the shared \`renderCanvas\`. Photo capture copies that canvas, and video recording uses its \`captureStream()\`, so a fresh accepted makeup layer is included in both outputs.
+- If a makeup result expires, it is not drawn. A capture taken without a fresh result may therefore contain no makeup rather than a stale mask.
+- When a current face detector track is available, the compositor compares its normalized face center with the face box captured by BiSeNet. A displacement above 0.08 frame-diagonal units invalidates the old mask instead of drawing it over a moved face. This is a conservative rejection guard, not geometric mask warping; if the detector track is unavailable, the 220ms freshness limit remains the available guard.
+- Inference runs locally in the browser after the ONNX runtime and model are downloaded. Offline model caching is not implemented.
+
+## Multi-model face fusion
+
+- NOXMultiModelFaceFusionProvider now runs BiSeNet semantic parsing and MediaPipe Face Landmarker against the same downscaled camera frame.
+- BiSeNet remains the source of pixel masks. MediaPipe contributes observed landmark topology and face-oval geometry; landmarks are never converted into fake pixel segmentation masks.
+- The fusion provider verifies frame identity, timestamp, dimensions, and face-box overlap before marking the result as fused. The current minimum face-box IoU is 0.20.
+- If MediaPipe is unavailable or its face box does not align, valid BiSeNet masks remain available as an explicitly partial result. If segmentation fails or its frame metadata does not match, the fused request is rejected.
+- NOXBeautyVisionProvider preserves validated fusion status and landmark analysis metadata for downstream diagnostics. The camera's live makeup pipeline now initializes this fusion provider rather than using BiSeNet alone.
+- The independent MediaPipe live landmark preview and tracking capability remains available; it has a separate lifecycle from the makeup pipeline.
+
+## Explicit limitations
+
+- The current makeup model supports lips and brows only; cheek and eyelid makeup are not implemented.
+- The 220ms freshness limit and face-box overlap gate reduce stale or mismatched overlays but do not guarantee perfect alignment during fast head movement. Dense motion-warp compensation is not claimed.
+- Fusion contract tests use synthetic face geometry and fake model providers. They verify frame matching, fail-closed behavior, and metadata propagation; they do not prove real-model landmark/segmentation agreement on live faces.
+- The controller uses a bounded low-resolution inference path. Sustained frame rate, heat, memory usage, and visual quality have not been measured on physical Android/iOS devices.
+- The model/runtime require an internet connection for first load. Offline caching has not been implemented.
+- CI tests use synthetic masks and fake provider sessions; they verify contracts and composition logic, not the real model's visual accuracy on a live face.
+
+## Status
+
+**Code and CI:** BiSeNet semantic masks, makeup rendering, live frame control, and shared-canvas compositing are implemented. Relevant GitHub Actions checks pass.
+
+**Physical-device verification:** not performed on Android/iOS or low-power phones.
+
+**Visual alignment and sustained real-time performance:** require browser and physical-device testing.

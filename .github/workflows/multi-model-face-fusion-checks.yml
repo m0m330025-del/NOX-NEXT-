@@ -1,0 +1,38 @@
+name: NOX Multi-Model Face Fusion Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-multi-model-face-fusion-provider.js"
+      - "core/nox-face-landmarks-engine.js"
+      - "tests/nox-multi-model-face-fusion-provider.test.mjs"
+      - ".github/workflows/multi-model-face-fusion-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-multi-model-face-fusion-provider.js"
+      - "core/nox-face-landmarks-engine.js"
+      - "tests/nox-multi-model-face-fusion-provider.test.mjs"
+      - ".github/workflows/multi-model-face-fusion-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fusion-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check fusion syntax
+        run: |
+          cp core/nox-multi-model-face-fusion-provider.js /tmp/nox-multi-model-face-fusion-provider.mjs
+          node --check /tmp/nox-multi-model-face-fusion-provider.mjs
+      - name: Run fusion contract tests
+        run: |
+          cp core/nox-multi-model-face-fusion-provider.js core/nox-multi-model-face-fusion-provider.mjs
+          cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
+          node --experimental-default-type=module tests/nox-multi-model-face-fusion-provider.test.mjs

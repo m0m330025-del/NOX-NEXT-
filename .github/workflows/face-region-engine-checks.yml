@@ -1,0 +1,42 @@
+name: NOX Face Region Engine Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-face-region-engine.js"
+      - "core/camera.js"
+      - "tests/nox-face-region-engine.test.mjs"
+      - ".github/workflows/face-region-engine-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-face-region-engine.js"
+      - "core/camera.js"
+      - "tests/nox-face-region-engine.test.mjs"
+      - ".github/workflows/face-region-engine-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  face-region-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check engine syntax
+        run: |
+          cp core/nox-face-region-engine.js /tmp/nox-face-region-engine.mjs
+          node --check /tmp/nox-face-region-engine.mjs
+      - name: Run face region tests
+        run: |
+          cp core/nox-face-region-engine.js core/nox-face-region-engine.mjs
+          node tests/nox-face-region-engine.test.mjs
+      - name: Verify camera integration
+        run: |
+          grep -q 'NOXFaceRegionEngine' core/camera.js
+          grep -q 'faceRegionEngine.analyze(trackedFace)' core/camera.js
+          grep -q 'trackedFaceRegions?.regions' core/camera.js

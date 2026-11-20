@@ -1,0 +1,113 @@
+const isPlainObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+const scalarSummary = value => {
+  if (!isPlainObject(value)) return {};
+  const summary = {};
+  for (const [key, item] of Object.entries(value).slice(0, 16)) {
+    if (item === null || ["string", "number", "boolean"].includes(typeof item)) summary[key] = item;
+  }
+  return summary;
+};
+
+/**
+ * Runtime registry for instantiated NOX engines.
+ * Engines are registered once when the camera adapter creates them. The brain
+ * reads this inventory generically; it does not need engine-specific edits.
+ */
+export class NOXEngineRegistry {
+  constructor() {
+    this.entries = new Map();
+  }
+
+  register({ id, name, category = "processing", instance, capabilities = [], requiresCapabilities = [], conflictsWith = [], estimatedCostMs = null, priority = 0, getStatus, isEnabled } = {}) {
+    if (typeof id !== "string" || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(id)) {
+      throw new TypeError("invalid-engine-id");
+    }
+    if (!instance || (typeof instance !== "object" && typeof instance !== "function")) {
+      throw new TypeError("engine-instance-required");
+    }
+    if (this.entries.has(id)) throw new Error("duplicate-engine-id:" + id);
+    const descriptor = {
+      id,
+      name: typeof name === "string" && name.trim() ? name.trim() : id,
+      category: typeof category === "string" ? category : "processing",
+      capabilities: [...new Set(Array.isArray(capabilities) ? capabilities.filter(item => typeof item === "string") : [])],
+      requiresCapabilities: [...new Set(Array.isArray(requiresCapabilities) ? requiresCapabilities.filter(item => typeof item === "string") : [])],
+      conflictsWith: [...new Set(Array.isArray(conflictsWith) ? conflictsWith.filter(item => typeof item === "string") : [])],
+      estimatedCostMs: Number.isFinite(estimatedCostMs) && estimatedCostMs >= 0 ? estimatedCostMs : null,
+      priority: Number.isFinite(priority) ? priority : 0,
+      instance,
+      getStatus: typeof getStatus === "function" ? getStatus : null,
+      isEnabled: typeof isEnabled === "function" ? isEnabled : null
+    };
+    this.entries.set(id, descriptor);
+    return () => {
+      if (this.entries.get(id) === descriptor) this.entries.delete(id);
+    };
+  }
+
+  replace(descriptor = {}) {
+    const previous = this.entries.get(descriptor.id) || null;
+    if (previous) this.entries.delete(descriptor.id);
+    let current;
+    try {
+      this.register(descriptor);
+      current = this.entries.get(descriptor.id);
+    } catch (error) {
+      if (previous) this.entries.set(descriptor.id, previous);
+      throw error;
+    }
+    return () => {
+      if (this.entries.get(descriptor.id) !== current) return false;
+      this.entries.delete(descriptor.id);
+      if (previous) this.entries.set(descriptor.id, previous);
+      return true;
+    };
+  }
+
+  snapshot() {
+    return [...this.entries.values()].map(entry => {
+      let rawStatus = null;
+      let statusAvailable = false;
+      try {
+        const reader = entry.getStatus || (typeof entry.instance.getStatus === "function"
+          ? entry.instance.getStatus.bind(entry.instance) : null);
+        if (reader) {
+          rawStatus = reader();
+          statusAvailable = true;
+        }
+      } catch {
+        rawStatus = null;
+      }
+      let enabled = null;
+      try {
+        if (entry.isEnabled) enabled = entry.isEnabled() === true;
+        else if (typeof rawStatus?.enabled === "boolean") enabled = rawStatus.enabled;
+        else if (typeof rawStatus?.active === "boolean") enabled = rawStatus.active;
+      } catch {
+        enabled = null;
+      }
+      return {
+        id: entry.id,
+        name: entry.name,
+        category: entry.category,
+        capabilities: entry.capabilities.slice(),
+        requiresCapabilities: entry.requiresCapabilities.slice(),
+        conflictsWith: entry.conflictsWith.slice(),
+        estimatedCostMs: entry.estimatedCostMs ?? (Number.isFinite(rawStatus?.estimatedCostMs) && rawStatus.estimatedCostMs >= 0 ? rawStatus.estimatedCostMs : null),
+        priority: entry.priority,
+        registered: true,
+        statusAvailable,
+        enabled,
+        status: scalarSummary(rawStatus)
+      };
+    });
+  }
+
+  get size() {
+    return this.entries.size;
+  }
+
+  clear() {
+    this.entries.clear();
+  }
+}

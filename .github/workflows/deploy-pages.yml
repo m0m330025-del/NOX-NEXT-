@@ -2,7 +2,7 @@ name: Deploy NOX NEXT preview
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/nox-camera-engine-rebuild"]
   workflow_dispatch:
 
 permissions:

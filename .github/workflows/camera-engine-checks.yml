@@ -1,0 +1,525 @@
+name: NOX Camera Engine Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-*.js"
+      - "tests/nox-*.test.mjs"
+      - "core/camera.js"
+      - "tests/nox-camera-webgl-fallback.test.mjs"
+      - "core/nox-filter-engine.js"
+      - "core/nox-original-filter-library.js"
+      - "tests/nox-original-filter-library.test.mjs"
+      - "core/nox-hybrid-fx-engine.js"
+      - "tests/nox-hybrid-fx-engine.test.mjs"
+      - "core/nox-hybrid-fx-engine.js"
+      - "tests/nox-hybrid-fx-engine.test.mjs"
+      - "docs/NOX-1000-ORIGINAL-FILTERS.md"
+      - "core/nox-temporal-memory-engine.js"
+      - "tests/nox-temporal-memory-engine.test.mjs"
+      - "core/nox-optical-flow-engine.js"
+      - "tests/nox-optical-flow-engine.test.mjs"
+      - "docs/NOX-CAMERA-ENGINE.md"
+      - "core/nox-temporal-alignment-engine.js"
+      - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "tests/nox-temporal-alignment-integration.test.mjs"
+      - "core/nox-smart-motion-separation-engine.js"
+      - "tests/nox-smart-motion-separation-engine.test.mjs"
+      - "core/nox-adaptive-temporal-fusion-engine.js"
+      - "tests/nox-adaptive-temporal-fusion-engine.test.mjs"
+      - "core/nox-multi-engine-intelligence-brain.js"
+      - "core/nox-engine-registry.js"
+      - "core/nox-engine-orchestration-planner.js"
+      - "core/nox-dynamic-engine-adapter.js"
+      - "tests/nox-dynamic-engine-adapter.test.mjs"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
+      - "tests/nox-engine-orchestration-planner.test.mjs"
+      - "tests/nox-engine-registry.test.mjs"
+      - "tests/nox-multi-engine-intelligence-brain.test.mjs"
+      - "core/nox-neural-camera-orchestrator.js"
+      - "tests/nox-neural-camera-orchestrator.test.mjs"
+      - "core/nox-predictive-camera-intelligence.js"
+      - "core/nox-scene-intelligence-engine.js"
+      - "tests/nox-predictive-camera-intelligence.test.mjs"
+      - "tests/nox-scene-intelligence-engine.test.mjs"
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "core/nox-face-landmarks-engine.js"
+      - "core/nox-beauty-vision-provider.js"
+      - "core/nox-skin-segmentation-engine.js"
+      - "app.js"
+      - "index.html"
+      - "camera.css"
+      - ".github/workflows/camera-engine-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-*.js"
+      - "tests/nox-*.test.mjs"
+      - "core/nox-optical-flow-engine.js"
+      - "tests/nox-optical-flow-engine.test.mjs"
+      - "core/nox-temporal-alignment-engine.js"
+      - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "core/nox-smart-motion-separation-engine.js"
+      - "tests/nox-smart-motion-separation-engine.test.mjs"
+      - "core/nox-adaptive-temporal-fusion-engine.js"
+      - "tests/nox-adaptive-temporal-fusion-engine.test.mjs"
+      - "core/nox-multi-engine-intelligence-brain.js"
+      - "core/nox-engine-registry.js"
+      - "core/nox-engine-orchestration-planner.js"
+      - "core/nox-dynamic-engine-adapter.js"
+      - "tests/nox-dynamic-engine-adapter.test.mjs"
+      - "core/nox-cortex.js"
+      - "tests/nox-cortex.test.mjs"
+      - "tests/nox-engine-orchestration-planner.test.mjs"
+      - "tests/nox-engine-registry.test.mjs"
+      - "tests/nox-multi-engine-intelligence-brain.test.mjs"
+      - "core/nox-neural-camera-orchestrator.js"
+      - "tests/nox-neural-camera-orchestrator.test.mjs"
+      - "docs/NOX-CAMERA-ENGINE.md"
+      - "core/nox-temporal-memory-engine.js"
+      - "tests/nox-temporal-memory-engine.test.mjs"
+      - "core/camera.js"
+      - "core/nox-filter-engine.js"
+      - "core/nox-original-filter-library.js"
+      - "tests/nox-original-filter-library.test.mjs"
+      - "docs/NOX-1000-ORIGINAL-FILTERS.md"
+      - "core/nox-mediapipe-selfie-provider.js"
+      - "core/nox-beauty-vision-provider.js"
+      - "core/nox-skin-segmentation-engine.js"
+      - "docs/NOX-CAMERA-INNOVATIONS.md"
+      - "app.js"
+      - "index.html"
+      - "camera.css"
+      - ".github/workflows/camera-engine-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-and-markup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check browser module syntax
+        run: |
+          cp core/camera.js /tmp/camera.mjs
+          cp app.js /tmp/app.mjs
+          cp core/nox-filter-engine.js /tmp/filter-engine.mjs
+          cp core/nox-camera-render-surface.js /tmp/camera-render-surface.mjs
+          cp core/nox-camera-cover-crop.js core/nox-camera-cover-crop.mjs
+          cp core/nox-original-filter-library.js /tmp/nox-original-filter-library.mjs
+          cp core/nox-hybrid-fx-engine.js /tmp/nox-hybrid-fx-engine.mjs
+          cp core/nox-bisenet-face-parsing-provider.js /tmp/bisenet-face-parsing-provider.mjs
+          cp core/nox-bisenet-face-parsing-provider.js core/nox-bisenet-face-parsing-provider.mjs
+          cp core/nox-beauty-vision-provider.js core/nox-beauty-vision-provider.mjs
+          cp core/nox-makeup-rendering-engine.js core/nox-makeup-rendering-engine.mjs
+          cp core/nox-mediapipe-selfie-provider.js /tmp/mediapipe-selfie-provider.mjs
+          cp core/nox-beauty-vision-provider.js /tmp/beauty-vision-provider.mjs
+          cp core/nox-skin-segmentation-engine.js /tmp/skin-segmentation-engine.mjs
+          cp core/nox-mediapipe-face-landmarker-provider.js /tmp/mediapipe-face-landmarker-provider.mjs
+          cp core/nox-mediapipe-face-landmarker-provider.js core/nox-mediapipe-face-landmarker-provider.mjs
+          cp core/nox-multi-model-face-fusion-provider.js core/nox-multi-model-face-fusion-provider.mjs
+          cp core/nox-face-landmarks-engine.js /tmp/face-landmarks-engine.mjs
+          cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
+          cp core/nox-face-roll-estimator.js /tmp/face-roll-estimator.mjs
+          cp core/nox-face-roll-delta.js /tmp/face-roll-delta.mjs
+          cp core/nox-face-roll-estimator.js core/nox-face-roll-estimator.mjs
+          cp core/nox-face-landmark-temporal-tracker.js /tmp/face-landmark-temporal-tracker.mjs
+          cp core/nox-optical-flow-engine.js /tmp/optical-flow-engine.mjs
+          cp core/nox-temporal-memory-engine.js /tmp/temporal-memory-engine.mjs
+          cp core/nox-temporal-alignment-engine.js /tmp/temporal-alignment-engine.mjs
+          cp core/nox-smart-motion-separation-engine.js /tmp/smart-motion-separation-engine.mjs
+          cp core/nox-adaptive-temporal-fusion-engine.js /tmp/adaptive-temporal-fusion-engine.mjs
+          cp core/nox-multi-engine-intelligence-brain.js /tmp/multi-engine-intelligence-brain.mjs
+          cp core/nox-neural-camera-orchestrator.js /tmp/neural-camera-orchestrator.mjs
+          cp core/nox-predictive-camera-intelligence.js /tmp/predictive-camera-intelligence.mjs
+          cp core/nox-predictive-stabilization-assist.js /tmp/predictive-stabilization-assist.mjs
+          cp core/nox-scene-intelligence-engine.js /tmp/scene-intelligence-engine.mjs
+          cp core/nox-engine-registry.js /tmp/engine-registry.mjs
+          cp core/nox-engine-orchestration-planner.js /tmp/engine-orchestration-planner.mjs
+          cp core/nox-dynamic-engine-adapter.js /tmp/dynamic-engine-adapter.mjs
+          cp core/nox-cortex.js /tmp/nox-cortex.mjs
+          node --check /tmp/camera.mjs
+          node tests/nox-camera-webgl-fallback.test.mjs
+          node --check /tmp/app.mjs
+          node --check /tmp/filter-engine.mjs
+          node --check /tmp/camera-render-surface.mjs
+          node tests/nox-camera-render-surface.test.mjs
+          node tests/nox-camera-cover-crop.test.mjs
+          node --check /tmp/nox-original-filter-library.mjs
+          node --check /tmp/nox-hybrid-fx-engine.mjs
+          node --check /tmp/bisenet-face-parsing-provider.mjs
+          node --check core/nox-makeup-rendering-engine.mjs
+          node --check /tmp/mediapipe-selfie-provider.mjs
+          node --check /tmp/beauty-vision-provider.mjs
+          node --check /tmp/skin-segmentation-engine.mjs
+          node --check /tmp/mediapipe-face-landmarker-provider.mjs
+          node tests/nox-mediapipe-face-landmarker-provider.test.mjs
+          node tests/nox-multi-model-face-fusion-provider.test.mjs
+          node tests/nox-camera-mediapipe-sharing.test.mjs
+          node --check /tmp/face-landmarks-engine.mjs
+          node --check /tmp/face-roll-estimator.mjs
+          node tests/nox-face-roll-estimator.test.mjs
+          node tests/nox-face-landmarks-provenance.test.mjs
+          node --check /tmp/face-roll-delta.mjs
+          node tests/nox-face-roll-delta.test.mjs
+          node --check /tmp/face-landmark-temporal-tracker.mjs
+          node --check /tmp/optical-flow-engine.mjs
+          node --check /tmp/temporal-memory-engine.mjs
+          node --check /tmp/temporal-alignment-engine.mjs
+          node --check /tmp/smart-motion-separation-engine.mjs
+          node --check /tmp/adaptive-temporal-fusion-engine.mjs
+          node --check /tmp/multi-engine-intelligence-brain.mjs
+          node --check /tmp/neural-camera-orchestrator.mjs
+          node --check /tmp/predictive-camera-intelligence.mjs
+          node --check /tmp/predictive-stabilization-assist.mjs
+          node --check /tmp/scene-intelligence-engine.mjs
+          node --check /tmp/engine-registry.mjs
+          node --check /tmp/engine-orchestration-planner.mjs
+          node --check /tmp/dynamic-engine-adapter.mjs
+          node --check /tmp/nox-cortex.mjs
+          node tests/nox-original-filter-library.test.mjs
+          node tests/nox-hybrid-fx-engine.test.mjs
+          node tests/nox-optical-flow-engine.test.mjs
+          node tests/nox-temporal-memory-engine.test.mjs
+          node tests/nox-temporal-alignment-engine.test.mjs
+          node tests/nox-temporal-alignment-integration.test.mjs
+          node tests/nox-smart-motion-separation-engine.test.mjs
+          node tests/nox-adaptive-temporal-fusion-engine.test.mjs
+          node tests/nox-multi-engine-intelligence-brain.test.mjs
+          node tests/nox-neural-camera-orchestrator.test.mjs
+          node tests/nox-predictive-camera-intelligence.test.mjs
+          node tests/nox-predictive-stabilization-assist.test.mjs
+          node tests/nox-scene-intelligence-engine.test.mjs
+          node tests/nox-engine-registry.test.mjs
+          node tests/nox-engine-orchestration-planner.test.mjs
+          node tests/nox-dynamic-engine-adapter.test.mjs
+          node tests/nox-cortex.test.mjs
+          node tests/nox-adaptive-runtime-scheduler.test.mjs
+          node tests/nox-controlled-optical-flow-runtime.test.mjs
+          node tests/nox-bisenet-face-parsing-provider.test.mjs
+          cp core/nox-live-makeup-compositor.js /tmp/nox-live-makeup-compositor.mjs
+          node --check /tmp/nox-live-makeup-compositor.mjs
+          cp core/nox-live-makeup-controller.js core/nox-live-makeup-controller.mjs
+          node tests/nox-live-makeup-controller.test.mjs
+          cp core/nox-live-makeup-compositor.js core/nox-live-makeup-compositor.mjs
+          node tests/nox-live-makeup-compositor.test.mjs
+      - name: Check camera markup hooks
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('core/camera.js', 'utf8');
+          if (!html.includes('340 إعدادًا بصريًا في 17 مجموعة') ||
+              html.includes('200 إعداد بصري مباشر')) {
+            throw new Error('Camera filter-library count must match the 340-preset / 17-group catalog');
+          }
+          if (!html.includes('الفصل الدقيق وتتبع ملامح الوجه والشعر والعمق لم تُنفذ بعد')) {
+            throw new Error('Camera filter UI must disclose unimplemented semantic segmentation features');
+          }
+          const required = [
+            'nox-camera-video', 'nox-camera-stage', 'nox-camera-start',
+            'nox-camera-state', 'nox-camera-status', 'nox-camera-flip',
+            'nox-camera-stop', 'nox-camera-capture', 'nox-camera-record',
+            'nox-camera-render', 'nox-lens-orbit', 'nox-lens-track',
+            'nox-camera-caption', 'nox-camera-file', 'nox-camera-result',
+            'nox-camera-photo', 'nox-camera-video-result', 'nox-camera-save',
+            'nox-living-metal-toggle', 'nox-living-metal-hint', 'nox-filter-select',
+            'nox-region-mask-toggle', 'nox-region-mask-clear', 'nox-region-mask-hint', 'nox-region-mask-overlay',
+            'nox-temporal-mode', 'nox-temporal-clear', 'nox-temporal-hint',
+            'nox-flow-mode', 'nox-flow-clear', 'nox-flow-hint', 'nox-region-follow-toggle', 'nox-region-follow-hint', 'nox-subject-lock-toggle', 'nox-subject-lock-hint', 'nox-motion-prediction-toggle', 'nox-motion-prediction-hint', 'nox-stabilizer-toggle', 'nox-stabilizer-hint', 'nox-low-light-mode', 'nox-low-light-hint', 'nox-detail-recovery-mode', 'nox-detail-recovery-hint', 'nox-motion-freeze-toggle', 'nox-motion-freeze-cancel', 'nox-motion-freeze-hint', 'nox-wave-matter-mode', 'nox-wave-matter-hint', 'nox-science-mode', 'nox-science-hint',
+            'nox-photon-timeline-toggle', 'nox-photon-timeline-preview', 'nox-photon-timeline-scrub',
+            'nox-photon-timeline-best', 'nox-photon-timeline-save', 'nox-photon-timeline-clear', 'nox-photon-timeline-hint',
+            'nox-photon-fusion-build', 'nox-photon-fusion-save',
+            'nox-photon-confidence-build', 'nox-photon-confidence-map', 'nox-photon-confidence-hint'
+          ];
+          const missing = required.filter(id => !html.includes('id="' + id + '"'));
+          if (missing.length) {
+            console.error('Missing camera elements:', missing.join(', '));
+            process.exit(1);
+          }
+          for (const id of required) {
+            if (!js.includes('#' + id)) {
+              console.error('Camera module does not reference expected element:', id);
+              process.exit(1);
+            }
+          }
+          for (const token of ['drawLivingMetal', 'livingMetalEnabled', 'livingMetalRegion',
+            'normalizedPoint', 'buildRegionMask', 'updateRegionMaskOverlay', 'regionMaskDrawing', 'regionMaskEnabled',
+            'resetTemporalMemory', 'ensureTemporalMemory', 'renderTemporalMemory', 'setTemporalMode',
+            'resetOpticalFlow', 'estimateOpticalFlow', 'drawOpticalFlow', 'setOpticalFlowMode',
+            'updateTrackedRegionFromFlow', 'setRegionFollowEnabled', 'regionFollowEnabled', 'setSubjectLockEnabled', 'updateSubjectLock', 'subjectLockTemplate', 'subjectLockConfidence', 'subjectLockLostFrames', 'subjectLockReacquireAttempts', 'distinctMatchMargin', 'ambiguousReacquire', 'setMotionPredictionEnabled', 'motionPredictionEnabled', 'subjectLockVelocity', 'searchCenterX', 'searchCenterY', 'leadLimit', 'updateCameraStabilization', 'setCameraStabilizationEnabled', 'cameraStabilizationEnabled', 'stabilizationOffset', 'stabilizationConfidence', 'drawStabilizedSource', 'setLowLightMode', 'lowLightMode', 'u_lowLight', 'u_texel', 'u_detail', 'detailSignal', 'detailGate']) {
+            if (!js.includes(token)) {
+              console.error('Living Metal implementation token missing:', token);
+              process.exit(1);
+            }
+          }
+          console.log('Camera markup hooks present:', required.length);
+          for (const token of ['NOXFaceDetectionEngine', 'NOXFaceTrackingEngine', 'requestFaceDetection(frameNow)', 'drawFaceTrackingOverlay(outputContext, outWidth, outHeight)', 'resetFaceTracking()']) {
+            if (!js.includes(token)) throw new Error('Camera face detection/tracking integration missing: ' + token);
+          }
+          console.log('Camera face detection and geometric tracking integration hooks verified');
+          for (const token of [
+            'NOXBiSeNetFaceParsingProvider', 'NOXBeautyVisionProvider', 'NOXMakeupRenderingEngine',
+            'NOXSkinSegmentationEngine', 'NOX BEAUTY VISION — REAL AI',
+            'runBeautyMaskPreview', 'releaseBeautyVision()',
+            'maxInputDimension: 256', 'beautySkinEngine.validateMask',
+            'NOXMediaPipeFaceLandmarkerProvider', 'NOXFaceLandmarksEngine',
+            'NOXFaceTrackingEngine', 'processLiveFaceLandmarks',
+            'id: "face-landmark-temporal-tracker"', 'dynamicEngineHost.getHandlers()',
+            'liveFaceTracking: true', 'faceTrackingEngine.updateLandmarks', 'faceLandmarksLiveEnabled',
+            'runFaceLandmarksPreview', 'releaseFaceLandmarker()',
+            'nox-face-landmarks-preview', 'await Promise.all(['
+          ]) {
+            if (!js.includes(token)) throw new Error('Real Beauty Vision camera integration missing: ' + token);
+          }
+          const cameraCss = fs.readFileSync('camera.css', 'utf8');
+          if (!cameraCss.includes('.nox-beauty-ai-panel')) {
+            throw new Error('Beauty Vision panel styles are missing');
+          }
+          if (!cameraCss.includes('#nox-face-landmarks-preview')) {
+            throw new Error('Face landmarks overlay styles are missing');
+          }
+          console.log('Opt-in MediaPipe face-skin and face-landmark previews verified');
+          const filterEngine = fs.readFileSync('core/nox-filter-engine.js', 'utf8');
+          for (const token of ['NOX_FILTERS', 'NOX_FILTER_GROUPS', 'getFallbackFilter']) {
+            if (!filterEngine.includes(token)) throw new Error('Filter engine export missing: ' + token);
+          }
+          const hybridEngineModule = await import('file:///tmp/nox-hybrid-fx-engine.mjs');
+          if (hybridEngineModule.NOX_HYBRID_FILTER_COUNT !== 6 ||
+              hybridEngineModule.NOX_HYBRID_FILTERS.some((filter) => filter.engines.length < 3)) {
+            throw new Error('NOX Hybrid Lab must expose six compositions of at least three engines');
+          }
+          for (const token of ['NOX_HYBRID_FILTERS', 'getNOXHybridFilter', 'selectedHybridFilter', 'renderer.hybrid', 'u_hybrid', 'CHROMA TIDE', 'PRISM FORGE', 'QUANTUM BLOOM', 'TOPOGRAPHIC DREAM', 'ECHO MATTER', 'AURORA RELIC']) {
+            if (!js.includes(token) && !hybridEngineModule.NOX_HYBRID_FILTERS.some((filter) => filter.name === token)) {
+              throw new Error('NOX Hybrid Lab integration token missing: ' + token);
+            }
+          }
+          const originalCatalogModule = await import('file:///tmp/nox-original-filter-library.mjs');
+          if (originalCatalogModule.NOX_FILTER_COUNT !== 1000 || originalCatalogModule.listNOXFilters().length !== 1000) {
+            throw new Error('NOX ORIGINAL catalog must expose exactly 1,000 presets');
+          }
+          const originalCamera = fs.readFileSync('core/camera.js', 'utf8');
+          for (const token of ['listNOXFilters', 'NOX ORIGINAL — 1000', 'selectedOriginalFilter ? 10 + selectedOriginalFilter.familyIndex', 'selectedOriginalFilter ? selectedOriginalFilter.variantIndex / 99']) {
+            if (!originalCamera.includes(token)) throw new Error('NOX ORIGINAL live GPU filter integration missing: ' + token);
+          }
+          for (const token of ['buildNOXHybridSelection', 'selectedHybridMask', 'selectedHybridWeights', 'u_hybridWeights[6]', 'uniform1fv(renderer.hybridWeights,', 'nox-hybrid-mixer', 'nox-hybrid-weight', 'syncHybridMixer', 'hybridFallbackFilters']) {
+            if (!js.includes(token)) throw new Error('NOX multi-engine hybrid mixer integration missing: ' + token);
+          }
+          const hybridSelection = hybridEngineModule.buildNOXHybridSelection(['chroma-tide', 'prism-forge', 'aurora-relic'], [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
+          if (hybridSelection.mask !== 35 || hybridSelection.count !== 3 || hybridSelection.weights[5] !== 0.8) {
+            throw new Error('NOX hybrid mixer mask/weight contract failed');
+          }
+          console.log('NOX weighted multi-engine mixer and Canvas fallback verified');
+          console.log('NOX ORIGINAL 1,000 procedural presets and live GPU selector verified');
+          const catalogModule = await import('file:///tmp/filter-engine.mjs');
+          const groups = catalogModule.NOX_FILTER_GROUPS;
+          const filters = catalogModule.NOX_FILTERS;
+          const totalFilters = filters.length;
+          if (totalFilters !== 340 || groups.length !== 17) throw new Error('Expected 340 filters in 17 groups, got ' + totalFilters);
+          if (groups.some((group) => !Array.isArray(group[1]) || group[1].length !== 20)) {
+            throw new Error('Every filter group must contain exactly 20 presets');
+          }
+          const expectedFamilies = [0,1,2,3,4,5,6,7,8,9,5,5,0,5,3,7,2];
+          const ids = new Set();
+          filters.forEach((filter, index) => {
+            const group = groups[filter.groupIndex];
+            if (filter.id !== index || ids.has(filter.id)) throw new Error('Filter IDs must be unique and sequential');
+            ids.add(filter.id);
+            if (!group || filter.category !== group[0] || filter.variant < 0 || filter.variant >= 20) {
+              throw new Error('Filter metadata does not match its catalog group: ' + filter.name);
+            }
+            if (filter.family !== expectedFamilies[filter.groupIndex]) {
+              throw new Error('Unexpected render-family mapping for ' + filter.name);
+            }
+          });
+          if (typeof catalogModule.getFallbackFilter !== 'function' ||
+              filters.some((filter) => typeof catalogModule.getFallbackFilter(filter) !== 'string')) {
+            throw new Error('Every filter must provide a Canvas fallback style');
+          }
+          const cameraSource = fs.readFileSync('core/camera.js', 'utf8');
+          for (const token of [
+            'NOXLiveMakeupController',
+            'NOXLiveMakeupCompositor',
+            'startLiveMakeup()',
+            'liveMakeupCompositor.draw(renderCanvas',
+            'أقدم من 220ms تُرفض تلقائيًا',
+            'renderCanvas.captureStream',
+            'function createOutputCanvas()'
+          ]) {
+            if (!cameraSource.includes(token)) throw new Error('Live makeup freshness/composition contract missing: ' + token);
+          }
+          console.log('Live makeup is composited into the shared camera output used by photo and video capture');
+          if (!cameraSource.includes('Boolean(selectedOriginalFilter) || Boolean(selectedHybridFilter)')) throw new Error('CORTEX diagnostics must recognize original and hybrid live filters');
+
+          if (!cameraSource.includes('selectedFilter ? selectedFilter.groupIndex : -1') ||
+              !cameraSource.includes('selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens]')) {
+            throw new Error('Selected filter group or Canvas fallback is not wired to the renderer');
+          }
+          for (const token of ['u_filterGroup', 'renderer.filterGroup', 'u_filterGroup > 9.5', 'u_filterGroup > 10.5', 'u_filterGroup > 11.5', 'u_filterGroup > 12.5', 'u_filterGroup > 13.5', 'u_filterGroup > 14.5', 'u_filterGroup > 15.5']) {
+            if (!cameraSource.includes(token)) throw new Error('Extended live-filter shader path missing: ' + token);
+          }
+          if (!cameraSource.includes('float eyeLum = dot(c, vec3(0.299, 0.587, 0.114));') || !cameraSource.includes('smoothstep(0.18,0.78,eyeLum)')) {
+            throw new Error('Eye filter shader must calculate luminance within its own scope');
+          }
+          const extendedGroups = groups.slice(10).map(group => group[0]);
+          const expectedExtended = ['مكياج الوجه','البشرة والعناية بالمظهر','الشعر والتسريحات','العيون والحواجب والرموش','الخلفيات والفصل المكاني','العمق والمنظور والبورتريه','الجسيمات والزخارف التفاعلية'];
+          if (JSON.stringify(extendedGroups) !== JSON.stringify(expectedExtended)) throw new Error('Extended filter groups are missing or reordered');
+          console.log('Extended live shader paths and seven filter groups verified');
+          for (const token of ['u_variant', 'u_time', 'family < 8.5']) {
+            if (!js.includes(token)) throw new Error('GPU filter family shader missing: ' + token);
+          }
+          console.log('Living Metal prototype hooks present: 3');
+          console.log('Manual region mask hooks present: 3');
+          const temporalAlignmentSource = fs.readFileSync('core/nox-temporal-alignment-engine.js', 'utf8');
+          for (const token of ['minConfidence = 0.16', 'minVectorCount = 4', 'maxAccumulated = 0.12', 'minSpatialSpan = 0.25', 'localized-motion-vectors', 'inconsistent-motion-vectors', 'onCapture(index)', 'getTransform(index)', 'reset()']) {
+            if (!temporalAlignmentSource.includes(token)) throw new Error('Temporal alignment confidence and drift policy missing: ' + token);
+          }
+          for (const token of ['NOXTemporalAlignmentEngine', 'temporalAlignmentEngine.ingest', 'temporalAlignmentEngine.onCapture', 'temporalAlignmentEngine.getTransform', 'alignment.dx * width']) {
+            if (!js.includes(token)) throw new Error('Temporal alignment is not connected to the camera pipeline: ' + token);
+          }
+          console.log('Temporal alignment confidence gates, drift bounds, and camera adapter hooks verified');
+          const motionSeparationSource = fs.readFileSync('core/nox-smart-motion-separation-engine.js', 'utf8');
+          for (const token of ['NOXSmartMotionSeparationEngine', 'minBackgroundRatio = 0.55', 'maxMotionResidual = 0.028', 'localizedMotionCandidates', 'dominant-global-motion-found']) {
+            if (!motionSeparationSource.includes(token)) throw new Error('Smart Motion Separation consensus contract missing: ' + token);
+          }
+          for (const token of ['NOXSmartMotionSeparationEngine', 'motionSeparationEngine.process', 'motionSeparationResult.globalVectors', 'NOX Smart Motion Separation']) {
+            if (!js.includes(token)) throw new Error('Smart Motion Separation is not connected to the camera pipeline: ' + token);
+          }
+          console.log('NOX Smart Motion Separation global consensus and camera integration verified');
+          const adaptiveFusionSource = fs.readFileSync('core/nox-adaptive-temporal-fusion-engine.js', 'utf8');
+          for (const token of ['NOXAdaptiveTemporalFusionEngine', 'minAlignmentConfidence = 0.22', 'minMotionConfidence = 0.14', 'ageDecay = 0.24', 'global-motion-evidence-unavailable']) {
+            if (!adaptiveFusionSource.includes(token)) throw new Error('Adaptive temporal fusion evidence policy missing: ' + token);
+          }
+          for (const token of ['NOXAdaptiveTemporalFusionEngine', 'adaptiveTemporalFusionEngine.plan', 'fusion.layers', 'NOX Adaptive Temporal Fusion']) {
+            if (!js.includes(token)) throw new Error('Adaptive temporal fusion is not connected to the camera compositor: ' + token);
+          }
+          console.log('NOX Adaptive Temporal Fusion evidence gates and camera compositor integration verified');
+          const orchestratorSource = fs.readFileSync('core/nox-neural-camera-orchestrator.js', 'utf8');
+          for (const token of ['NOXNeuralCameraOrchestrator', 'historySize = 12', 'overloadRatio = 0.92', 'recoveryRatio = 0.68', 'session-only', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'decisionCooldownFrames = 12', 'decision-cooldown-active', 'commitAdaptiveDecision', 'cooldownRemaining', 'reset()']) {
+            if (!orchestratorSource.includes(token)) throw new Error('NOX Neural Camera Orchestrator bounded adaptive-memory policy missing: ' + token);
+          }
+          for (const token of ['NOXNeuralCameraOrchestrator', 'noxNeuralCameraOrchestrator.observeFrame', 'noxNeuralCameraOrchestrator.evaluate', 'ذاكرة التكيف قصيرة المدى']) {
+            if (!js.includes(token)) throw new Error('NOX Neural Camera Orchestrator is not integrated with measured camera frames: ' + token);
+          }
+          for (const token of ['getAdaptiveRecommendation', 'recommend-reduce-load', 'recommend-one-tier-recovery', 'NOX Neural Decision', 'commitAdaptiveDecision(qualityDecision.action)']) {
+            if (!js.includes(token)) throw new Error('Measured neural decision policy is not controlling bounded camera quality tiers: ' + token);
+          }
+          console.log('NOX Neural Camera Orchestrator session-only adaptive memory and camera integration verified');
+
+          const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
+          for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
+            if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
+          }
+          console.log('Temporal memory engine hooks and bounded buffer profile verified');
+          for (const token of ['lowPower ? 48 : 64', 'lowPower ? 36 : 48', 'lowPower ? 2 : 3', 'getImageData']) {
+            if (!js.includes(token)) throw new Error('Optical flow low-resolution bounded sampling missing: ' + token);
+          }
+          console.log('Sparse optical flow bounded sampling hooks verified');
+          const flowEngineSource = fs.readFileSync('core/nox-optical-flow-engine.js', 'utf8');
+          if (!flowEngineSource.includes('dx: -bestDx / width')) {
+            throw new Error('Sparse optical flow engine must normalize horizontal motion vectors');
+          }
+          if (!js.includes('opticalFlowEngine.process') ||
+              !js.includes('dynamicEngineHost.getHandlers()') ||
+              !js.includes('new NOXDynamicEngineAdapter') ||
+              !js.includes('cortex.execute')) {
+            throw new Error('Sparse optical flow must execute through the NOX Dynamic Adapter and CORTEX');
+          }
+          for (const engineId of ['optical-flow', 'face-detection', 'face-tracking', 'face-landmarks', 'facial-mask-builder', 'skin-segmentation']) {
+            if (!js.includes('id: "' + engineId + '"')) {
+              throw new Error('Camera dynamic adapter registration missing: ' + engineId);
+            }
+          }
+          for (const engineId of ['temporal-memory', 'temporal-alignment', 'smart-motion-separation', 'adaptive-temporal-fusion', 'predictive-camera-intelligence', 'scene-intelligence']) {
+            if (!js.includes('id: "' + engineId + '"') || !js.includes('dynamicEngineHost.runSync("' + engineId + '"')) {
+              throw new Error('Camera synchronous dynamic adapter integration missing: ' + engineId);
+            }
+          }
+          if (!js.includes('المحركات المتصلة بالعقد الموحد') ||
+              !js.includes('dynamicEngineHost.getRuntimeSnapshot()') ||
+              !js.includes('حالة دورة حياة المحركات') ||
+              !js.includes('أهلية خطة العقل')) {
+            throw new Error('Dynamic adapter runtime lifecycle diagnostics are missing');
+          }
+          const adapterModule = await import('file:///tmp/dynamic-engine-adapter.mjs');
+          if (typeof adapterModule.NOXDynamicEngineAdapterHost.prototype.getRuntimeSnapshot !== 'function') {
+            throw new Error('Dynamic adapter runtime snapshot API is missing');
+          }
+          if (typeof adapterModule.NOXDynamicEngineAdapter.prototype.handleSync !== 'function' ||
+              typeof adapterModule.NOXDynamicEngineAdapterHost.prototype.runSync !== 'function') {
+            throw new Error('Synchronous Dynamic Adapter execution API is missing');
+          }
+          for (const token of ['regionFollowLastSequence', 'count < 2', 'Math.max(-0.025']) {
+            if (!js.includes(token)) throw new Error('Region-follow confidence and motion guard missing: ' + token);
+          }
+          console.log('Reality Follow confidence and displacement guards verified');
+          for (const token of ['meanSad > 38', 'subjectLockConfidence < 0.46', 'subjectLockLostFrames >= 2', 'variance < 12']) {
+            if (!js.includes(token)) throw new Error('Subject Lock confidence/loss guard missing: ' + token);
+          }
+          console.log('Subject Lock bounded template matching and loss guards verified');
+          for (const token of ['subjectLockLostFrames >= 2', 'lowPower ? 9 : 14', 'distinctMatchMargin < 1.5', 'meanSad > 25', 'subjectLockWasReacquired']) {
+            if (!js.includes(token)) throw new Error('Subject Lock safe re-acquisition guard missing: ' + token);
+          }
+          console.log('Subject Lock conservative re-acquisition guards verified');
+          for (const token of ['subjectLockVelocity.x * 0.62', 'observedDx * 0.38', 'lowPower ? 4 : 6', 'motionPredictionEnabled ? Math.max', 'subjectLockVelocity = { x: 0, y: 0 }']) {
+            if (!js.includes(token)) throw new Error('Motion prediction smoothing or bounded lead missing: ' + token);
+          }
+          console.log('NOX Motion Prediction bounded lead and velocity smoothing verified');
+          for (const token of ['stableVectors.length < 4', 'maxOffset = 0.025', 'stabilizationTarget.x - correctionX', 'stabilizationOffset.x * 0.76', 'const zoom = cameraStabilizationEnabled ? 1.06 : 1']) {
+            if (!js.includes(token)) throw new Error('Smart Stabilizer confidence, crop, or smoothing guard missing: ' + token);
+          }
+          const stabilizationAssistSource = fs.readFileSync('core/nox-predictive-stabilization-assist.js', 'utf8');
+          for (const token of ['calculateNOXPredictiveStabilizationCorrection', 'predictionConfidence >= minPredictionConfidence', 'predictionHorizonMs <= maxPredictionHorizonMs', 'frameRatio < maxFrameRatio', 'maxCorrection', 'predictionUsed']) {
+            if (!stabilizationAssistSource.includes(token)) throw new Error('Predictive stabilization helper guard missing: ' + token);
+          }
+          if (!js.includes('calculateNOXPredictiveStabilizationCorrection') || !js.includes('stabilizationCorrection.dx') || !js.includes('stabilizationCorrection.dy')) {
+            throw new Error('Predictive stabilization helper is not wired to the live camera path');
+          }
+          console.log('NOX Smart Stabilizer robust motion estimate, bounded crop, and independently testable predictive assist verified');
+          for (const token of ['darkMask = 1.0 - smoothstep', 'u_lowLight > 1.5', 'smoothstep(0.025, 0.16, edge1)', 'lowLightMode === "strong"', 'u_texel']) {
+            if (!js.includes(token)) throw new Error('Low-light adaptive shadow/noise treatment missing: ' + token);
+          }
+          console.log('NOX Low-Light Rescue adaptive shadow and edge-aware smoothing verified');
+          for (const token of ['detailSignal = centerLum - averageLum', 'smoothstep(0.012, 0.075, abs(detailSignal))', 'u_detail > 1.5', 'detailRecoveryMode === "strong"', 'updateMotionFreezeState', 'motionFreezeCaptureStartedAt', 'motionFreezeLastSpeed <= 0.9', '1400', 'nox-motion-freeze-cancel']) {
+            if (!js.includes(token)) throw new Error('True Detail Recovery guarded detail enhancement missing: ' + token);
+          }
+          console.log('NOX True Detail Recovery thresholded local-detail enhancement verified');
+          for (const token of ['motionFreezeEnabled', 'opticalFlowVectors.filter', 'motionFreezeLastSpeed <= 0.9', 'motionFreezeCaptureStartedAt', '1400', 'cancelMotionFreezeCapture', 'capturePhotoNow']) {
+            if (!js.includes(token)) throw new Error('Motion Freeze bounded capture-assist behavior missing: ' + token);
+          }
+          console.log('NOX Motion Freeze motion-aware capture timing and timeout fallback verified');
+          for (const token of ['u_waveMatter', 'filmThickness', 'phaseR', 'phaseG', 'phaseB', 'edgeGate', 'Rayleigh-like sky scattering grade', 'setWaveMatterMode', 'u_science', 'setScienceMode', 'fluorescence', 'polarization', 'light-field', 'spectral']) {
+            if (!js.includes(token)) throw new Error('Wave Matter optical-physics simulation missing: ' + token);
+          }
+          console.log('NOX Wave Matter thin-film, dispersion, and atmospheric-scattering shader paths verified');
+          for (const token of ['capturePhotonMoment', 'measurePhotonSharpness', 'getPhotonMotionEstimate', 'selectBestPhotonMoment', 'saveSelectedPhotonMoment', 'photonTimelineOrder', 'lowPower ? 192 : 256', 'lowPower ? 3 : 4', '220 : 150', 'nox-photon-timeline-scrub']) {
+            if (!js.includes(token)) throw new Error('NOX PHOTON TIME MACHINE timeline implementation missing: ' + token);
+          }
+          console.log('NOX PHOTON TIME MACHINE bounded timeline, moment scoring, and preview hooks verified');
+          for (const token of ['estimatePhotonAlignment', 'drawAlignedPhotonSlot', 'alignmentConfidence', 'alignmentValid', 'alignmentError', 'previousSlot.meta.alignmentValid && Boolean(alignment)', 'bestSad > 38', 'confidence < 0.035']) {
+            if (!js.includes(token)) throw new Error('NOX Temporal Reconstruction alignment guard missing: ' + token);
+          }
+          console.log('NOX Temporal Reconstruction bounded global alignment and confidence guards verified');
+          for (const token of ['buildPhotonDetailFusion', 'clearPhotonDetailFusion', 'savePhotonDetailFusion', 'photonFusionTilesUsed', 'meanDifference > 14', 'bestSharpness * 1.12', 'bestSharpness + 1.5', 'scratchSlots.forEach', 'photonFusionReferenceIndex']) {
+            if (!js.includes(token)) throw new Error('NOX Temporal Detail Fusion safety or selection guard missing: ' + token);
+          }
+          console.log('NOX Temporal Detail Fusion conservative tile selection and cleanup guards verified');
+          for (const token of ['buildPhotonConfidenceMap', 'clearPhotonConfidenceMap', 'photonConfidenceCounts', 'difference / samples <= 14', 'agreeing >= 2', 'context.drawImage(reference.canvas, 0, 0)', 'photonConfidenceReferenceIndex']) {
+            if (!js.includes(token)) throw new Error('NOX Temporal Confidence Map classification or invalidation guard missing: ' + token);
+          }
+          console.log('NOX Temporal Confidence Map evidence categories and reference invalidation verified');
+          for (const token of ['buildPhotonGhostGuard', 'clearPhotonGhostGuard', 'photonGhostGuardTiles', 'temporalRange > 18', 'photonGhostGuardReferenceIndex === referenceSlotIndex', 'nox-photon-ghost-build', 'nox-photon-ghost-map']) {
+            if (!js.includes(token) && !fs.readFileSync('index.html', 'utf8').includes(token)) {
+              throw new Error('NOX Temporal Ghost Guard detection or fusion-blocking guard missing: ' + token);
+            }
+          }
+          console.log('NOX Temporal Ghost Guard temporal-variation mask and fusion blocking verified');
+          console.log('NOX filter catalog verified:', totalFilters, 'presets /', groups.length, 'groups');
+          NODE

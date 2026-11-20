@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { NOXSceneIntelligenceEngine } from "../core/nox-scene-intelligence-engine.js";
+const engine = new NOXSceneIntelligenceEngine();
+const dark = engine.evaluate({ meanLuminance: 0.12, contrast: 0.18, motion: { enabled: true, accepted: true, vectorCount: 12 }, frameCostMs: 8, targetFrameMs: 33 });
+assert.equal(dark.lighting, "very-dim"); assert.equal(dark.movement, "dynamic"); assert.equal(dark.recommendation, "consider-low-light-pipeline");
+const bright = engine.evaluate({ meanLuminance: 0.9, contrast: 0.34, motion: { enabled: true, accepted: false, vectorCount: 3 }, frameCostMs: 8, targetFrameMs: 33 });
+assert.equal(bright.lighting, "bright"); assert.equal(bright.contrast, "high"); assert.equal(bright.movement, "ambiguous-or-insufficient");
+const overloaded = engine.evaluate({ meanLuminance: 0.5, contrast: 0.2, motion: { enabled: true, accepted: true, vectorCount: 10 }, frameCostMs: 31, targetFrameMs: 33 });
+assert.equal(overloaded.performance, "over-budget"); assert.equal(overloaded.recommendation, "protect-frame-budget");
+const unknown = engine.evaluate({});
+assert.equal(unknown.lighting, "unknown"); assert.equal(unknown.movement, "unknown"); assert.equal(unknown.confidence, 0); assert.equal(unknown.semanticRecognition, false);
+const invalid = engine.evaluate({ meanLuminance: 4, contrast: -1, motion: { enabled: false } });
+assert.equal(invalid.lighting, "unknown"); assert.equal(invalid.contrast, "unknown");
+assert.equal(engine.getStatus().lighting, "unknown"); engine.reset(); assert.equal(engine.getStatus().confidence, 0);
+console.log("NOX Scene Intelligence Engine deterministic tests passed");

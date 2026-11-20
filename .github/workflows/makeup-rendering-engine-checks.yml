@@ -1,0 +1,62 @@
+name: NOX Makeup Rendering Engine Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-makeup-rendering-engine.js"
+      - "core/nox-live-makeup-controller.js"
+      - "core/camera.js"
+      - "tests/nox-live-makeup-compositor.test.mjs"
+      - "core/nox-live-makeup-compositor.js"
+      - "tests/nox-live-makeup-controller.test.mjs"
+      - "tests/nox-makeup-rendering-engine.test.mjs"
+      - ".github/workflows/makeup-rendering-engine-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-makeup-rendering-engine.js"
+      - "core/nox-live-makeup-controller.js"
+      - "core/nox-live-makeup-compositor.js"
+      - "core/camera.js"
+      - "tests/nox-live-makeup-compositor.test.mjs"
+      - "tests/nox-live-makeup-controller.test.mjs"
+      - "tests/nox-makeup-rendering-engine.test.mjs"
+      - ".github/workflows/makeup-rendering-engine-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  makeup-rendering-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check engine syntax
+        run: |
+          cp core/nox-makeup-rendering-engine.js /tmp/nox-makeup-rendering-engine.mjs
+          node --check /tmp/nox-makeup-rendering-engine.mjs
+      - name: Check live makeup controller syntax
+        run: |
+          cp core/nox-live-makeup-controller.js /tmp/nox-live-makeup-controller.mjs
+          node --check /tmp/nox-live-makeup-controller.mjs
+      - name: Run live makeup controller tests
+        run: |
+          cp core/nox-live-makeup-controller.js core/nox-live-makeup-controller.mjs
+          node tests/nox-live-makeup-controller.test.mjs
+      - name: Check live makeup compositor syntax
+        run: |
+          cp core/nox-live-makeup-compositor.js /tmp/nox-live-makeup-compositor.mjs
+          node --check /tmp/nox-live-makeup-compositor.mjs
+      - name: Run live makeup compositor tests
+        run: |
+          cp core/nox-live-makeup-compositor.js core/nox-live-makeup-compositor.mjs
+          cp core/nox-makeup-rendering-engine.js core/nox-makeup-rendering-engine.mjs
+          node tests/nox-live-makeup-compositor.test.mjs
+      - name: Run makeup mask tests
+        run: |
+          cp core/nox-makeup-rendering-engine.js core/nox-makeup-rendering-engine.mjs
+          node tests/nox-makeup-rendering-engine.test.mjs
