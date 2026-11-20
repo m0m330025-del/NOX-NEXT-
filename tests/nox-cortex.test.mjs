@@ -18,6 +18,13 @@ assert.equal(cortex.engines.get("makeup-rendering").enabled, false,
   "makeup must remain unavailable until a trusted semantic-region provider is connected");
 assert.equal(beauty.execution, "not-started");
 
+const liteFaceMask = cortex.plan(
+  { faceRequested: true, landmarksRequested: true, maskRequested: true },
+  { requested: ["face-landmarks", "facial-mask-builder"], mode: "lite" }
+);
+assert.deepEqual(liteFaceMask.engines.map(engine => engine.id), ["face-landmarks", "facial-mask-builder"]);
+assert.equal(liteFaceMask.totalCost, 3, "bounded low-resolution face geometry must fit lite mode");
+
 const skinOnly = cortex.plan({ skinRequested: true }, { requested: ["skin-segmentation"], mode: "balanced" });
 assert.deepEqual(skinOnly.engines.map(engine => engine.id), ["skin-segmentation"],
   "MediaPipe selfie segmentation is an independent provider and must not require browser FaceDetector");
