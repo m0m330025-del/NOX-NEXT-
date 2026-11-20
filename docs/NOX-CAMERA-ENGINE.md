@@ -117,3 +117,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 - The brain does not infer temperature, battery state, scene semantics, depth, or sensor properties that the browser does not expose. It does not create pixels or replace the specialist engines.
 - A deterministic test covers a complete evidence-backed path, low-power overload, stale flow, ambiguous motion, missing data, missing alignment, disabled temporal mode, and reset behavior.
 - This is a source-level coordination layer. CI does not establish real-device performance or visual improvement; Android Chrome testing remains required.
+
+## NOX Neural Camera Orchestrator
+
+- `core/nox-neural-camera-orchestrator.js` wraps the Multi-Engine Intelligence Brain with a bounded, session-only decision memory.
+- It records only measured render duration and the active frame-time budget. The history is capped (12 samples by default), is reset when the camera session starts/stops, and is never written to local storage or sent to a server.
+- Three or more overload samples in the latest four observations produce a reduce-load recommendation. Five or more stable samples in the latest six can produce a one-tier recovery recommendation, subject to the low-power minimum tier.
+- Recommendations are diagnostic only. The orchestrator does not switch quality tiers, toggle engines, infer battery/temperature, or train a neural network. "Neural" is the feature name; the implemented policy is deterministic and testable.
+- Invalid measurements are ignored. Deterministic tests cover overload, recovery hysteresis, low-power floor, bounded history, invalid input, and reset.
+- Measurements are collected once per rendered camera frame. Browser CI does not prove device-specific benefit; real profiling is still required.
