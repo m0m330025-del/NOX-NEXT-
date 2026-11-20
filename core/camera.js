@@ -1,6 +1,6 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
 import { listNOXFilters } from "./nox-original-filter-library.js";
-import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection } from "./nox-hybrid-fx-engine.js";
+import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CHAOS_MODES, getNOXChaosMode, createNOXChaosRecipe, validateNOXChaosRecipe } from "./nox-hybrid-fx-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
@@ -56,6 +56,7 @@ uniform float u_science;
 uniform float u_signature;
 uniform float u_hybrid;
 uniform float u_hybridMix;
+uniform float u_chaosMode;
 uniform float u_hybridWeights[6];
 uniform vec2 u_texel;
 void main() {
@@ -319,6 +320,16 @@ void main() {
   float angle = atan(centered.y, centered.x);
   float lum = dot(c, vec3(0.299, 0.587, 0.114));
   vec3 hybridColor = c;
+  float chaosLum = dot(c, vec3(0.299, 0.587, 0.114));
+  float chaosPulse = 0.5 + 0.5 * sin(u_time * 1.7 + radius * 18.0 + chaosLum * 5.0);
+  float chaosPhase = sin(angle * 3.0 + u_time * 0.8 + chaosLum * 6.28318);
+  float chaosGravity = exp(-radius * (2.0 + 2.0 * chaosPulse));
+  float chaosTemporal = 0.5 + 0.5 * sin(u_time * 0.55 + uv.x * 8.0 - uv.y * 5.0);
+  float chaosCoupling = 0.0;
+  if (u_chaosMode > 0.5 && u_chaosMode < 1.5) chaosCoupling = chaosPulse;
+  else if (u_chaosMode > 1.5 && u_chaosMode < 2.5) chaosCoupling = 0.5 + 0.5 * chaosPhase;
+  else if (u_chaosMode > 2.5 && u_chaosMode < 3.5) chaosCoupling = chaosGravity;
+  else if (u_chaosMode > 3.5) chaosCoupling = chaosTemporal;
   if (mod(floor(u_hybrid / 1.0), 2.0) > 0.5) {
     float tide = sin(uv.x * 18.0 + sin(uv.y * 11.0 + u_time * 0.7) * 2.2 + u_time);
     vec2 bend = vec2(cos(tide * 2.4), sin(tide * 2.1)) * u_texel * 5.0;
@@ -326,7 +337,7 @@ void main() {
     float edge = length(texture2D(u_image, uv + u_texel * 2.0).rgb - texture2D(u_image, uv - u_texel * 2.0).rgb);
     hybridColor = mix(c, refracted.bgr, 0.22 + 0.18 * abs(tide));
     hybridColor += vec3(0.08, 0.42, 0.58) * smoothstep(0.025, 0.18, edge) * (0.35 + 0.25 * tide);
-    c = mix(c, hybridColor, clamp(u_hybridWeights[0], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[0] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.52 + chaosLum * 0.12)), 0.0, 0.85));
   }
   if (mod(floor(u_hybrid / 2.0), 2.0) > 0.5) {
     float bands = sin(angle * 7.0 + radius * 46.0 - u_time * 1.3);
@@ -336,7 +347,7 @@ void main() {
     hybridColor = vec3(redTap.r, c.g, blueTap.b);
     hybridColor = mix(hybridColor, vec3(0.18, 0.88, 1.0), smoothstep(0.04, 0.24, edge) * 0.42);
     hybridColor += vec3(0.52, 0.18, 0.78) * max(0.0, bands) * 0.10;
-    c = mix(c, hybridColor, clamp(u_hybridWeights[1], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[1] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.42 + chaosTemporal * 0.12)), 0.0, 0.85));
   }
   if (mod(floor(u_hybrid / 4.0), 2.0) > 0.5) {
     vec2 cell = floor(uv * vec2(31.0, 23.0));
@@ -345,7 +356,7 @@ void main() {
     float bloom = exp(-radius * radius * 9.0) * pulse;
     float spark = smoothstep(0.965, 1.0, particle) * pulse;
     hybridColor = c * vec3(0.72, 0.88, 1.18) + vec3(0.16, 0.30, 0.58) * bloom + vec3(0.38, 0.78, 1.0) * spark * 0.55;
-    c = mix(c, hybridColor, clamp(u_hybridWeights[2], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[2] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.58 + chaosLum * 0.12)), 0.0, 0.85));
   }
   if (mod(floor(u_hybrid / 8.0), 2.0) > 0.5) {
     float field = sin(uv.x * 22.0 + sin(uv.y * 13.0) * 3.0) + cos(uv.y * 19.0 - u_time * 0.25);
@@ -353,7 +364,7 @@ void main() {
     float dotGrid = step(0.42, fract(sin(dot(floor(uv * vec2(48.0, 32.0)), vec2(12.9898,78.233))) * 43758.5453));
     vec3 ink = mix(vec3(0.06,0.10,0.22), vec3(0.20,0.92,0.78), contour);
     hybridColor = mix(c, ink * (0.42 + lum * 0.82), 0.18 + contour * 0.24) + vec3(0.32,0.16,0.62) * dotGrid * contour * 0.10;
-    c = mix(c, hybridColor, clamp(u_hybridWeights[3], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[3] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.36 + chaosTemporal * 0.12)), 0.0, 0.85));
   }
   if (mod(floor(u_hybrid / 16.0), 2.0) > 0.5) {
     vec2 drift = vec2(sin(u_time * 0.7 + uv.y * 8.0), cos(u_time * 0.55 + uv.x * 7.0)) * u_texel * 4.0;
@@ -361,14 +372,14 @@ void main() {
     vec3 echoB = texture2D(u_image, clamp(uv - drift * 1.7, 0.0, 1.0)).rgb;
     float motionMask = smoothstep(0.025, 0.22, length(echoA - echoB));
     hybridColor = mix(c, mix(echoA, echoB.bgr, 0.48), 0.16 + motionMask * 0.38) + vec3(0.10,0.42,0.78) * motionMask * 0.14;
-    c = mix(c, hybridColor, clamp(u_hybridWeights[4], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[4] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.48 + chaosLum * 0.12)), 0.0, 0.85));
   }
   if (mod(floor(u_hybrid / 32.0), 2.0) > 0.5) {
     float aurora = sin(uv.y * 26.0 + sin(uv.x * 9.0 + u_time * 0.4) * 3.0);
     vec3 film = 0.5 + 0.5 * cos(vec3(0.0, 2.1, 4.2) + aurora * 2.4 + radius * 13.0);
     float arc = exp(-pow((radius - (0.22 + 0.035 * sin(angle * 3.0 + u_time))) * 34.0, 2.0));
     hybridColor = c * (0.62 + film * 0.72) + vec3(0.12,0.58,0.72) * max(0.0, aurora) * 0.12 + vec3(0.52,0.18,0.82) * arc * 0.20;
-    c = mix(c, hybridColor, clamp(u_hybridWeights[5], 0.0, 0.85));
+    c = mix(c, hybridColor, clamp(u_hybridWeights[5] * (u_chaosMode < 0.5 ? 1.0 : (0.68 + chaosCoupling * 0.62 + chaosTemporal * 0.12)), 0.0, 0.85));
   }
   gl_FragColor = vec4(clamp(c, 0.0, 1.0), color.a);
 }`
@@ -407,6 +418,7 @@ export function initCamera() {
   let selectedOriginalFilter = null;
   let selectedHybridFilter = null;
   let selectedHybridMask = 0;
+  let selectedChaosMode = "resonance";
   let selectedHybridWeights = [0.48, 0.52, 0.44, 0.46, 0.40, 0.50];
   let recorder = null;
   let recordingStream = null;
@@ -1131,6 +1143,7 @@ export function initCamera() {
       hybrid: gl.getUniformLocation(program, "u_hybrid"),
       hybridMix: gl.getUniformLocation(program, "u_hybridMix"),
       hybridWeights: gl.getUniformLocation(program, "u_hybridWeights[0]"),
+      chaosMode: gl.getUniformLocation(program, "u_chaosMode"),
       texel: gl.getUniformLocation(program, "u_texel")
     };
   }
@@ -2636,6 +2649,7 @@ export function initCamera() {
         const signatureModes = ["aurora", "prism", "quantum", "liquid", "holo"];
         gl.uniform1f(renderer.signature, Math.max(0, signatureModes.indexOf(signatureMode) + 1));
         gl.uniform1f(renderer.hybrid, selectedHybridMask);
+        gl.uniform1f(renderer.chaosMode, getNOXChaosMode(selectedChaosMode).mode);
         gl.uniform1fv(renderer.hybridWeights, selectedHybridWeights);
         gl.uniform1f(renderer.hybridMix, selectedHybridFilter ? selectedHybridFilter.mix : 0.42);
         gl.uniform2f(renderer.texel, 1 / Math.max(1, outWidth), 1 / Math.max(1, outHeight));
@@ -3267,14 +3281,27 @@ export function initCamera() {
     const hybridMixerPanel = document.createElement("div");
     hybridMixerPanel.className = "nox-hybrid-mixer";
     hybridMixerPanel.hidden = true;
-    const mixerTitle = document.createElement("b"); mixerTitle.textContent = "HYBRID MIXER";
+    const mixerTitle = document.createElement("b"); mixerTitle.textContent = "NOX CHAOS FUSION";
+    const chaosSelect = document.createElement("select");
+    chaosSelect.className = "nox-chaos-mode";
+    chaosSelect.setAttribute("aria-label", "نمط تفاعل المحركات");
+    NOX_CHAOS_MODES.forEach((item) => { const option = document.createElement("option"); option.value = item.id; option.textContent = item.name + " — " + item.description; chaosSelect.append(option); });
+    chaosSelect.value = selectedChaosMode;
+    chaosSelect.addEventListener("change", () => { selectedChaosMode = getNOXChaosMode(chaosSelect.value).id; if (stream) renderFrame(false); announce("نمط التفاعل: " + getNOXChaosMode(selectedChaosMode).name, Boolean(stream)); });
+    const recipeName = document.createElement("input"); recipeName.type = "text"; recipeName.maxLength = 32; recipeName.placeholder = "اسم التركيبة"; recipeName.setAttribute("aria-label", "اسم التركيبة");
+    const recipeSave = document.createElement("button"); recipeSave.type = "button"; recipeSave.textContent = "حفظ التركيبة";
+    const recipeLoad = document.createElement("select"); recipeLoad.setAttribute("aria-label", "استعادة تركيبة محفوظة");
+    function refreshChaosRecipes() { recipeLoad.replaceChildren(); const empty = document.createElement("option"); empty.value = ""; empty.textContent = "استعادة تركيبة محفوظة"; recipeLoad.append(empty); try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); if (Array.isArray(list)) list.filter(validateNOXChaosRecipe).forEach((item,index) => { const option = document.createElement("option"); option.value = String(index); option.textContent = item.name; recipeLoad.append(option); }); } catch {} }
+    recipeSave.addEventListener("click", () => { try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); const ids = NOX_HYBRID_FILTERS.filter((item,index) => hybridLayerControls[index].check.checked).map(item => item.id); const recipe = createNOXChaosRecipe(recipeName.value, ids, selectedHybridWeights, selectedChaosMode); const next = (Array.isArray(list) ? list.filter(validateNOXChaosRecipe).filter(item => item.name !== recipe.name) : []); next.push(recipe); localStorage.setItem("nox-chaos-recipes-v1", JSON.stringify(next.slice(-20))); refreshChaosRecipes(); recipeName.value = ""; announce("تم حفظ التركيبة محليًا على هذا المتصفح."); } catch(error) { announce("تعذر الحفظ: " + String(error.message || error)); } });
+    recipeLoad.addEventListener("change", () => { if (recipeLoad.value === "") return; try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); const recipe = validateNOXChaosRecipe(list[Number(recipeLoad.value)]); if (!recipe) throw new Error("invalid recipe"); selectedChaosMode = recipe.mode; chaosSelect.value = recipe.mode; hybridLayerControls.forEach((control,index) => { control.check.checked = recipe.ids.includes(NOX_HYBRID_FILTERS[index].id); control.slider.value = String(Math.round(recipe.weights[index] * 100)); }); syncHybridMixer(); announce("تمت استعادة تركيبة " + recipe.name, Boolean(stream)); } catch { announce("تعذر استعادة التركيبة المحفوظة."); } });
+    refreshChaosRecipes();
     const mixerHint = document.createElement("small"); mixerHint.textContent = "فعّل أكثر من محرك واضبط قوة كل طبقة";
     const hybridLayers = document.createElement("div"); hybridLayers.className = "nox-hybrid-mixer-layers";
     const hybridCount = document.createElement("span"); hybridCount.className = "nox-hybrid-count";
     const hybridReset = document.createElement("button"); hybridReset.type = "button"; hybridReset.className = "nox-hybrid-reset"; hybridReset.textContent = "إعادة الضبط";
     const mixerHead = document.createElement("div"); mixerHead.className = "nox-hybrid-mixer-head"; mixerHead.append(mixerTitle, mixerHint);
     const mixerFoot = document.createElement("div"); mixerFoot.className = "nox-hybrid-mixer-footer"; mixerFoot.append(hybridCount, hybridReset);
-    hybridMixerPanel.append(mixerHead, hybridLayers, mixerFoot);
+    hybridMixerPanel.append(mixerHead, chaosSelect, recipeName, recipeSave, recipeLoad, hybridLayers, mixerFoot);
     filterSelect.insertAdjacentElement("afterend", hybridMixerPanel);
     const hybridLayerControls = NOX_HYBRID_FILTERS.map((filter, index) => {
       const row = document.createElement("label"); row.className = "nox-hybrid-layer";
