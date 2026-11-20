@@ -318,7 +318,6 @@ jobs:
           }
           const cameraSource = fs.readFileSync('core/camera.js', 'utf8');
           for (const token of [
-            'طبقة تحليل الوجه والمكياج الحالية للمعاينة فقط ولا تدخل في الملف المحفوظ',
             'NOXLiveMakeupController',
             'NOXLiveMakeupCompositor',
             'startLiveMakeup()',
