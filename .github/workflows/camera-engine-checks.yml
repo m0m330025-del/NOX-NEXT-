@@ -192,8 +192,9 @@ jobs:
           }
           console.log('Living Metal prototype hooks present: 3');
           console.log('Manual region mask hooks present: 3');
-          if (!js.includes('lowPower ? 160 : 224') || !js.includes('lowPower ? 3 : 4')) {
-            throw new Error('Temporal memory must retain bounded low-power and standard buffer sizes');
+          const temporalEngineSource = fs.readFileSync('core/nox-temporal-memory-engine.js', 'utf8');
+          for (const token of ['liteMaxSide = 160', 'standardMaxSide = 224', 'liteBufferCount = 3', 'standardBufferCount = 4', 'liteIntervalMs = 180', 'standardIntervalMs = 120', 'getCaptureDecision', 'getCompositePlan', 'commitCapture', 'reset()']) {
+            if (!temporalEngineSource.includes(token)) throw new Error('Temporal memory policy engine contract missing: ' + token);
           }
           console.log('Temporal memory engine hooks and bounded buffer profile verified');
           for (const token of ['lowPower ? 48 : 64', 'lowPower ? 36 : 48', 'lowPower ? 2 : 3', 'getImageData']) {
