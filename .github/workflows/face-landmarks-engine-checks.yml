@@ -7,6 +7,7 @@ on:
       - "core/nox-face-landmarks-engine.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "tests/nox-face-landmarks-engine.test.mjs"
+      - "tests/nox-mediapipe-face-landmarker-provider.test.mjs"
       - ".github/workflows/face-landmarks-engine-checks.yml"
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
@@ -37,3 +38,5 @@ jobs:
           node --check core/nox-mediapipe-face-landmarker-provider.mjs
       - name: Run landmark region tests
         run: node tests/nox-face-landmarks-engine.test.mjs
+      - name: Run MediaPipe provider contract tests
+        run: node tests/nox-mediapipe-face-landmarker-provider.test.mjs
