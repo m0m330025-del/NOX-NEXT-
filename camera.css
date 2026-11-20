@@ -302,6 +302,7 @@
 .nox-camera-v2-actions button{min-width:46px;min-height:46px}
 .nox-camera-v2-stage #nox-camera-exit{min-width:46px;min-height:46px}
 @media(max-width:760px){
+  .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-v2-tools>.nox-camera-family-tabs{display:flex!important}
   .nox-camera-page:has(.nox-camera-v2-stage.is-live) .nox-camera-family-tabs{
     position:fixed;z-index:1004;left:50%;bottom:calc(378px + env(safe-area-inset-bottom));
     transform:translateX(-50%);width:min(calc(100vw - 36px),360px);margin:0;
