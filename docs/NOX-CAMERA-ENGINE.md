@@ -58,3 +58,13 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Existing profiles are preserved: Lite samples at a maximum side of 160 with 3 slots / 180 ms; standard samples at a maximum side of 224 with 4 slots / 120 ms.
 - This extraction does not align historical frames with optical flow, estimate camera motion for temporal warping, or guarantee ghost suppression. The CORTEX `temporal-memory` dependency remains a registry contract and is not claimed as an executed camera handler.
 - A deterministic Node test covers profile sizing, capture cadence, ring wrap, composite-plan modes, reset, and invalid inputs. Physical-device performance and visual quality remain untested.
+
+## NOX Temporal Alignment Engine (confidence-gated translation)
+
+- `core/nox-temporal-alignment-engine.js` converts the existing sparse optical-flow vectors into a robust median global translation for the bounded temporal-memory slots.
+- A sample is accepted only when enough vectors pass the confidence gate and their displacement dispersion stays bounded. Duplicate/stale flow sequences are ignored.
+- Per-slot translation is accumulated only while it remains within a strict drift limit. A slot is invalidated rather than allowed to drift indefinitely; a newly captured slot starts with a zero transform.
+- The camera adapter applies the accepted translation while drawing temporal-memory samples. It does not add asynchronous work to the render loop; it consumes the latest completed optical-flow result.
+- This is global 2D translation only. It does not estimate rotation, zoom, parallax, depth, rolling shutter, or dense per-pixel deformation. It cannot guarantee complete ghost removal.
+- Deterministic tests cover confidence filtering, stale sequences, inconsistent vectors, slot reset, and accumulated-drift invalidation. Optical-flow, temporal-memory, and temporal-alignment tests are all included in the camera workflow.
+- Real-scene visual quality, edge cropping, device performance, heat, and battery impact remain unverified until tested on physical devices, including Galaxy M12.
