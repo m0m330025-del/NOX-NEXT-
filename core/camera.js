@@ -1,6 +1,6 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
 import { listNOXFilters } from "./nox-original-filter-library.js";
-import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CHAOS_MODES, getNOXChaosMode, createNOXChaosRecipe, validateNOXChaosRecipe } from "./nox-hybrid-fx-engine.js";
+import { NOX_HYBRID_FILTERS, getNOXHybridFilter, buildNOXHybridSelection, NOX_CHAOS_MODES, getNOXChaosMode, createNOXChaosRecipe, validateNOXChaosRecipe, generateNOXChaosRecipe } from "./nox-hybrid-fx-engine.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
@@ -3316,6 +3316,27 @@ export function initCamera() {
     const recipeName = document.createElement("input"); recipeName.type = "text"; recipeName.maxLength = 32; recipeName.placeholder = "اسم التركيبة"; recipeName.setAttribute("aria-label", "اسم التركيبة");
     const recipeSave = document.createElement("button"); recipeSave.type = "button"; recipeSave.textContent = "حفظ التركيبة";
     const recipeLoad = document.createElement("select"); recipeLoad.setAttribute("aria-label", "استعادة تركيبة محفوظة");
+    const evolveButton = document.createElement("button"); evolveButton.type = "button"; evolveButton.className = "nox-evolve-button"; evolveButton.textContent = "✧ توليد تركيبة متطورة";
+    const evolveStatus = document.createElement("small"); evolveStatus.className = "nox-evolve-status"; evolveStatus.setAttribute("role", "status"); evolveStatus.textContent = "يبحث عن مزج جديد ويستبعد التركيبات المتشابهة";
+    evolveButton.addEventListener("click", () => {
+      try {
+        let history = [];
+        try { const stored = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); if (Array.isArray(stored)) history = stored.map(validateNOXChaosRecipe).filter(Boolean); } catch {}
+        const activeIds = NOX_HYBRID_FILTERS.filter((item,index) => hybridLayerControls[index]?.check.checked).map(item => item.id);
+        if (activeIds.length) history.push(createNOXChaosRecipe("CURRENT MIX", activeIds, selectedHybridWeights, selectedChaosMode));
+        const generated = generateNOXChaosRecipe(history, { seed: Date.now() });
+        if (!generated) throw new Error("لم يتم العثور على تركيبة جديدة؛ احفظ أو غيّر التركيبات السابقة ثم أعد المحاولة");
+        selectedChaosMode = generated.mode; chaosSelect.value = generated.mode;
+        hybridLayerControls.forEach((control,index) => {
+          control.check.checked = generated.ids.includes(NOX_HYBRID_FILTERS[index].id);
+          control.slider.value = String(Math.round(generated.weights[index] * 100));
+        });
+        syncHybridMixer();
+        recipeName.value = generated.name;
+        evolveStatus.textContent = "تركيبة جديدة · تميّز " + Math.round(generated.score * 100) + "% · اضغط حفظ التركيبة للاحتفاظ بها";
+        announce("تم توليد " + generated.name, Boolean(stream));
+      } catch (error) { evolveStatus.textContent = "تعذر التوليد: " + String(error.message || error); }
+    });
     function refreshChaosRecipes() { recipeLoad.replaceChildren(); const empty = document.createElement("option"); empty.value = ""; empty.textContent = "استعادة تركيبة محفوظة"; recipeLoad.append(empty); try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); if (Array.isArray(list)) list.filter(validateNOXChaosRecipe).forEach((item,index) => { const option = document.createElement("option"); option.value = String(index); option.textContent = item.name; recipeLoad.append(option); }); } catch {} }
     recipeSave.addEventListener("click", () => { try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); const ids = NOX_HYBRID_FILTERS.filter((item,index) => hybridLayerControls[index].check.checked).map(item => item.id); const recipe = createNOXChaosRecipe(recipeName.value, ids, selectedHybridWeights, selectedChaosMode); const next = (Array.isArray(list) ? list.filter(validateNOXChaosRecipe).filter(item => item.name !== recipe.name) : []); next.push(recipe); localStorage.setItem("nox-chaos-recipes-v1", JSON.stringify(next.slice(-20))); refreshChaosRecipes(); recipeName.value = ""; announce("تم حفظ التركيبة محليًا على هذا المتصفح."); } catch(error) { announce("تعذر الحفظ: " + String(error.message || error)); } });
     recipeLoad.addEventListener("change", () => { if (recipeLoad.value === "") return; try { const list = JSON.parse(localStorage.getItem("nox-chaos-recipes-v1") || "[]"); const validList = Array.isArray(list) ? list.map(validateNOXChaosRecipe).filter(Boolean) : []; const recipe = validList[Number(recipeLoad.value)]; if (!recipe) throw new Error("invalid recipe"); selectedChaosMode = recipe.mode; chaosSelect.value = recipe.mode; hybridLayerControls.forEach((control,index) => { control.check.checked = recipe.ids.includes(NOX_HYBRID_FILTERS[index].id); control.slider.value = String(Math.round(recipe.weights[index] * 100)); }); syncHybridMixer(); announce("تمت استعادة تركيبة " + recipe.name, Boolean(stream)); } catch { announce("تعذر استعادة التركيبة المحفوظة."); } });
@@ -3326,7 +3347,7 @@ export function initCamera() {
     const hybridReset = document.createElement("button"); hybridReset.type = "button"; hybridReset.className = "nox-hybrid-reset"; hybridReset.textContent = "إعادة الضبط";
     const mixerHead = document.createElement("div"); mixerHead.className = "nox-hybrid-mixer-head"; mixerHead.append(mixerTitle, mixerHint);
     const mixerFoot = document.createElement("div"); mixerFoot.className = "nox-hybrid-mixer-footer"; mixerFoot.append(hybridCount, hybridReset);
-    hybridMixerPanel.append(mixerHead, chaosSelect, recipeName, recipeSave, recipeLoad, hybridLayers, mixerFoot);
+    hybridMixerPanel.append(mixerHead, chaosSelect, evolveButton, evolveStatus, recipeName, recipeSave, recipeLoad, hybridLayers, mixerFoot);
     filterSelect.insertAdjacentElement("afterend", hybridMixerPanel);
     const hybridLayerControls = NOX_HYBRID_FILTERS.map((filter, index) => {
       const row = document.createElement("label"); row.className = "nox-hybrid-layer";
