@@ -2751,6 +2751,7 @@ export function initCamera() {
     fpsWindowStart = 0;
     fpsWindowFrames = 0;
     qualityTier = lowPower ? 1 : 0;
+    noxNeuralCameraOrchestrator.reset();
     resetTemporalMemory();
     resetPhotonTimeline();
     resetOpticalFlow();
@@ -2782,6 +2783,7 @@ export function initCamera() {
       const memory = Number(navigator.deviceMemory || 4);
       lowPower = memory <= 3 || (navigator.hardwareConcurrency || 4) <= 4;
       qualityTier = lowPower ? 1 : 0;
+      noxNeuralCameraOrchestrator.reset();
       lastRenderedAt = 0;
       slowFrameStreak = 0;
       stableFrameStreak = 0;
