@@ -100,6 +100,10 @@ export class NOXLiveMakeupCompositor {
       this.clear();
       return false;
     }
+    if (!this.faceBox) {
+      this.clear();
+      return false;
+    }
     let alignment = null;
     if (this.faceBox) {
       const validCurrent = currentFaceBox &&
