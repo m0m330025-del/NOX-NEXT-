@@ -1,4 +1,5 @@
 import { NOX_FILTERS, NOX_FILTER_GROUPS, getFallbackFilter } from "./nox-filter-engine.js";
+import { listNOXFilters } from "./nox-original-filter-library.js";
 import { NOXFaceDetectionEngine } from "./nox-face-detection-engine.js";
 import { NOXFaceTrackingEngine } from "./nox-face-tracking-engine.js";
 import { NOXFaceRegionEngine } from "./nox-face-region-engine.js";
@@ -340,6 +341,7 @@ export function initCamera() {
   let facing = "user";
   let selectedLens = 0;
   let selectedFilter = null;
+  let selectedOriginalFilter = null;
   let recorder = null;
   let recordingStream = null;
   let chunks = [];
@@ -997,8 +999,7 @@ export function initCamera() {
     photo.removeAttribute("src");
     videoResult.removeAttribute("src");
     save.removeAttribute("href");
-    result.hidden = true;
-  }
+    result.hidden = true;  }
 
   function createShader(gl, type, source) {
     const shader = gl.createShader(type);
@@ -1997,8 +1998,7 @@ export function initCamera() {
     }
     opticalFlowLastAt = now;
     if (!opticalFlowPrevious || opticalFlowWidth !== sampleWidth || opticalFlowHeight !== sampleHeight) {
-      opticalFlowPrevious = gray;
-      opticalFlowWidth = sampleWidth;
+      opticalFlowPrevious = gray;      opticalFlowWidth = sampleWidth;
       opticalFlowHeight = sampleHeight;
       opticalFlowVectors = [];
       opticalFlowConfidence = 0;
@@ -2540,9 +2540,9 @@ export function initCamera() {
       try {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
         gl.uniform1i(gl.getUniformLocation(renderer.program, "u_image"), 0);
-        gl.uniform1f(renderer.mode, selectedFilter ? 10 + selectedFilter.family : LENSES[selectedLens].mode);
-        gl.uniform1f(renderer.variant, selectedFilter ? selectedFilter.variant / 19 : 0);
-        gl.uniform1f(renderer.filterGroup, selectedFilter ? selectedFilter.groupIndex : -1);
+        gl.uniform1f(renderer.mode, selectedOriginalFilter ? 10 + selectedOriginalFilter.familyIndex : selectedFilter ? 10 + selectedFilter.family : LENSES[selectedLens].mode);
+        gl.uniform1f(renderer.variant, selectedOriginalFilter ? selectedOriginalFilter.variantIndex / 99 : selectedFilter ? selectedFilter.variant / 19 : 0);
+        gl.uniform1f(renderer.filterGroup, selectedOriginalFilter ? -1 : selectedFilter ? selectedFilter.groupIndex : -1);
         gl.uniform1f(renderer.time, performance.now() / 1000);
         gl.uniform1f(renderer.mirror, facing === "user" ? 1 : 0);
         gl.uniform1f(renderer.lowLight, lowLightMode === "strong" ? 2 : lowLightMode === "gentle" ? 1 : 0);
@@ -2566,7 +2566,8 @@ export function initCamera() {
       if (!ctx) return;
       const filters = ["none", "brightness(1.08) saturate(1.1)", "sepia(.18) saturate(1.12)", "hue-rotate(145deg) saturate(1.2)", "saturate(1.45) contrast(1.04)", "sepia(.42) contrast(1.05)", "grayscale(1) contrast(1.08)"];
       ctx.save();
-      const baseFilter = selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
+      const originalFallback = selectedOriginalFilter ? ["saturate(1.25) contrast(1.08) hue-rotate(18deg)", "saturate(1.35) contrast(1.12)", "saturate(1.4) hue-rotate(38deg)", "saturate(1.45) contrast(1.08)", "brightness(1.08) saturate(1.22)", "grayscale(1) contrast(1.2)", "contrast(1.12) saturate(1.25)", "sepia(.22) contrast(1.14)", "brightness(.92) contrast(1.18)", "saturate(1.55) hue-rotate(65deg)"][selectedOriginalFilter.familyIndex] : null;
+      const baseFilter = selectedOriginalFilter ? originalFallback : selectedFilter ? getFallbackFilter(selectedFilter) : filters[selectedLens];
       const lowLightFilter = lowLightMode === "strong" ? "brightness(1.28) contrast(1.08) saturate(1.04)" : lowLightMode === "gentle" ? "brightness(1.14) contrast(1.04) saturate(1.02)" : "none";
       const detailFilter = detailRecoveryMode === "strong" ? "contrast(1.16) saturate(1.03)" : detailRecoveryMode === "natural" ? "contrast(1.08)" : "none";
       ctx.filter = [baseFilter, lowLightFilter, detailFilter].filter(value => value !== "none").join(" ") || "none";
@@ -2997,8 +2998,7 @@ export function initCamera() {
   $("#nox-photon-timeline-clear")?.addEventListener("click", () => {
     resetPhotonTimeline();
     announce("تم مسح سجل NOX PHOTON TIME MACHINE", Boolean(stream));
-    updateDiagnostics();
-  });
+    updateDiagnostics();  });
   $("#nox-photon-timeline-save")?.addEventListener("click", saveSelectedPhotonMoment);
 
   $("#nox-living-metal-toggle")?.addEventListener("click", () => {
@@ -3100,6 +3100,7 @@ export function initCamera() {
   function selectLens(index) {
     selectedLens = (index + LENSES.length) % LENSES.length;
     selectedFilter = null;
+    selectedOriginalFilter = null;
     if (filterSelect) filterSelect.value = "";
     const buttons = [...page.querySelectorAll(".nox-lens-v2")];
     buttons.forEach((button, buttonIndex) => {
@@ -3120,7 +3121,7 @@ export function initCamera() {
     filterSelect.replaceChildren();
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = "اختر فلترًا من مكتبة NOX (340)";
+    placeholder.textContent = "اختر فلترًا من مكتبة NOX (1,340)";
     filterSelect.append(placeholder);
     NOX_FILTER_GROUPS.forEach((group, family) => {
       const optgroup = document.createElement("optgroup");
@@ -3133,9 +3134,28 @@ export function initCamera() {
       });
       filterSelect.append(optgroup);
     });
+    const originalGroup = document.createElement("optgroup");
+    originalGroup.label = "NOX ORIGINAL — 1000 فلتر إجرائي";
+    listNOXFilters().forEach((filter, index) => {
+      const option = document.createElement("option");
+      option.value = "original:" + filter.id;
+      option.textContent = filter.name + " · " + filter.id;
+      originalGroup.append(option);
+    });
+    filterSelect.append(originalGroup);
     filterSelect.addEventListener("change", () => {
-      const id = Number(filterSelect.value);
-      selectedFilter = filterSelect.value === "" ? null : (NOX_FILTERS[id] || null);
+      const value = filterSelect.value;
+      if (value.startsWith("original:")) {
+        const index = Number(value.slice("original:nox-".length)) - 1;
+        selectedOriginalFilter = Number.isInteger(index) && index >= 0 && index < 1000
+          ? { familyIndex: Math.floor(index / 100), variantIndex: index % 100, id: value.slice(9) }
+          : null;
+        selectedFilter = null;
+      } else {
+        selectedOriginalFilter = null;
+        const id = Number(value);
+        selectedFilter = value === "" ? null : (NOX_FILTERS[id] || null);
+      }
       if (stream) renderFrame(false);
       announce(selectedFilter ? "تم اختيار " + selectedFilter.name : "تم الرجوع إلى العدسات الأساسية", Boolean(stream));
       updateDiagnostics();
