@@ -146,3 +146,12 @@ This branch replaces the previous camera controller with a standalone browser ca
 - Recommendations are diagnostic only. The engine does not change exposure, filters, camera settings, quality tiers, scheduling, or rendered pixels.
 - It does not recognize people, objects, skin, depth, or semantic scene categories. Global luminance/contrast are heuristic sample statistics, not calibrated sensor measurements; mixed lighting and low-texture scenes can mislead them.
 - Deterministic tests cover dim/bright scenes, contrast, motion ambiguity, overload protection, missing/invalid measurements, and reset. Real-scene calibration and Galaxy M12 testing remain outstanding.
+
+
+## NOX Automatic Engine Discovery
+
+- `core/nox-engine-registry.js` provides a runtime registry for instantiated engines. The camera adapter registers active camera engines once; the intelligence brain consumes a generic registry snapshot and adds discovery decisions without engine-specific branches.
+- The registry reads an engine status through its `getStatus()` API when available, safely summarizes scalar status fields, and reports engines without a status API without calling arbitrary processing methods.
+- Adding a new engine to the camera runtime requires creating its instance and registering it once with a stable ID, name, category, capabilities, and optional status reader. The brain and its decision logic do not need engine-specific edits.
+- This discovers registered runtime instances, not arbitrary files or uninstantiated modules. Browser JavaScript cannot enumerate source files from a directory. Registration does not automatically activate or execute an engine; execution remains gated by evidence, capability, and performance checks.
+- Deterministic tests cover late registration, status read failures, safe status summarization, unregister, clear, and invalid IDs.
