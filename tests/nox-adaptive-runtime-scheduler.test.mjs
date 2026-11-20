@@ -51,10 +51,10 @@ const lowPower = scheduler.evaluate({
   cortexPlan: { state: "planned", engines: [{ id: "optical-flow", requires: [] }] },
   runtimeSnapshot: snapshot,
   targetFrameMs: 18,
-  frameCostMs: 12,
+  frameCostMs: 13,
   lowPower: true
 });
-assert.equal(lowPower.availableBudgetMs, 3.5);
+assert.equal(lowPower.availableBudgetMs, 2.5);
 assert.equal(lowPower.steps[0].reason, "measured-p95-exceeds-remaining-frame-budget");
 
 const missingAdapter = scheduler.evaluate({
