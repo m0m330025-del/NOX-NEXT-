@@ -8,7 +8,7 @@ import { calculateNOXFaceRollDelta } from "./nox-face-roll-delta.js";
 const SUPPORTED_REGIONS = new Set(["lips", "brows"]);
 
 export class NOXLiveMakeupCompositor {
-  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, maxRollAgeMs = 220, maxRollDeltaRadians = 0.35, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
+  constructor({ canvasFactory = () => document.createElement("canvas"), maxAgeMs = 220, maxRollAgeMs = 80, maxRollDeltaRadians = 0.35, edgeSoftness = 0.35, maxCenterDrift = 0.12, minScaleRatio = 0.75, maxScaleRatio = 1.33 } = {}) {
     if (typeof canvasFactory !== "function" || !Number.isFinite(maxAgeMs) || maxAgeMs < 1 ||
         !Number.isFinite(maxRollAgeMs) || maxRollAgeMs < 1 ||
         !Number.isFinite(maxRollDeltaRadians) || maxRollDeltaRadians <= 0 || maxRollDeltaRadians > Math.PI / 2 ||
