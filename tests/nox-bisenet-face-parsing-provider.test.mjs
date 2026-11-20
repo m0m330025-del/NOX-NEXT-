@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { NOXBiSeNetFaceParsingProvider } from "../core/nox-bisenet-face-parsing-provider.mjs";
-import { NOXBeautyVisionProvider } from "../core/nox-beauty-vision-provider.mjs";
-import { NOXMakeupRenderingEngine } from "../core/nox-makeup-rendering-engine.mjs";
+import { NOXBiSeNetFaceParsingProvider } from "../core/nox-bisenet-face-parsing-provider.js";
+import { NOXBeautyVisionProvider } from "../core/nox-beauty-vision-provider.js";
+import { NOXMakeupRenderingEngine } from "../core/nox-makeup-rendering-engine.js";
 
 const size = 4;
 const pixels = size * size;
