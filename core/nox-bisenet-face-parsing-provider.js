@@ -36,7 +36,18 @@ function preprocessCanvasFrame(source, width, height, size, canvasFactory) {
   canvas.width = size; canvas.height = size;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) throw new Error("2d-context-unavailable");
-  context.drawImage(source, 0, 0, size, size);
+
+  // Preserve the source aspect ratio. Padding is filled with the RGB ImageNet
+  // mean so the normalized padding becomes approximately zero.
+  const scale = Math.min(size / width, size / height);
+  const contentWidth = Math.max(1, Math.min(size, Math.round(width * scale)));
+  const contentHeight = Math.max(1, Math.min(size, Math.round(height * scale)));
+  const offsetX = Math.floor((size - contentWidth) / 2);
+  const offsetY = Math.floor((size - contentHeight) / 2);
+  context.fillStyle = "rgb(124,116,104)";
+  context.fillRect(0, 0, size, size);
+  context.drawImage(source, offsetX, offsetY, contentWidth, contentHeight);
+
   const pixels = context.getImageData(0, 0, size, size).data;
   const input = new Float32Array(3 * size * size);
   const mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225];
@@ -46,7 +57,21 @@ function preprocessCanvasFrame(source, width, height, size, canvasFactory) {
     input[plane + i] = (pixels[i * 4 + 1] / 255 - mean[1]) / std[1];
     input[plane * 2 + i] = (pixels[i * 4 + 2] / 255 - mean[2]) / std[2];
   }
+  input.noxLetterbox = { x: offsetX, y: offsetY, width: contentWidth, height: contentHeight };
   return input;
+}
+function cropLetterboxed(source, sourceWidth, sourceHeight, rect) {
+  const x = Math.max(0, Math.min(sourceWidth - 1, Math.floor(rect.x * sourceWidth / sourceWidth)));
+  const y = Math.max(0, Math.min(sourceHeight - 1, Math.floor(rect.y * sourceHeight / sourceHeight)));
+  const right = Math.max(x + 1, Math.min(sourceWidth, Math.ceil(rect.x + rect.width)));
+  const bottom = Math.max(y + 1, Math.min(sourceHeight, Math.ceil(rect.y + rect.height)));
+  const width = right - x, height = bottom - y;
+  const output = new source.constructor(width * height);
+  for (let row = 0; row < height; row += 1) {
+    const start = (y + row) * sourceWidth + x;
+    output.set(source.subarray(start, start + width), row * width);
+  }
+  return { data: output, width, height };
 }
 function resizeNearest(source, sourceWidth, sourceHeight, targetWidth, targetHeight) {
   if (sourceWidth === targetWidth && sourceHeight === targetHeight) return new source.constructor(source);
@@ -173,11 +198,23 @@ export class NOXBiSeNetFaceParsingProvider {
         output.dims[2] !== this.modelInputSize || output.dims[3] !== this.modelInputSize) throw new Error("unexpected-bisenet-output-tensor");
 
     const decoded = decodeLogits(output.data, this.modelInputSize, this.modelInputSize, DEFAULTS.classCount);
-    const faceBox = faceBounds(decoded.labels, this.modelInputSize, this.modelInputSize);
+    const letterbox = inputData.noxLetterbox || {
+      x: 0, y: 0, width: this.modelInputSize, height: this.modelInputSize
+    };
+    const croppedLabels = cropLetterboxed(
+      decoded.labels, this.modelInputSize, this.modelInputSize, letterbox
+    );
+    const croppedConfidence = cropLetterboxed(
+      decoded.confidence, this.modelInputSize, this.modelInputSize, letterbox
+    );
+    if (croppedLabels.width < 1 || croppedLabels.height < 1) {
+      throw new Error("invalid-bisenet-letterbox-region");
+    }
+    const faceBox = faceBounds(croppedLabels.data, croppedLabels.width, croppedLabels.height);
     if (!faceBox) throw new Error("bisenet-face-skin-not-found");
-    const skin = makeRegionMask(decoded.labels, decoded.confidence, this.modelInputSize, this.modelInputSize, width, height, CLASS_IDS.skin);
-    const lips = makeRegionMask(decoded.labels, decoded.confidence, this.modelInputSize, this.modelInputSize, width, height, CLASS_IDS.lips);
-    const brows = makeRegionMask(decoded.labels, decoded.confidence, this.modelInputSize, this.modelInputSize, width, height, CLASS_IDS.brows);
+    const skin = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.skin);
+    const lips = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.lips);
+    const brows = makeRegionMask(croppedLabels.data, croppedConfidence.data, croppedLabels.width, croppedLabels.height, width, height, CLASS_IDS.brows);
     if (!skin) throw new Error("bisenet-skin-mask-not-found");
     return {
       width, height, frameId, timestamp,
