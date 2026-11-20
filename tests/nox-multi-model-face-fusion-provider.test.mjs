@@ -4,9 +4,13 @@ import { NOXMultiModelFaceFusionProvider } from "../core/nox-multi-model-face-fu
 const width = 100, height = 100, timestamp = 1000, frameId = "f-1";
 const faceBox = { x: 0.2, y: 0.2, width: 0.6, height: 0.6 };
 const connections = { faceOval: Array.from({length: 12}, (_, i) => ({start:i,end:(i+1)%12})) };
-const landmarks = Array.from({length: 478}, (_, i) => ({
-  x: 0.2 + (i % 12) * 0.05, y: 0.2 + Math.floor(i / 12) * 0.01, z: 0
-}));
+const landmarks = Array.from({length: 478}, (_, i) => {
+  if (i < 12) {
+    const angle = (i / 12) * Math.PI * 2;
+    return { x: 0.5 + Math.cos(angle) * 0.3, y: 0.5 + Math.sin(angle) * 0.3, z: 0 };
+  }
+  return { x: 0.5, y: 0.5, z: 0 };
+});
 const detected = { detected:true, source:"mediapipe-face-landmarker-478", width,height,
   landmarks, connections };
 function makeProvider({ detection = detected, segmentation = {} } = {}) {
