@@ -664,9 +664,7 @@ export function initCamera() {
         if (skin.state !== "accepted") throw new Error("رفض قناع البشرة: " + skin.reason);
         return { vision, skin };
       }
-    })
-
-    ,
+    }),
     new NOXDynamicEngineAdapter({
       id: "temporal-memory", name: "Temporal Memory", category: "temporal",
       instance: temporalMemoryEngine, cost: 2, priority: 60,
@@ -3033,6 +3031,7 @@ export function initCamera() {
     const rows = [
       ["NOX Multi-Engine Intelligence Brain", intelligencePlan.status + " — " + intelligencePlan.performanceMode + " — " + intelligencePlan.performanceReason],
       ["الاكتشاف التلقائي للمحركات", intelligencePlan.discoveredEngineCount + " محرك مسجل — " + intelligencePlan.engineInventory.map(engine => engine.name + (engine.statusAvailable ? " ✓" : " •")).join("، ")],
+      ["المحركات المتصلة بالعقد الموحد", dynamicEngineHost.getStatus().length + " محرك — " + dynamicEngineHost.getStatus().map(engine => engine.id + " (" + engine.state + ")").join("، ")],
       ["مسار تنسيق المحركات", intelligencePlan.pipeline.length ? intelligencePlan.pipeline.join(" ← ") : "لا يوجد مسار موثوق؛ الإطار الحي محمي"],
       ["خطة اختيار وترتيب المحركات", engineOrchestrationPlan.steps.length ? engineOrchestrationPlan.steps.map(step => step.order + ". " + step.name).join(" ← ") : "لا توجد مجموعة آمنة موصى بها"],
       ["حالة مخطط التشغيل", engineOrchestrationPlan.status + " — " + engineOrchestrationPlan.mode + " — توصية فقط؛ لم يتم تشغيل أي محرك"],
