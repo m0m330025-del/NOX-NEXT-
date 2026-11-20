@@ -2,3 +2,24 @@
 .github
 node_modules
 .DS_Store
+# Environment files and local credentials must never enter the public image.
+.env
+.env.*
+**/.env
+**/.env.*
+.npmrc
+**/.npmrc
+.netrc
+**/.netrc
+id_rsa*
+**/id_rsa*
+*.pem
+**/*.pem
+*.key
+**/*.key
+*.p12
+**/*.p12
+*.pfx
+**/*.pfx
+secrets/
+**/secrets/
