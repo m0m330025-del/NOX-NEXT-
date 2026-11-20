@@ -12,10 +12,6 @@ on:
       - "tests/nox-optical-flow-engine.test.mjs"
       - "core/nox-temporal-alignment-engine.js"
       - "tests/nox-temporal-alignment-engine.test.mjs"
-      - "core/nox-optical-flow-engine.js"
-      - "tests/nox-optical-flow-engine.test.mjs"
-      - "core/nox-temporal-alignment-engine.js"
-      - "tests/nox-temporal-alignment-engine.test.mjs"
       - "core/nox-mediapipe-selfie-provider.js"
       - "core/nox-mediapipe-face-landmarker-provider.js"
       - "core/nox-face-landmarks-engine.js"
@@ -30,6 +26,12 @@ on:
   push:
     branches: ["feature/nox-camera-engine-rebuild"]
     paths:
+      - "core/nox-optical-flow-engine.js"
+      - "tests/nox-optical-flow-engine.test.mjs"
+      - "core/nox-temporal-alignment-engine.js"
+      - "tests/nox-temporal-alignment-engine.test.mjs"
+      - "core/nox-temporal-memory-engine.js"
+      - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/nox-temporal-memory-engine.js"
       - "tests/nox-temporal-memory-engine.test.mjs"
       - "core/camera.js"
