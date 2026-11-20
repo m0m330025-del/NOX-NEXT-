@@ -168,13 +168,24 @@ export class NOXFacialMaskBuilder {
     const minY = Math.max(0, Math.floor(Math.min(...ys) * height));
     const maxY = Math.min(height - 1, Math.ceil(Math.max(...ys) * height));
     let pixelCount = 0;
-    for (let y = minY; y <= maxY; y += 1) {
-      for (let x = minX; x <= maxX; x += 1) {
-        const point = { x: (x + 0.5) / width, y: (y + 0.5) / height };
-        if (!pointInPolygon(point, outer) || pointInPolygon(point, inner)) continue;
-        if (!candidates.some(([a, b, c]) => pointInTriangle(point, a, b, c))) continue;
-        mask[y * width + x] = 1;
-        pixelCount += 1;
+    // Rasterize only within each candidate triangle's bounding box. The previous
+    // whole-contour scan tested every pixel against every candidate triangle,
+    // which could become prohibitively expensive on dense face tessellations.
+    for (const [a, b, c] of candidates) {
+      const triMinX = Math.max(minX, Math.floor(Math.min(a.x, b.x, c.x) * width));
+      const triMaxX = Math.min(maxX, Math.ceil(Math.max(a.x, b.x, c.x) * width));
+      const triMinY = Math.max(minY, Math.floor(Math.min(a.y, b.y, c.y) * height));
+      const triMaxY = Math.min(maxY, Math.ceil(Math.max(a.y, b.y, c.y) * height));
+      for (let y = triMinY; y <= triMaxY; y += 1) {
+        for (let x = triMinX; x <= triMaxX; x += 1) {
+          const index = y * width + x;
+          if (mask[index] !== 0) continue;
+          const point = { x: (x + 0.5) / width, y: (y + 0.5) / height };
+          if (!pointInPolygon(point, outer) || pointInPolygon(point, inner)) continue;
+          if (!pointInTriangle(point, a, b, c)) continue;
+          mask[index] = 1;
+          pixelCount += 1;
+        }
       }
     }
     if (pixelCount < 1) {
