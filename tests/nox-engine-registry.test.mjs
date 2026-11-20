@@ -19,6 +19,8 @@ registry.register({
   instance: { getStatus: () => { throw new Error("status-unavailable"); } }
 });
 registry.register({ id: "new-engine-added-later", instance: {} });
+assert.throws(() => registry.register({ id: "optical-flow", instance: {} }), /duplicate-engine-id:optical-flow/);
+assert.equal(registry.size, 3, "duplicate registration must not replace a live engine");
 
 const snapshot = registry.snapshot();
 assert.equal(snapshot.length, 3);
