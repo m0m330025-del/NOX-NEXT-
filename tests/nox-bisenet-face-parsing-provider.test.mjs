@@ -53,10 +53,13 @@ const letterboxProvider = new NOXBiSeNetFaceParsingProvider({
   })
 });
 assert.equal((await letterboxProvider.initialize()).available, true);
-await letterboxProvider.segment({
+const letterboxedResult = await letterboxProvider.segment({
   source: {}, width: 8, height: 4, frameId: "landscape", timestamp: 100
 });
 assert.deepEqual(drawArguments, [0, 1, 4, 2], "landscape frame must be centered with preserved aspect ratio");
+assert.equal(letterboxedResult.skin.data.length, 8 * 4, "skin mask must map back to original frame dimensions");
+assert.equal(letterboxedResult.regions.lips.data.length, 8 * 4, "lip mask must map back to original frame dimensions");
+assert.equal(letterboxedResult.regions.brows.data.length, 8 * 4, "brow mask must map back to original frame dimensions");
 await letterboxProvider.dispose();
 
 // Verify the real parsing output passes through the shared vision adapter and
