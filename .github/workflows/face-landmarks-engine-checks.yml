@@ -1,0 +1,39 @@
+name: NOX Face Landmarks Engine Checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "core/nox-face-landmarks-engine.js"
+      - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "tests/nox-face-landmarks-engine.test.mjs"
+      - ".github/workflows/face-landmarks-engine-checks.yml"
+  push:
+    branches: ["feature/nox-camera-engine-rebuild"]
+    paths:
+      - "core/nox-face-landmarks-engine.js"
+      - "core/nox-mediapipe-face-landmarker-provider.js"
+      - "tests/nox-face-landmarks-engine.test.mjs"
+      - ".github/workflows/face-landmarks-engine-checks.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  face-landmarks-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Prepare ESM source copies
+        run: |
+          cp core/nox-face-landmarks-engine.js core/nox-face-landmarks-engine.mjs
+          cp core/nox-mediapipe-face-landmarker-provider.js core/nox-mediapipe-face-landmarker-provider.mjs
+      - name: Check syntax
+        run: |
+          node --check core/nox-face-landmarks-engine.mjs
+          node --check core/nox-mediapipe-face-landmarker-provider.mjs
+      - name: Run landmark region tests
+        run: node tests/nox-face-landmarks-engine.test.mjs
