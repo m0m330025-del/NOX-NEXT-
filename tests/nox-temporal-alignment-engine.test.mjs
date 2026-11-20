@@ -35,7 +35,7 @@ for (let sequence = 5; sequence < 30; sequence += 1) {
 }
 assert.equal(engine.getTransform(0).valid, false, "large accumulated drift must invalidate a slot");
 
-const invalidated = engine.ingest(weak, { sequence: 5, width: 64, height: 48 });
+const invalidated = engine.ingest(weak, { sequence: 30, width: 64, height: 48 });
 assert.equal(invalidated.reason, "insufficient-confident-vectors");
 assert.equal(engine.getTransform(0).valid, false,
   "a rejected motion sample must invalidate stale accumulated transforms");
@@ -43,7 +43,7 @@ engine.onCapture(0);
 assert.equal(engine.getTransform(0).valid, true,
   "a fresh capture must start with a clean transform");
 const excessive = engine.ingest(vectors.map(vector => ({ ...vector, dx: 0.08 })),
-  { sequence: 6, width: 64, height: 48 });
+  { sequence: 31, width: 64, height: 48 });
 assert.equal(excessive.reason, "motion-step-exceeds-bound");
 assert.equal(engine.getTransform(0).valid, false,
   "over-bound motion must not be silently clamped into an inaccurate transform");
