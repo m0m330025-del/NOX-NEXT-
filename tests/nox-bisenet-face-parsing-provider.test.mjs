@@ -103,4 +103,54 @@ await adapter.reset();
 assert.equal(provider.state, "idle");
 const missing = new NOXBiSeNetFaceParsingProvider({ modelUrl: "", modelInputSize: size });
 assert.equal((await missing.initialize()).reason, "model-url-not-configured");
+// Production loading must verify both the pinned byte length and SHA-256
+// before ONNX Runtime receives model bytes.
+const expectedHash = "0d9bd318e46987c3bdbfacae9e2c0f461cae1c6ac6ea6d43bbe541a91727e33f";
+const expectedDigest = Uint8Array.from(expectedHash.match(/.{2}/g), byte => Number.parseInt(byte, 16));
+const modelBuffer = new Uint8Array([1, 2, 3, 4]).buffer;
+let verifiedModelInput = null;
+let verifiedFetchOptions = null;
+const verifiedRuntime = {
+  Tensor: class Tensor {},
+  InferenceSession: {
+    create: async input => {
+      verifiedModelInput = input;
+      return session;
+    }
+  }
+};
+const verifiedProvider = new NOXBiSeNetFaceParsingProvider({
+  modelUrl: "https://models.example.test/face.onnx",
+  modelInputSize: size,
+  modelBytes: 4,
+  modelSha256: expectedHash,
+  runtimeLoader: async () => verifiedRuntime,
+  fetchImpl: async (_url, options) => {
+    verifiedFetchOptions = options;
+    return { ok: true, arrayBuffer: async () => modelBuffer };
+  },
+  cryptoProvider: { subtle: { digest: async () => expectedDigest.buffer } }
+});
+assert.equal((await verifiedProvider.initialize()).available, true);
+assert.deepEqual(Array.from(verifiedModelInput), [1, 2, 3, 4]);
+assert.equal(verifiedFetchOptions.credentials, "omit");
+assert.equal(verifiedFetchOptions.mode, "cors");
+await verifiedProvider.dispose();
+
+let runtimeCreatedOnMismatch = false;
+const mismatchProvider = new NOXBiSeNetFaceParsingProvider({
+  modelUrl: "https://models.example.test/face.onnx",
+  modelInputSize: size,
+  modelBytes: 4,
+  modelSha256: expectedHash,
+  runtimeLoader: async () => ({
+    Tensor: class Tensor {},
+    InferenceSession: { create: async () => { runtimeCreatedOnMismatch = true; return session; } }
+  }),
+  fetchImpl: async () => ({ ok: true, arrayBuffer: async () => modelBuffer }),
+  cryptoProvider: { subtle: { digest: async () => new Uint8Array(32).buffer } }
+});
+assert.equal((await mismatchProvider.initialize()).available, false);
+assert.equal(runtimeCreatedOnMismatch, false, "a hash mismatch must block ONNX session creation");
+
 console.log("NOX BiSeNet Face Parsing Provider tests passed");
