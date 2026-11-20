@@ -25,6 +25,7 @@ export class NOXEngineRegistry {
     if (!instance || (typeof instance !== "object" && typeof instance !== "function")) {
       throw new TypeError("engine-instance-required");
     }
+    if (this.entries.has(id)) throw new Error("duplicate-engine-id:" + id);
     const descriptor = {
       id,
       name: typeof name === "string" && name.trim() ? name.trim() : id,
