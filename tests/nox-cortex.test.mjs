@@ -12,10 +12,10 @@ const beauty = cortex.plan({
 const ids = beauty.engines.map(engine => engine.id);
 assert.ok(ids.indexOf("face-detection") < ids.indexOf("face-landmarks"));
 assert.ok(ids.indexOf("face-landmarks") < ids.indexOf("facial-mask-builder"));
-assert.ok(ids.indexOf("facial-mask-builder") < ids.indexOf("makeup-rendering"));
 assert.ok(ids.includes("filter-render"));
 assert.ok(!ids.includes("makeup-rendering"), "makeup stays gated until trusted semantic region masks are available");
-assert.ok(beauty.rejected.some(item => item.id === "makeup-rendering" && item.reason === "engine-disabled"));
+assert.equal(cortex.engines.get("makeup-rendering").enabled, false,
+  "makeup must remain unavailable until a trusted semantic-region provider is connected");
 assert.equal(beauty.execution, "not-started");
 
 const skinOnly = cortex.plan({ skinRequested: true }, { requested: ["skin-segmentation"], mode: "balanced" });
